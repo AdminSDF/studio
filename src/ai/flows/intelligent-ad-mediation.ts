@@ -44,15 +44,18 @@ Consider the following factors:
 *   Booster Usage: {{boosterUsage}}
 *   Page Visits: {{pageVisits}}
 
-Based on these inputs, select the best ad to display to the user. 
-The ad URL MUST be a valid, complete, and absolute URL string (e.g., 'https://example.com/ad_target'). 
+Based on these inputs, select the best ad to display to the user.
+The ad URL MUST be a valid, complete, and absolute URL string (e.g., 'https://example.com/ad_target').
 The ad should be suitable for display within an iframe and ideally be a banner-style ad (e.g. a static image with a link, or simple HTML content). Avoid direct links to full websites unless they are specifically designed to be embedded as an advertisement.
-Do not return error messages or conversational text in the adUrl field. 
+
+You can also choose to display a specific high-performing banner ad from Adsterra. If you choose this, use the ad URL: 'https://syndication.adsterra.com/bn.php?ID=26645903&type=banner'. This ad is a 468x60 banner. You might consider this for users who are highly engaged, using premium features, or if other ad options seem less relevant.
+
+Do not return error messages or conversational text in the adUrl field.
 Explain your reasoning for choosing the ad.
 
 Return the ad URL and the reasoning.
 `,
-  config: { 
+  config: {
     safetySettings: [
       {
         category: 'HARM_CATEGORY_HATE_SPEECH',
@@ -82,7 +85,7 @@ const mediateAdFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    if (!output) { 
+    if (!output) {
         throw new Error('AI failed to generate ad data.');
     }
     // The z.string().url() in the schema ensures adUrl is a valid URL.
