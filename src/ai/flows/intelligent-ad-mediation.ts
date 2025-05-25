@@ -45,15 +45,19 @@ Consider the following factors:
 *   Page Visits: {{pageVisits}}
 
 Based on these inputs, select the best ad to display to the user.
-The ad URL MUST be a valid, complete, and absolute URL string (e.g., 'https://example.com/ad_target').
+
+The 'adUrl' field in your output MUST ALWAYS be a valid, complete, and absolute URL string (e.g., 'https://example.com/ad_target'). Do NOT put any other text, explanations, or error messages in the 'adUrl' field. It must solely be the URL.
+
 The ad should be suitable for display within an iframe and ideally be a banner-style ad (e.g. a static image with a link, or simple HTML content). Avoid direct links to full websites unless they are specifically designed to be embedded as an advertisement.
 
-You can also choose to display a specific high-performing banner ad from Adsterra. If you choose this, use the ad URL: 'https://syndication.adsterra.com/bn.php?ID=26645903&type=banner'. This ad is a 468x60 banner. You might consider this for users who are highly engaged, using premium features, or if other ad options seem less relevant.
+Consider if a highly targeted ad is appropriate. If you determine that a specific ad is relevant based on the user's activity, provide its URL in the 'adUrl' field.
 
-Do not return error messages or conversational text in the adUrl field.
-Explain your reasoning for choosing the ad.
+If, after considering the user's activity, you cannot identify a more specific or targeted ad, OR if the user's activity is low/neutral, you MUST default to providing the following high-performing Adsterra banner URL in the 'adUrl' field: 'https://syndication.adsterra.com/bn.php?ID=26645903&type=banner'. This is a 468x60 banner.
+
+Explain your reasoning for choosing the ad in the 'reason' field. If you defaulted to the Adsterra banner, explain that a generic high-performing ad was selected due to [briefly state why, e.g., neutral user activity, lack of a more specific match].
 
 Return the ad URL and the reasoning.
+Remember: The 'adUrl' field MUST contain only the URL.
 `,
   config: {
     safetySettings: [
