@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, onSnapshot, Timestamp, setDoc, updateDoc, collection, query, where, orderBy, getDocs, runTransaction, writeBatch, serverTimestamp, increment } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, Timestamp, setDoc, updateDoc, collection, query, where, orderBy, getDocs, runTransaction, writeBatch, serverTimestamp, increment, DocumentData } from 'firebase/firestore';
 import type { UserData, Transaction, MarqueeItem } from '@/types';
 import { useAuth } from './auth-provider';
 import { CONFIG } from '@/lib/constants';
@@ -75,6 +75,68 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const processFirestoreData = (data: DocumentData, currentAuthUser: typeof user): UserData => {
+    let processedLastTapDate: string;
+    const rawLTDate = data.lastTapDate;
+    if (rawLTDate && typeof (rawLTDate as any).toDate === 'function') {
+      processedLastTapDate = (rawLTDate as Timestamp).toDate().toDateString();
+    } else if (rawLTDate instanceof Date) {
+      processedLastTapDate = rawLTDate.toDateString();
+    } else if (typeof rawLTDate === 'string') {
+      const d = new Date(rawLTDate);
+      processedLastTapDate = !isNaN(d.getTime()) ? d.toDateString() : new Date().toDateString();
+    } else {
+      processedLastTapDate = new Date().toDateString();
+    }
+
+    let processedLastEnergyUpdate: Date | null;
+    const rawLEUpdate = data.lastEnergyUpdate;
+    if (rawLEUpdate && typeof (rawLEUpdate as any).toDate === 'function') {
+      processedLastEnergyUpdate = (rawLEUpdate as Timestamp).toDate();
+    } else if (rawLEUpdate instanceof Date) {
+      processedLastEnergyUpdate = rawLEUpdate;
+    } else {
+      processedLastEnergyUpdate = new Date(); // Fallback to now if undefined/null from Firestore
+    }
+
+    let processedLastLoginBonusClaimed: Date | null;
+    const rawLLBC = data.lastLoginBonusClaimed;
+    if (rawLLBC && typeof (rawLLBC as any).toDate === 'function') {
+      processedLastLoginBonusClaimed = (rawLLBC as Timestamp).toDate();
+    } else if (rawLLBC instanceof Date) {
+      processedLastLoginBonusClaimed = rawLLBC;
+    } else {
+      processedLastLoginBonusClaimed = null;
+    }
+    
+    let processedCreatedAt: Date | null;
+    const rawCreatedAt = data.createdAt;
+    if (rawCreatedAt && typeof (rawCreatedAt as any).toDate === 'function') {
+      processedCreatedAt = (rawCreatedAt as Timestamp).toDate();
+    } else if (rawCreatedAt instanceof Date) {
+      processedCreatedAt = rawCreatedAt;
+    } else {
+      processedCreatedAt = new Date(currentAuthUser?.joinDate || Date.now());
+    }
+
+    return {
+      balance: data.balance ?? 0,
+      tapCountToday: data.tapCountToday ?? 0,
+      currentEnergy: data.currentEnergy ?? CONFIG.INITIAL_MAX_ENERGY,
+      maxEnergy: data.maxEnergy ?? CONFIG.INITIAL_MAX_ENERGY,
+      tapPower: data.tapPower ?? CONFIG.INITIAL_TAP_POWER,
+      boostLevels: data.boostLevels ?? {},
+      referredBy: data.referredBy ?? null,
+      name: data.name ?? currentAuthUser?.name ?? 'New User',
+      email: data.email ?? currentAuthUser?.email ?? '',
+      lastTapDate: processedLastTapDate,
+      lastEnergyUpdate: processedLastEnergyUpdate,
+      lastLoginBonusClaimed: processedLastLoginBonusClaimed,
+      createdAt: processedCreatedAt,
+    };
+  };
+
+
   const fetchUserData = useCallback(async () => {
     if (!user || !firebaseUser) {
       setUserDataState(null);
@@ -87,16 +149,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const userDocSnap = await getDoc(userDocRef);
 
       if (userDocSnap.exists()) {
-        const data = userDocSnap.data() as UserData;
-        // Convert Timestamps to Dates
-        const formattedData: UserData = {
-          ...data,
-          lastTapDate: data.lastTapDate ? (data.lastTapDate as unknown as Timestamp).toDate().toDateString() : new Date().toDateString(),
-          lastEnergyUpdate: data.lastEnergyUpdate ? (data.lastEnergyUpdate as unknown as Timestamp).toDate() : new Date(),
-          lastLoginBonusClaimed: data.lastLoginBonusClaimed ? (data.lastLoginBonusClaimed as unknown as Timestamp).toDate() : null,
-          createdAt: data.createdAt ? (data.createdAt as unknown as Timestamp).toDate() : new Date(user.joinDate || Date.now()),
-        };
-        setUserDataState(formattedData);
+        const data = userDocSnap.data();
+        setUserDataState(processFirestoreData(data, user));
       } else {
         // Initialize new user data
         const now = new Date();
@@ -110,18 +164,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           lastEnergyUpdate: now,
           boostLevels: {},
           lastLoginBonusClaimed: null,
-          referredBy: null, // Handle referral logic during registration
+          referredBy: null, 
           createdAt: new Date(user.joinDate || Date.now()),
           name: user.name || 'New User',
           email: user.email || '',
         };
+        // Ensure Timestamps are used for Firestore storage
         await setDoc(userDocRef, {
           ...newUser,
-          lastTapDate: Timestamp.fromDate(new Date(newUser.lastTapDate!)),
+          lastTapDate: Timestamp.fromDate(new Date(newUser.lastTapDate!)), // Store as Timestamp
           lastEnergyUpdate: Timestamp.fromDate(newUser.lastEnergyUpdate as Date),
+          lastLoginBonusClaimed: newUser.lastLoginBonusClaimed ? Timestamp.fromDate(newUser.lastLoginBonusClaimed as Date) : null,
           createdAt: Timestamp.fromDate(newUser.createdAt as Date),
         });
-        setUserDataState(newUser);
+        setUserDataState(newUser); // Set local state with JS Dates/strings
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
@@ -135,8 +191,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     try {
       const userDocRef = doc(db, 'users', user.id);
-      // Convert Date objects back to Timestamps for Firestore
-      const firestoreReadyData = { ...dataToUpdate, updatedAt: serverTimestamp() };
+      const firestoreReadyData: Partial<DocumentData> = { ...dataToUpdate, updatedAt: serverTimestamp() };
+      
       if (dataToUpdate.lastEnergyUpdate instanceof Date) {
         firestoreReadyData.lastEnergyUpdate = Timestamp.fromDate(dataToUpdate.lastEnergyUpdate);
       }
@@ -144,8 +200,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         firestoreReadyData.lastLoginBonusClaimed = Timestamp.fromDate(dataToUpdate.lastLoginBonusClaimed);
       }
        if (dataToUpdate.lastTapDate && typeof dataToUpdate.lastTapDate === 'string') {
-        firestoreReadyData.lastTapDate = Timestamp.fromDate(new Date(dataToUpdate.lastTapDate));
+        // Ensure we are storing a Timestamp if lastTapDate is provided as a string for update
+        const dateObj = new Date(dataToUpdate.lastTapDate);
+        if (!isNaN(dateObj.getTime())) {
+            firestoreReadyData.lastTapDate = Timestamp.fromDate(dateObj);
+        } else {
+            // Handle invalid date string if necessary, or remove from update
+            delete firestoreReadyData.lastTapDate; 
+        }
       }
+      // Note: createdAt should generally not be updated after initial creation.
 
       await updateDoc(userDocRef, firestoreReadyData);
     } catch (error) {
@@ -162,10 +226,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         ...transactionData,
         id: newTransactionRef.id,
         userId: user.id,
-        date: serverTimestamp() as Timestamp, // Firestore will set this
+        date: serverTimestamp() as Timestamp, 
       };
       await setDoc(newTransactionRef, newTransaction);
-      setTransactions(prev => [{...newTransaction, date: new Date()}, ...prev]); // Optimistic update
+      // Optimistic update with a client-side Date object for immediate display
+      setTransactions(prev => [{...newTransaction, date: new Date()} as Transaction, ...prev]);
       toast({ title: "Success", description: `${transactionData.type} recorded.`, variant: "default" });
     } catch (error) {
       console.error("Error adding transaction:", error);
@@ -182,11 +247,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     try {
       const q = query(collection(db, 'transactions'), where('userId', '==', user.id), orderBy('date', 'desc'));
       const querySnapshot = await getDocs(q);
-      const userTransactions = querySnapshot.docs.map(docSnap => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-        date: (docSnap.data().date as Timestamp).toDate(),
-      })) as Transaction[];
+      const userTransactions = querySnapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          ...data,
+          date: (data.date as Timestamp).toDate(), // Convert Timestamp to Date
+        } as Transaction;
+      });
       setTransactions(userTransactions);
     } catch (error) {
       console.error("Error fetching transactions:", error);
@@ -198,29 +266,25 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     if (user && !authLoading) {
       fetchUserData();
       fetchTransactions();
-      fetchMarqueeItems(); // Fetch marquee items when user logs in
-      // Set up real-time listener for user data
+      fetchMarqueeItems(); 
       const userDocRef = doc(db, 'users', user.id);
       const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
         if (docSnap.exists()) {
-          const data = docSnap.data() as UserData;
-          setUserDataState({
-            ...data,
-            lastTapDate: data.lastTapDate ? (data.lastTapDate as unknown as Timestamp).toDate().toDateString() : new Date().toDateString(),
-            lastEnergyUpdate: data.lastEnergyUpdate ? (data.lastEnergyUpdate as unknown as Timestamp).toDate() : new Date(),
-            lastLoginBonusClaimed: data.lastLoginBonusClaimed ? (data.lastLoginBonusClaimed as unknown as Timestamp).toDate() : null,
-            createdAt: data.createdAt ? (data.createdAt as unknown as Timestamp).toDate() : new Date(user.joinDate || Date.now()),
-          });
+          const data = docSnap.data();
+          setUserDataState(processFirestoreData(data, user));
         }
       });
-      // Set up real-time listener for transactions
-      const q = query(collection(db, 'transactions'), where('userId', '==', user.id), orderBy('date', 'desc'));
-      const unsubscribeTransactions = onSnapshot(q, (querySnapshot) => {
-         const userTransactions = querySnapshot.docs.map(docSnap => ({
-            id: docSnap.id,
-            ...docSnap.data(),
-            date: (docSnap.data().date as Timestamp).toDate(),
-         })) as Transaction[];
+      
+      const qTransactions = query(collection(db, 'transactions'), where('userId', '==', user.id), orderBy('date', 'desc'));
+      const unsubscribeTransactions = onSnapshot(qTransactions, (querySnapshot) => {
+         const userTransactions = querySnapshot.docs.map(docSnap => {
+            const data = docSnap.data();
+            return {
+                id: docSnap.id,
+                ...data,
+                date: (data.date as Timestamp).toDate(), // Convert Timestamp to Date
+            } as Transaction;
+         });
          setTransactions(userTransactions);
       }, (error) => {
         console.error("Error in transaction snapshot listener:", error);
@@ -284,7 +348,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           updates.tapPower = increment(booster.value);
         } else if (booster.effect_type === 'max_energy') {
           updates.maxEnergy = increment(booster.value);
-          updates.currentEnergy = increment(booster.value); // Also increase current energy
+          updates.currentEnergy = increment(booster.value); 
         }
         transaction.update(userRef, updates);
       });
@@ -296,7 +360,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         details: `${booster.name} Lvl ${currentLevel + 1}`,
       });
       toast({ title: "Success", description: `${booster.name} upgraded!`, variant: "default" });
-      // User data will update via snapshot listener
     } catch (error: any) {
       console.error("Error purchasing booster:", error);
       toast({ title: "Error", description: error.message || "Failed to purchase booster.", variant: "destructive" });
@@ -325,7 +388,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         status: 'completed',
       });
       toast({ title: "Bonus Claimed!", description: `You received ${CONFIG.DAILY_LOGIN_BONUS} ${CONFIG.COIN_SYMBOL}.`, variant: "default" });
-      // User data will update via snapshot listener
     } catch (error) {
       console.error("Error claiming daily bonus:", error);
       toast({ title: "Error", description: "Failed to claim daily bonus.", variant: "destructive" });
@@ -365,7 +427,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         inrAmount: amount * CONFIG.CONVERSION_RATE,
       });
       toast({ title: "Request Submitted", description: "Your redeem request has been submitted.", variant: "default" });
-      // User data updates via snapshot
     } catch (error: any) {
       console.error("Error submitting redeem request:", error);
       toast({ title: "Error", description: error.message || "Failed to submit redeem request.", variant: "destructive" });
@@ -377,21 +438,26 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     try {
       const userDocRef = doc(db, 'users', user.id);
       const now = new Date();
-      const defaultUserDataForReset: UserData = {
-        balance: 0, tapCountToday: 0, lastTapDate: now.toDateString(), currentEnergy: CONFIG.INITIAL_MAX_ENERGY,
+      // Use the processFirestoreData to get a UserData structure with JS Dates
+      const defaultRawData: DocumentData = {
+        balance: 0, tapCountToday: 0, lastTapDate: now.toDateString(), // Keep as string for initial object
+        currentEnergy: CONFIG.INITIAL_MAX_ENERGY,
         maxEnergy: CONFIG.INITIAL_MAX_ENERGY, tapPower: CONFIG.INITIAL_TAP_POWER,
-        lastEnergyUpdate: now, boostLevels: {}, lastLoginBonusClaimed: null,
-        createdAt: userData?.createdAt || now, // Keep original creation date if available
-        referredBy: userData?.referredBy || null, // Keep original referral
+        lastEnergyUpdate: now, // JS Date
+        boostLevels: {}, lastLoginBonusClaimed: null,
+        createdAt: userData?.createdAt || now, // JS Date, keep original if available
+        referredBy: userData?.referredBy || null,
         name: userData?.name || user.name || 'User',
         email: userData?.email || user.email || '',
       };
       
+      // Convert to Firestore Timestamps for saving
       await setDoc(userDocRef, {
-        ...defaultUserDataForReset,
-        lastTapDate: Timestamp.fromDate(new Date(defaultUserDataForReset.lastTapDate!)),
-        lastEnergyUpdate: Timestamp.fromDate(defaultUserDataForReset.lastEnergyUpdate as Date),
-        createdAt: Timestamp.fromDate(defaultUserDataForReset.createdAt as Date),
+        ...defaultRawData, // Spread all, then override dates for Firestore
+        lastTapDate: Timestamp.fromDate(new Date(defaultRawData.lastTapDate!)),
+        lastEnergyUpdate: Timestamp.fromDate(defaultRawData.lastEnergyUpdate as Date),
+        lastLoginBonusClaimed: defaultRawData.lastLoginBonusClaimed ? Timestamp.fromDate(defaultRawData.lastLoginBonusClaimed as Date) : null,
+        createdAt: Timestamp.fromDate(defaultRawData.createdAt as Date),
         updatedAt: serverTimestamp()
       });
 
@@ -401,9 +467,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       transactionsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
       await batch.commit();
       
-      setTransactions([]); // Clear local transactions state
+      setTransactions([]);
       toast({ title: "Progress Reset", description: "Your account progress has been reset.", variant: "default" });
-      // User data will update via snapshot
     } catch (error) {
       console.error("Error resetting progress:", error);
       toast({ title: "Error", description: "Failed to reset progress.", variant: "destructive" });

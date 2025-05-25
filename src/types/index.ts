@@ -10,15 +10,15 @@ export interface UserProfile {
 export interface UserData {
   balance: number;
   tapCountToday: number;
-  lastTapDate: string | null; // Store as ISO string or Date string
+  lastTapDate: string | null; // Stored as Date string 'YYYY-MM-DD' or full Date().toDateString() in local state
   currentEnergy: number;
   maxEnergy: number;
   tapPower: number;
-  lastEnergyUpdate: Date | Timestamp | null;
+  lastEnergyUpdate: Date | null; // In local state, this is a JS Date object or null
   boostLevels: Record<string, number>; // e.g., { 'tap_power_1': 2, 'max_energy_1': 1 }
-  lastLoginBonusClaimed: Date | Timestamp | null;
+  lastLoginBonusClaimed: Date | null; // In local state, this is a JS Date object or null
   referredBy: string | null;
-  createdAt: Date | Timestamp | null;
+  createdAt: Date | null; // In local state, this is a JS Date object or null
   name?: string; // From auth profile
   email?: string; // From auth profile
 }
@@ -48,7 +48,7 @@ export interface Transaction {
   paymentMethod?: PaymentMethod | string;
   paymentDetails?: PaymentDetails;
   status: 'pending' | 'completed' | 'failed';
-  date: Date | Timestamp;
+  date: Date | Timestamp; // Can be Timestamp when read from Firestore, converted to Date for state
   details?: string; // For booster name or other info
 }
 
