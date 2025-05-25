@@ -224,8 +224,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
          setTransactions(userTransactions);
       }, (error) => {
         console.error("Error in transaction snapshot listener:", error);
-        // The error message you provided originates from here or a similar listener.
-        // Remind user to check Firestore indexes.
         toast({ title: "Database Error", description: "Could not listen for transaction updates. Check Firestore indexes if this persists.", variant: "destructive", duration: 10000 });
       });
 
