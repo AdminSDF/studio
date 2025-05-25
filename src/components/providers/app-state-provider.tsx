@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
@@ -179,7 +180,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       return;
     }
     try {
-      const q = query(collection(db, 'transactions'), where('userId', '==', user.id), orderBy('date', 'desc'),_orderByPlaceholder);
+      const q = query(collection(db, 'transactions'), where('userId', '==', user.id), orderBy('date', 'desc'));
       const querySnapshot = await getDocs(q);
       const userTransactions = querySnapshot.docs.map(docSnap => ({
         id: docSnap.id,
@@ -192,7 +193,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
-  const _orderByPlaceholder = orderBy('date', 'desc'); // Keep consistent query
 
   useEffect(() => {
     if (user && !authLoading) {
@@ -214,7 +214,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         }
       });
       // Set up real-time listener for transactions
-      const q = query(collection(db, 'transactions'), where('userId', '==', user.id), _orderByPlaceholder);
+      const q = query(collection(db, 'transactions'), where('userId', '==', user.id), orderBy('date', 'desc'));
       const unsubscribeTransactions = onSnapshot(q, (querySnapshot) => {
          const userTransactions = querySnapshot.docs.map(docSnap => ({
             id: docSnap.id,
@@ -222,6 +222,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             date: (docSnap.data().date as Timestamp).toDate(),
          })) as Transaction[];
          setTransactions(userTransactions);
+      }, (error) => {
+        console.error("Error in transaction snapshot listener:", error);
+        // The error message you provided originates from here or a similar listener.
+        // Remind user to check Firestore indexes.
+        toast({ title: "Database Error", description: "Could not listen for transaction updates. Check Firestore indexes if this persists.", variant: "destructive", duration: 10000 });
       });
 
       return () => {
@@ -234,7 +239,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setTransactions([]);
       setLoadingUserData(false);
     }
-  }, [user, authLoading, fetchUserData, fetchTransactions, fetchMarqueeItems]);
+  }, [user, authLoading, fetchUserData, fetchTransactions, fetchMarqueeItems, toast]);
 
   const updateEnergy = useCallback((newEnergy: number, lastUpdate: Date) => {
     setUserDataState(prev => prev ? { ...prev, currentEnergy: newEnergy, lastEnergyUpdate: lastUpdate } : null);
@@ -439,3 +444,4 @@ export function useAppState() {
   }
   return context;
 }
+
