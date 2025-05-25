@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, onSnapshot, Timestamp, setDoc, updateDoc, collection, query, where, orderBy, getDocs, runTransaction, writeBatch, serverTimestamp, increment, DocumentData } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, Timestamp, setDoc, updateDoc, collection, query, where, orderBy, getDocs, runTransaction, writeBatch, serverTimestamp, increment, DocumentData, FirestoreError } from 'firebase/firestore';
 import type { UserData, Transaction, MarqueeItem } from '@/types';
 import { useAuth } from './auth-provider';
 import { CONFIG } from '@/lib/constants';
@@ -78,25 +78,25 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const processFirestoreData = (data: DocumentData, currentAuthUser: typeof user): UserData => {
     let processedLastTapDate: string;
     const rawLTDate = data.lastTapDate;
-    if (rawLTDate && typeof (rawLTDate as any).toDate === 'function') {
+    if (rawLTDate && typeof (rawLTDate as any).toDate === 'function') { // Is Firestore Timestamp
       processedLastTapDate = (rawLTDate as Timestamp).toDate().toDateString();
-    } else if (rawLTDate instanceof Date) {
+    } else if (rawLTDate instanceof Date) { // Is JS Date
       processedLastTapDate = rawLTDate.toDateString();
-    } else if (typeof rawLTDate === 'string') {
+    } else if (typeof rawLTDate === 'string') { // Is String
       const d = new Date(rawLTDate);
-      processedLastTapDate = !isNaN(d.getTime()) ? d.toDateString() : new Date().toDateString();
-    } else {
+      processedLastTapDate = !isNaN(d.getTime()) ? d.toDateString() : new Date().toDateString(); // Fallback
+    } else { // Fallback for null, undefined, or other types
       processedLastTapDate = new Date().toDateString();
     }
 
-    let processedLastEnergyUpdate: Date | null;
+    let processedLastEnergyUpdate: Date;
     const rawLEUpdate = data.lastEnergyUpdate;
     if (rawLEUpdate && typeof (rawLEUpdate as any).toDate === 'function') {
       processedLastEnergyUpdate = (rawLEUpdate as Timestamp).toDate();
     } else if (rawLEUpdate instanceof Date) {
       processedLastEnergyUpdate = rawLEUpdate;
     } else {
-      processedLastEnergyUpdate = new Date(); // Fallback to now if undefined/null from Firestore
+      processedLastEnergyUpdate = new Date(); 
     }
 
     let processedLastLoginBonusClaimed: Date | null;
@@ -109,7 +109,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       processedLastLoginBonusClaimed = null;
     }
     
-    let processedCreatedAt: Date | null;
+    let processedCreatedAt: Date;
     const rawCreatedAt = data.createdAt;
     if (rawCreatedAt && typeof (rawCreatedAt as any).toDate === 'function') {
       processedCreatedAt = (rawCreatedAt as Timestamp).toDate();
@@ -129,10 +129,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       referredBy: data.referredBy ?? null,
       name: data.name ?? currentAuthUser?.name ?? 'New User',
       email: data.email ?? currentAuthUser?.email ?? '',
-      lastTapDate: processedLastTapDate,
-      lastEnergyUpdate: processedLastEnergyUpdate,
-      lastLoginBonusClaimed: processedLastLoginBonusClaimed,
-      createdAt: processedCreatedAt,
+      lastTapDate: processedLastTapDate, // Now a string
+      lastEnergyUpdate: processedLastEnergyUpdate, // Now a Date
+      lastLoginBonusClaimed: processedLastLoginBonusClaimed, // Now a Date or null
+      createdAt: processedCreatedAt, // Now a Date
     };
   };
 
@@ -258,6 +258,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setTransactions(userTransactions);
     } catch (error) {
       console.error("Error fetching transactions:", error);
+      // It's possible this initial fetch also fails due to missing index.
+      // The snapshot listener below will show a toast.
     }
   }, [user]);
 
@@ -286,9 +288,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             } as Transaction;
          });
          setTransactions(userTransactions);
-      }, (error) => {
+      }, (error: FirestoreError) => { // Explicitly type error as FirestoreError
         console.error("Error in transaction snapshot listener:", error);
-        toast({ title: "Database Error", description: "Could not listen for transaction updates. Check Firestore indexes if this persists.", variant: "destructive", duration: 10000 });
+        let description = "Could not listen for transaction updates. Please try again later.";
+        if (error.code === 'failed-precondition') {
+          description = "Could not load transactions. A required database index is missing. Please check your Firebase Firestore indexes for the 'transactions' collection (userId asc, date desc).";
+        }
+        toast({ title: "Database Error", description, variant: "destructive", duration: 5000 }); // Reduced duration
       });
 
       return () => {
