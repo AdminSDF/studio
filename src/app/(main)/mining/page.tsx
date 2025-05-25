@@ -7,10 +7,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Progress } from '@/components/ui/progress';
 import { CONFIG } from '@/lib/constants';
 import { formatNumber } from '@/lib/utils';
-import { Zap, DollarSign, Target, Info, AlertTriangle } from 'lucide-react';
+import { Zap, DollarSign, Target, Info, AlertTriangle, Wallet } from 'lucide-react'; // Added Wallet
 import { useToast } from '@/hooks/use-toast';
 import { AdContainer } from '@/components/shared/ad-container';
 import Image from 'next/image';
+import { Skeleton } from '@/components/ui/skeleton'; // Added Skeleton import
 
 // Helper to show floating tap value
 function showFloatingTapValue(amount: number, coinElementId: string) {
