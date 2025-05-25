@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An intelligent ad mediation AI agent.
@@ -20,7 +21,7 @@ const MediateAdInputSchema = z.object({
 export type MediateAdInput = z.infer<typeof MediateAdInputSchema>;
 
 const MediateAdOutputSchema = z.object({
-  adUrl: z.string().describe('The URL of the ad to display.'),
+  adUrl: z.string().url({ message: "Ad URL must be a valid URL." }).describe('The URL of the ad to display. This must be a complete and valid URL string (e.g., https://example.com/ad_target).'),
   reason: z.string().describe('The reason for displaying this ad.'),
 });
 export type MediateAdOutput = z.infer<typeof MediateAdOutputSchema>;
@@ -43,10 +44,30 @@ Consider the following factors:
 *   Booster Usage: {{boosterUsage}}
 *   Page Visits: {{pageVisits}}
 
-Based on these inputs, select the best ad to display to the user. The ad URL MUST be a URL string. Explain your reasoning for choosing the ad.
+Based on these inputs, select the best ad to display to the user. The ad URL MUST be a valid, complete, and absolute URL string (e.g., 'https://example.com/ad_target'). Do not return error messages or conversational text in the adUrl field. Explain your reasoning for choosing the ad.
 
 Return the ad URL and the reasoning.
 `,
+  config: { 
+    safetySettings: [
+      {
+        category: 'HARM_CATEGORY_HATE_SPEECH',
+        threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+      },
+      {
+        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+        threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+      },
+      {
+        category: 'HARM_CATEGORY_HARASSMENT',
+        threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+      },
+      {
+        category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+        threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+      },
+    ],
+  },
 });
 
 const mediateAdFlow = ai.defineFlow(
@@ -57,6 +78,12 @@ const mediateAdFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    return output!;
+    if (!output) { 
+        throw new Error('AI failed to generate ad data.');
+    }
+    // The z.string().url() in the schema ensures adUrl is a valid URL.
+    // If the model returns something that's not a URL, the prompt() call itself will throw an error due to Zod validation.
+    return output;
   }
 );
+
