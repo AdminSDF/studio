@@ -44,7 +44,11 @@ Consider the following factors:
 *   Booster Usage: {{boosterUsage}}
 *   Page Visits: {{pageVisits}}
 
-Based on these inputs, select the best ad to display to the user. The ad URL MUST be a valid, complete, and absolute URL string (e.g., 'https://example.com/ad_target'). Do not return error messages or conversational text in the adUrl field. Explain your reasoning for choosing the ad.
+Based on these inputs, select the best ad to display to the user. 
+The ad URL MUST be a valid, complete, and absolute URL string (e.g., 'https://example.com/ad_target'). 
+The ad should be suitable for display within an iframe and ideally be a banner-style ad (e.g. a static image with a link, or simple HTML content). Avoid direct links to full websites unless they are specifically designed to be embedded as an advertisement.
+Do not return error messages or conversational text in the adUrl field. 
+Explain your reasoning for choosing the ad.
 
 Return the ad URL and the reasoning.
 `,
