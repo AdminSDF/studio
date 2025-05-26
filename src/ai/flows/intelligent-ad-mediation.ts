@@ -21,7 +21,7 @@ const MediateAdInputSchema = z.object({
 export type MediateAdInput = z.infer<typeof MediateAdInputSchema>;
 
 const MediateAdOutputSchema = z.object({
-  adType: z.enum(['url', 'adsense']).describe("The type of ad content to render. Use 'url' for direct ad links, or 'adsense' for Google AdSense units."),
+  adType: z.enum(['url', 'adsense', 'adsterra_script']).describe("The type of ad content to render. Use 'url' for direct ad links, 'adsense' for Google AdSense units, or 'adsterra_script' for a specific Adsterra JS-based ad unit (728x90)."),
   adUrl: z.string().url({ message: "Ad URL must be a valid URL." }).optional().describe("The URL of the ad to display if adType is 'url'. This must be a complete and valid URL string (e.g., https://example.com/ad_target)."),
   adClient: z.string().optional().describe("The AdSense client ID (e.g., ca-pub-XXXXXXXXXXXXXXXX) if adType is 'adsense'."),
   adSlot: z.string().optional().describe("The AdSense ad slot ID (e.g., YYYYYYYYYY) if adType is 'adsense'."),
@@ -42,7 +42,7 @@ const MediateAdOutputSchema = z.object({
 }, {
   message: "adClient and adSlot are required when adType is 'adsense'",
   path: ["adClient", "adSlot"],
-});
+}); // adsterra_script type does not require additional fields from AI.
 
 export type MediateAdOutput = z.infer<typeof MediateAdOutputSchema>;
 
@@ -65,19 +65,21 @@ Consider the following factors:
 
 Based on these inputs, select the best ad to display to the user.
 
-You have two types of ads you can choose:
-1.  **URL Ad**: Display an ad from a direct URL. For this, set \`adType: "url"\` and provide a valid, complete, and absolute URL string in the \`adUrl\` field (e.g., 'https://example.com/ad_target'). The ad should be suitable for display within an iframe and ideally be a banner-style ad. Avoid direct links to full websites unless they are specifically designed to be embedded.
-2.  **Google AdSense Ad**: Display a Google AdSense unit. For this, set \`adType: "adsense"\`, \`adClient: "ca-pub-9690805652184611"\`, and \`adSlot: "9271312880"\`. Do NOT provide an \`adUrl\` if you choose AdSense.
+You have three types of ads you can choose:
+1.  **URL Ad**: Display an ad from a direct URL. For this, set \`adType: "url"\` and provide a valid, complete, and absolute URL string in the \`adUrl\` field (e.g., 'https://example.com/ad_target'). The ad should be suitable for display within an iframe and ideally be a banner-style ad (e.g., 468x60). Avoid direct links to full websites unless they are specifically designed to be embedded.
+2.  **Google AdSense Ad**: Display a Google AdSense unit. For this, set \`adType: "adsense"\`, \`adClient: "ca-pub-9690805652184611"\`, and \`adSlot: "9271312880"\`. Do NOT provide an \`adUrl\` if you choose AdSense. This is a standard AdSense banner.
+3.  **Adsterra Script Ad**: Display an Adsterra ad using its JavaScript integration. For this, set \`adType: "adsterra_script"\`. No other ad-specific fields like \`adUrl\`, \`adClient\`, or \`adSlot\` are needed. This particular Adsterra unit will render a 728x90 banner.
 
-If, after considering the user's activity, you cannot identify a specific or targeted ad (either URL or AdSense), OR if the user's activity is low/neutral, you MUST default to providing the following high-performing Adsterra banner:
+If, after considering the user's activity, you cannot identify a specific or targeted ad (URL, AdSense, or Adsterra Script), OR if the user's activity is low/neutral, you MUST default to providing the following high-performing Adsterra URL banner:
 Set \`adType: "url"\` and \`adUrl: "https://syndication.adsterra.com/bn.php?ID=26645903&type=banner"\`. This is a 468x60 banner.
 
-Explain your reasoning for choosing the ad in the 'reason' field. If you defaulted to the Adsterra banner, explain that a generic high-performing ad was selected due to [briefly state why, e.g., neutral user activity, lack of a more specific match].
+Explain your reasoning for choosing the ad in the 'reason' field. If you defaulted to the 468x60 Adsterra URL banner, explain that a generic high-performing ad was selected due to [briefly state why, e.g., neutral user activity, lack of a more specific match].
 
-Return the ad type, necessary fields (adUrl for 'url' type; adClient and adSlot for 'adsense' type), and the reasoning.
+Return the ad type, necessary fields (adUrl for 'url' type; adClient and adSlot for 'adsense' type; no specific fields for 'adsterra_script' beyond adType itself), and the reasoning.
 Remember:
 - If \`adType: "url"\`, the 'adUrl' field MUST contain only the URL.
 - If \`adType: "adsense"\`, 'adClient' and 'adSlot' MUST be provided and 'adUrl' should be omitted or null.
+- If \`adType: "adsterra_script"\`, no other ad-specific fields are needed from you.
 `,
   config: {
     safetySettings: [
@@ -98,15 +100,14 @@ const mediateAdFlow = ai.defineFlow(
   async input => {
     const {output} = await prompt(input);
     if (!output) {
-        // Fallback to Adsterra if AI fails to generate any valid output
+        // Fallback to Adsterra URL banner if AI fails to generate any valid output
         return {
             adType: 'url',
-            adUrl: 'https://syndication.adsterra.com/bn.php?ID=26645903&type=banner',
-            reason: 'AI failed to generate ad data, defaulting to high-performing banner.',
+            adUrl: 'https://syndication.adsterra.com/bn.php?ID=26645903&type=banner', // 468x60 banner
+            reason: 'AI failed to generate ad data, defaulting to high-performing URL banner.',
         };
     }
-    // Zod schema validation (including .refine) will handle ensuring the output is correct.
-    // If adType is 'url', adUrl must be present. If 'adsense', adClient and adSlot must be present.
+    // Zod schema validation (including .refine/.superRefine) will handle ensuring the output is correct.
     return output;
   }
 );

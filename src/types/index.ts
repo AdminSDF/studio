@@ -1,3 +1,4 @@
+
 import type { Timestamp } from 'firebase/firestore';
 
 export interface UserProfile {
@@ -57,9 +58,10 @@ export interface MarqueeItem {
 }
 
 export interface AdContent {
-  adType: 'url' | 'adsense';
+  adType: 'url' | 'adsense' | 'adsterra_script';
   adUrl?: string; // Required if adType is 'url'
   adClient?: string; // Required if adType is 'adsense'
   adSlot?: string; // Required if adType is 'adsense'
+  // No specific fields for adsterra_script needed from AI; component handles details
   reason: string;
 }
