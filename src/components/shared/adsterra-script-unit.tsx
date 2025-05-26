@@ -41,7 +41,7 @@ export const AdsterraScriptUnit: React.FC = () => {
       // The width is set to 100% to attempt to fit its parent.
       // However, the Adsterra script itself configures a 728px wide ad.
       // In an app with max-width 500px, this ad WILL OVERFLOW.
-      // Consider using a responsive Adsterra ad unit or adjusting app layout.
+      // The overflow: 'hidden' style attempts to mitigate visual breaks by clipping the ad.
       style={{ width: '100%', height: `${ADSTERRA_HEIGHT}px`, overflow: 'hidden' }}
       data-ai-hint="advertisement banner script adsterra"
     >
@@ -60,3 +60,4 @@ export const AdsterraScriptUnit: React.FC = () => {
     </div>
   );
 };
+

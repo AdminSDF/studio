@@ -24,8 +24,7 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
 
   useEffect(() => {
     async function fetchAd() {
-      if (!userData) return; // Only fetch if userData is available
-      // Removed !trigger condition here, fetchAd is now only called when trigger is true from parent.
+      if (!userData) return; 
 
       setIsLoading(true);
       setError(null);
@@ -62,23 +61,20 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
       }
     }
 
-    if (trigger) { // Only fetch/process ad if trigger is explicitly true
+    if (trigger) { 
         fetchAd();
     } else {
-        // If trigger is false, reset ad state to ensure no stale ad is shown.
-        // This helps when parent component wants to explicitly hide/reset the ad.
         setAd(null);
         setError(null);
         setIsLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userData, pageContext, trigger, pageHistory]);
+  }, [userData, pageContext, trigger, pageHistory]); // Removed addPageVisit from dependencies as it's stable
 
   if (isLoading) {
     return (
       <Card className="w-full my-4 mx-auto text-center bg-muted/50 p-2 border-dashed">
         <CardContent className="p-2">
-          {/* Adjust skeleton height to better match potential ad heights */}
           <Skeleton className="h-[90px] w-full rounded-md" />
           <Skeleton className="h-4 w-1/2 mx-auto mt-2 rounded-md" />
         </CardContent>
@@ -101,8 +97,6 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
     return null; 
   }
 
-  // The outer Card provides consistent framing.
-  // Specific ad components will render inside CardContent.
   return (
     <Card className="w-full my-4 mx-auto text-center bg-card p-0 overflow-hidden shadow-md">
       <CardContent className="p-0 flex justify-center items-center">
@@ -110,10 +104,8 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
           <AdSenseUnit
             adClient={ad.adClient}
             adSlot={ad.adSlot}
-            // AdSense banners are often responsive or have fixed sizes managed by Google's script.
-            // Style for a typical banner, ensuring it's block for layout.
             style={{ display: 'block', margin: 'auto' }}
-            className="max-w-full" // Ensure AdSense unit doesn't overflow its container visually
+            className="max-w-full" 
           />
         ) : ad.adType === 'url' && ad.adUrl ? (
           <iframe
@@ -121,23 +113,20 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
             frameBorder="0"
             scrolling="no"
             allowFullScreen={true}
-            // The iframe width is 100% of CardContent. Height is adaptive.
             className="w-full h-[60px] sm:h-[90px] md:h-[100px]"
             title="Advertisement"
             data-ai-hint="advertisement banner"
           ></iframe>
         ) : ad.adType === 'adsterra_script' ? (
-          // AdsterraScriptUnit manages its own content and sizing based on Adsterra's script.
-          // The Adsterra script for 728x90 will likely overflow in a <500px container.
-          // The styling in AdsterraScriptUnit (width: 100%, overflow:hidden) attempts to mitigate visual breaks.
           <AdsterraScriptUnit />
         ) : (
            <div className="p-4 text-sm text-muted-foreground">Invalid ad configuration received.</div>
         )}
       </CardContent>
       {/* Optional: Display reason from AI for debugging/transparency 
-      <p className="text-xs text-muted-foreground p-1 bg-muted/20">{ad.reason}</p> 
+      {ad.reason && <p className="text-xs text-muted-foreground p-1 bg-muted/20">{ad.reason}</p>}
       */}
     </Card>
   );
 }
+

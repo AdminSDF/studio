@@ -65,3 +65,4 @@ export interface AdContent {
   // No specific fields for adsterra_script needed from AI; component handles details
   reason: string;
 }
+
