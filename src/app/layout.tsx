@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/components/providers/auth-provider';
 import { AppStateProvider } from '@/components/providers/app-state-provider';
 import { cn } from '@/lib/utils';
+import Script from 'next/script';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -24,6 +25,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9690805652184611"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
+      </head>
       <body className={cn(poppins.variable, 'font-sans antialiased flex flex-col min-h-screen')}>
         <AuthProvider>
           <AppStateProvider>

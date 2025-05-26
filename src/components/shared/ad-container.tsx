@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -7,10 +8,11 @@ import type { AdContent } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
+import { AdSenseUnit } from './adsense-unit'; // Import the new AdSense component
 
 interface AdContainerProps {
-  pageContext: string; // e.g., "mining", "profile" to help tailor ad request if needed
-  trigger: boolean; // Prop to trigger ad fetch
+  pageContext: string;
+  trigger: boolean;
 }
 
 export function AdContainer({ pageContext, trigger }: AdContainerProps) {
@@ -27,9 +29,7 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
       setError(null);
       setAd(null);
 
-      // Gather inputs for the AI flow
-      const tappingFrequency = userData.tapCountToday; // Simple metric for now
-      
+      const tappingFrequency = userData.tapCountToday;
       let boosterUsageDescription = "No boosters active.";
       const activeBoosters = Object.entries(userData.boostLevels || {})
         .filter(([, level]) => level > 0)
@@ -38,7 +38,6 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
       if (activeBoosters) {
         boosterUsageDescription = `Active boosters: ${activeBoosters}`;
       }
-      
       const pageVisitsHistory = pageHistory.join(' -> ') || "No page visits recorded yet.";
 
       try {
@@ -61,14 +60,24 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
       }
     }
 
-    fetchAd();
-  }, [userData, pageContext, trigger, pageHistory]);
+    // Only fetch ad if trigger is true.
+    // The trigger is toggled by parent components to refresh the ad.
+    if (trigger) {
+        fetchAd();
+    } else {
+        // If trigger is false (e.g. on initial load where parent hasn't set it high),
+        // we might not want to fetch immediately, or reset existing ad.
+        // For now, let's clear any existing ad if trigger goes low.
+        setAd(null); 
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData, pageContext, trigger, pageHistory]); // Removed fetchAd from deps to avoid re-triggering on its own change
 
   if (isLoading) {
     return (
       <Card className="w-full my-4 mx-auto text-center bg-muted/50 p-2 border-dashed">
         <CardContent className="p-2">
-          <Skeleton className="h-[50px] w-full rounded-md" />
+          <Skeleton className="h-[60px] w-full rounded-md" />
           <Skeleton className="h-4 w-1/2 mx-auto mt-2 rounded-md" />
         </CardContent>
       </Card>
@@ -87,24 +96,36 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
   }
 
   if (!ad) {
-    return null; // No ad to display or not triggered
+    return null; 
   }
 
   return (
     <Card className="w-full my-4 mx-auto text-center bg-card p-0 overflow-hidden shadow-md">
       <CardContent className="p-0">
-        <iframe
-          src={ad.adUrl}
-          frameBorder="0"
-          scrolling="no"
-          allowFullScreen={true}
-          className="w-full h-[60px] sm:h-[90px] md:h-[100px]" // Standard ad slot sizes
-          title="Advertisement"
-          data-ai-hint="advertisement banner"
-        ></iframe>
-        {/* Optionally display reason for debugging or specific UI: 
-           <p className="text-xs text-muted-foreground p-1">{ad.reason}</p> 
-        */}
+        {ad.adType === 'adsense' && ad.adClient && ad.adSlot ? (
+          <AdSenseUnit
+            adClient={ad.adClient}
+            adSlot={ad.adSlot}
+            // You might want to adjust style/className for AdSense banners
+            // For a 468x60 banner, the AdSenseUnit default style `display:block` should work.
+            // If different AdSense sizes are mediated, this might need to be dynamic.
+            style={{ display: 'block', width: '100%', height: '60px', margin: 'auto' }}
+            className="flex justify-center items-center" // Added for centering if needed
+          />
+        ) : ad.adType === 'url' && ad.adUrl ? (
+          <iframe
+            src={ad.adUrl}
+            frameBorder="0"
+            scrolling="no"
+            allowFullScreen={true}
+            className="w-full h-[60px] sm:h-[90px] md:h-[100px]"
+            title="Advertisement"
+            data-ai-hint="advertisement banner"
+          ></iframe>
+        ) : (
+           <div className="p-4 text-sm text-muted-foreground">Invalid ad configuration received.</div>
+        )}
+        {/* Optional: <p className="text-xs text-muted-foreground p-1">{ad.reason}</p> */}
       </CardContent>
     </Card>
   );

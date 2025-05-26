@@ -57,6 +57,9 @@ export interface MarqueeItem {
 }
 
 export interface AdContent {
-  adUrl: string;
+  adType: 'url' | 'adsense';
+  adUrl?: string; // Required if adType is 'url'
+  adClient?: string; // Required if adType is 'adsense'
+  adSlot?: string; // Required if adType is 'adsense'
   reason: string;
 }
