@@ -1,3 +1,4 @@
+
 "use client"
 
 // Inspired by react-hot-toast library
@@ -182,12 +183,15 @@ function useToast() {
         listeners.splice(index, 1)
       }
     }
-  }, [state])
+  }, []) // Changed dependency array to []
 
   return {
     ...state,
-    toast,
-    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+    toast, // This is the stable, top-level 'toast' function
+    dismiss: React.useCallback( // Memoize dismiss function
+      (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+      []
+    ),
   }
 }
 

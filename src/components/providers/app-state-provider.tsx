@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, onSnapshot, Timestamp, setDoc, updateDoc, collection, query, where, orderBy, getDocs, runTransaction, writeBatch, serverTimestamp, increment, DocumentData, FirestoreError, limit, collectionGroup } from 'firebase/firestore';
-import type { UserData, Transaction, MarqueeItem, LeaderboardEntry, Achievement, AppTheme } from '@/types';
+import type { UserData, Transaction, MarqueeItem, LeaderboardEntry, Achievement, AppTheme, UserProfile } from '@/types';
 import { useAuth } from './auth-provider';
 import { CONFIG } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
@@ -17,8 +17,8 @@ interface AppStateContextType {
   achievements: Achievement[];
   loadingUserData: boolean;
   loadingLeaderboard: boolean;
-  loadingAchievements: boolean; 
-  setUserDataState: (data: UserData | null) => void; 
+  loadingAchievements: boolean;
+  setUserDataState: (data: UserData | null) => void;
   fetchUserData: () => Promise<void>;
   updateUserFirestoreData: (data: Partial<UserData>) => Promise<void>;
   addTransaction: (transaction: Omit<Transaction, 'id' | 'userId' | 'date'>) => Promise<void>;
@@ -44,10 +44,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [marqueeItems, setMarqueeItems] = useState<MarqueeItem[]>(CONFIG.DEFAULT_MARQUEE_ITEMS.map(text => ({text})));
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [achievements] = useState<Achievement[]>(CONFIG.ACHIEVEMENTS); 
+  const [achievements] = useState<Achievement[]>(CONFIG.ACHIEVEMENTS);
   const [loadingUserData, setLoadingUserData] = useState(true);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(true);
-  const [loadingAchievements, setLoadingAchievements] = useState(false); 
+  const [loadingAchievements, setLoadingAchievements] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [pageHistory, setPageHistory] = useState<string[]>([]);
   const { toast } = useToast();
@@ -71,7 +71,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('offline', updateOnlineStatus);
     };
   }, [toast]);
-  
+
   const fetchMarqueeItems = useCallback(async () => {
     try {
       const newsDocRef = doc(db, 'app_settings', 'news_ticker');
@@ -87,46 +87,55 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const processFirestoreData = useCallback((data: DocumentData, currentAuthUser: typeof user): UserData => {
+ const processFirestoreData = useCallback((data: DocumentData, currentAuthUser: UserProfile | null): UserData => {
     let processedLastTapDate: string;
     const rawLTDate = data.lastTapDate;
-    if (rawLTDate && typeof (rawLTDate as any).toDate === 'function') { 
-      processedLastTapDate = (rawLTDate as Timestamp).toDate().toDateString();
-    } else if (rawLTDate instanceof Date) { 
+    if (rawLTDate instanceof Timestamp) {
+      processedLastTapDate = rawLTDate.toDate().toDateString();
+    } else if (rawLTDate instanceof Date) {
       processedLastTapDate = rawLTDate.toDateString();
-    } else if (typeof rawLTDate === 'string') { 
+    } else if (typeof rawLTDate === 'string') {
       const d = new Date(rawLTDate);
       processedLastTapDate = !isNaN(d.getTime()) ? d.toDateString() : new Date().toDateString();
-    } else { 
+    } else {
       processedLastTapDate = new Date().toDateString();
     }
 
     let processedLastEnergyUpdate: Date;
     const rawLEUpdate = data.lastEnergyUpdate;
-    if (rawLEUpdate && typeof (rawLEUpdate as any).toDate === 'function') {
-      processedLastEnergyUpdate = (rawLEUpdate as Timestamp).toDate();
+    if (rawLEUpdate instanceof Timestamp) {
+      processedLastEnergyUpdate = rawLEUpdate.toDate();
     } else if (rawLEUpdate instanceof Date) {
       processedLastEnergyUpdate = rawLEUpdate;
+    } else if (typeof rawLEUpdate === 'string') {
+        const d = new Date(rawLEUpdate);
+        processedLastEnergyUpdate = !isNaN(d.getTime()) ? d : new Date();
     } else {
-      processedLastEnergyUpdate = new Date(); 
+      processedLastEnergyUpdate = new Date();
     }
 
     let processedLastLoginBonusClaimed: Date | null;
     const rawLLBC = data.lastLoginBonusClaimed;
-    if (rawLLBC && typeof (rawLLBC as any).toDate === 'function') {
-      processedLastLoginBonusClaimed = (rawLLBC as Timestamp).toDate();
+    if (rawLLBC instanceof Timestamp) {
+      processedLastLoginBonusClaimed = rawLLBC.toDate();
     } else if (rawLLBC instanceof Date) {
       processedLastLoginBonusClaimed = rawLLBC;
+    } else if (typeof rawLLBC === 'string') {
+        const d = new Date(rawLLBC);
+        processedLastLoginBonusClaimed = !isNaN(d.getTime()) ? d : null;
     } else {
       processedLastLoginBonusClaimed = null;
     }
-    
+
     let processedCreatedAt: Date;
     const rawCreatedAt = data.createdAt;
-    if (rawCreatedAt && typeof (rawCreatedAt as any).toDate === 'function') {
-      processedCreatedAt = (rawCreatedAt as Timestamp).toDate();
+    if (rawCreatedAt instanceof Timestamp) {
+      processedCreatedAt = rawCreatedAt.toDate();
     } else if (rawCreatedAt instanceof Date) {
       processedCreatedAt = rawCreatedAt;
+    } else if (typeof rawCreatedAt === 'string') {
+        const d = new Date(rawCreatedAt);
+        processedCreatedAt = !isNaN(d.getTime()) ? d : new Date(currentAuthUser?.joinDate || Date.now());
     } else {
       processedCreatedAt = new Date(currentAuthUser?.joinDate || Date.now());
     }
@@ -153,6 +162,100 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }, []);
 
 
+  const addTransaction = useCallback(async (transactionData: Omit<Transaction, 'id' | 'userId' | 'date'>) => {
+    if (!user) return;
+    try {
+      const newTransactionRef = doc(collection(db, 'transactions'));
+      const newTransaction: Transaction = {
+        ...transactionData,
+        id: newTransactionRef.id,
+        userId: user.id,
+        date: serverTimestamp() as Timestamp,
+      };
+      await setDoc(newTransactionRef, newTransaction);
+      // The snapshot listener should update transactions, but for immediate feedback:
+      // Temporarily cast to Transaction for immediate UI update, actual date will be Timestamp from server
+      setTransactions(prev => [{...newTransaction, date: new Date()} as Transaction, ...prev].sort((a,b) => ((b.date as Date).getTime() - (a.date as Date).getTime())));
+      toast({ title: "Success", description: `${transactionData.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} recorded.`, variant: "default" });
+    } catch (error) {
+      console.error("Error adding transaction:", error);
+      toast({ title: "Error", description: "Failed to record transaction.", variant: "destructive" });
+    }
+  }, [user, toast]);
+
+  const checkAndAwardAchievements = useCallback(async () => {
+    if (!userData || !user) return;
+    setLoadingAchievements(true);
+    let awardedNew = false;
+    const currentCompletedAchievements = userData.completedAchievements || {};
+
+    for (const achievement of CONFIG.ACHIEVEMENTS) {
+      if (currentCompletedAchievements[achievement.id]) {
+        continue;
+      }
+
+      let criteriaMet = false;
+      switch (achievement.criteria.type) {
+        case 'tap_count_today':
+          criteriaMet = userData.tapCountToday >= achievement.criteria.value;
+          break;
+        case 'balance_reach':
+          criteriaMet = userData.balance >= achievement.criteria.value;
+          break;
+        case 'referrals_made':
+          criteriaMet = (userData.referralsMadeCount || 0) >= achievement.criteria.value;
+          break;
+        case 'booster_purchase_specific':
+          if (achievement.criteria.boosterId === 'any') {
+            criteriaMet = Object.values(userData.boostLevels || {}).some(level => (level as number) > 0);
+          } else {
+            criteriaMet = (userData.boostLevels?.[achievement.criteria.boosterId!] || 0) >= achievement.criteria.value;
+          }
+          break;
+      }
+
+      if (criteriaMet) {
+        const userRef = doc(db, 'users', user.id);
+        try {
+          await runTransaction(db, async (firestoreTransaction) => { // Renamed to avoid conflict
+            const userDoc = await firestoreTransaction.get(userRef);
+            if (!userDoc.exists()) throw "User document does not exist!";
+
+            const serverUserData = userDoc.data();
+            const serverCompletedAchievements = serverUserData.completedAchievements || {};
+            if (serverCompletedAchievements[achievement.id]) return; // Already awarded by another process
+
+            firestoreTransaction.update(userRef, {
+              balance: increment(achievement.reward),
+              [`completedAchievements.${achievement.id}`]: serverTimestamp(),
+            });
+          });
+          await addTransaction({
+            amount: achievement.reward,
+            type: 'achievement_reward',
+            status: 'completed',
+            details: achievement.name,
+          });
+          awardedNew = true;
+          toast({ title: "Achievement Unlocked!", description: `You earned ${achievement.reward} ${CONFIG.COIN_SYMBOL} for ${achievement.name}!`, variant: "default" });
+           setUserDataState(prev => prev ? ({
+             ...prev,
+             balance: prev.balance + achievement.reward,
+             completedAchievements: { ...prev.completedAchievements, [achievement.id]: Timestamp.now() }
+           }) : null);
+
+        } catch (error) {
+          console.error("Error awarding achievement transaction:", error);
+          // Do not toast here if transaction failed, as it might be a race condition or already awarded
+        }
+      }
+    }
+    setLoadingAchievements(false);
+    // if (awardedNew) {
+      // Relies on snapshot to update userData fully
+    // }
+  }, [userData, user, addTransaction, toast, setUserDataState]); // Added setUserDataState
+
   const fetchUserData = useCallback(async () => {
     if (!user || !firebaseUser) {
       setUserDataState(null);
@@ -166,14 +269,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
       if (userDocSnap.exists()) {
         const data = userDocSnap.data();
-        setUserDataState(processFirestoreData(data, user));
+        const processedData = processFirestoreData(data, user);
+        setUserDataState(processedData);
+        // No need to call checkAndAwardAchievements here, snapshot listener will do it.
       } else {
         const now = new Date();
         const newUser: UserData = {
           balance: 0, tapCountToday: 0, lastTapDate: now.toDateString(),
           currentEnergy: CONFIG.INITIAL_MAX_ENERGY, maxEnergy: CONFIG.INITIAL_MAX_ENERGY,
           tapPower: CONFIG.INITIAL_TAP_POWER, lastEnergyUpdate: now, boostLevels: {},
-          lastLoginBonusClaimed: null, referredBy: null, 
+          lastLoginBonusClaimed: null, referredBy: null,
           createdAt: new Date(user.joinDate || Date.now()),
           name: user.name || 'New User', email: user.email || '',
           completedAchievements: {}, referralsMadeCount: 0,
@@ -181,7 +286,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         };
         await setDoc(userDocRef, {
           ...newUser,
-          lastTapDate: Timestamp.fromDate(new Date(newUser.lastTapDate!)), // Ensure string date is converted
+          // Convert Date objects to Timestamps for Firestore
+          lastTapDate: Timestamp.fromDate(new Date(newUser.lastTapDate!)),
           lastEnergyUpdate: Timestamp.fromDate(newUser.lastEnergyUpdate as Date),
           lastLoginBonusClaimed: newUser.lastLoginBonusClaimed ? Timestamp.fromDate(newUser.lastLoginBonusClaimed as Date) : null,
           createdAt: Timestamp.fromDate(newUser.createdAt as Date),
@@ -194,14 +300,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoadingUserData(false);
     }
-  }, [user, firebaseUser, toast, processFirestoreData]);
+  }, [user, firebaseUser, toast, processFirestoreData, setUserDataState]);
+
 
   const updateUserFirestoreData = useCallback(async (dataToUpdate: Partial<UserData>) => {
     if (!user) return;
     try {
       const userDocRef = doc(db, 'users', user.id);
       const firestoreReadyData: Partial<DocumentData> = { ...dataToUpdate, updatedAt: serverTimestamp() };
-      
+
       if (dataToUpdate.lastEnergyUpdate instanceof Date) {
         firestoreReadyData.lastEnergyUpdate = Timestamp.fromDate(dataToUpdate.lastEnergyUpdate);
       }
@@ -213,33 +320,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         if (!isNaN(dateObj.getTime())) {
             firestoreReadyData.lastTapDate = Timestamp.fromDate(dateObj);
         } else {
-            delete firestoreReadyData.lastTapDate; 
+            delete firestoreReadyData.lastTapDate;
         }
       }
       await updateDoc(userDocRef, firestoreReadyData);
     } catch (error) {
       console.error("Error updating user data:", error);
       toast({ title: "Error", description: "Failed to save changes.", variant: "destructive" });
-    }
-  }, [user, toast]);
-
-  const addTransaction = useCallback(async (transactionData: Omit<Transaction, 'id' | 'userId' | 'date'>) => {
-    if (!user) return;
-    try {
-      const newTransactionRef = doc(collection(db, 'transactions'));
-      const newTransaction: Transaction = {
-        ...transactionData,
-        id: newTransactionRef.id,
-        userId: user.id,
-        date: serverTimestamp() as Timestamp, 
-      };
-      await setDoc(newTransactionRef, newTransaction);
-      // The snapshot listener should update transactions, but for immediate feedback:
-      setTransactions(prev => [{...newTransaction, date: new Date()} as Transaction, ...prev].sort((a,b) => (b.date as Date).getTime() - (a.date as Date).getTime()));
-      toast({ title: "Success", description: `${transactionData.type.replace(/_/g, ' ')} recorded.`, variant: "default" });
-    } catch (error) {
-      console.error("Error adding transaction:", error);
-      toast({ title: "Error", description: "Failed to record transaction.", variant: "destructive" });
     }
   }, [user, toast]);
 
@@ -257,7 +344,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         return {
           id: docSnap.id,
           ...data,
-          date: (data.date as Timestamp).toDate(), // Convert Timestamp to Date
+          date: (data.date as Timestamp).toDate(),
         } as Transaction;
       });
       setTransactions(userTransactions);
@@ -274,31 +361,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
      *    - Field: `balance`, Sort Order: Descending
      *    - You can create this in your Firebase console -> Firestore Database -> Indexes.
      * 2. Firestore Security Rules:
-     *    - Ensure your rules allow authenticated users to read the `users` collection.
-     *    - A basic rule might look like:
+     *    - Ensure your rules allow authenticated users to read/list the `users` collection.
+     *    - Example rule for `users` collection (adapt to your needs):
      *      ```rules
-     *      rules_version = '2';
-     *      service cloud.firestore {
-     *        match /databases/{database}/documents {
-     *          // Allow reading users collection for leaderboard if user is authenticated
-     *          match /users/{userId} {
-     *            allow read: if request.auth != null;
-     *            // Allow user to write to their own document
-     *            allow write: if request.auth != null && request.auth.uid == userId;
-     *          }
-     *          // Allow user to read/write their own transactions
-     *          match /transactions/{transactionId} {
-     *            allow read, write: if request.auth != null && request.resource.data.userId == request.auth.uid;
-     *          }
-     *          // Allow reading app_settings for news_ticker
-     *          match /app_settings/news_ticker {
-     *             allow read: if true; // Or if request.auth != null depending on your needs
-     *          }
-     *        }
+     *      match /users/{userId} {
+     *        allow get: if request.auth != null && request.auth.uid == userId; // User can read their own full doc
+     *        allow list: if request.auth != null; // Authenticated users can list users (for leaderboard)
+     *        allow create: if request.auth != null && request.auth.uid == userId; // User can create their own doc
+     *        allow update: if request.auth != null && request.auth.uid == userId; // User can update their own doc
      *      }
      *      ```
-     *    - Modify these rules according to your app's security needs.
-     *    - Apply these rules in your Firebase console -> Firestore Database -> Rules.
      */
     setLoadingLeaderboard(true);
     try {
@@ -318,9 +390,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       console.error("Detailed error fetching leaderboard data:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
       let description = "Could not load leaderboard. Please try again later.";
       if (error.code === 'failed-precondition') {
-        description = "Leaderboard query failed. Ensure an index exists on 'users' for 'balance' (descending). Check Firebase console.";
+        description = "Leaderboard query failed. Index missing on 'users' for 'balance' (descending). Check Firebase console.";
       } else if (error.code === 'permission-denied') {
-        description = "Permission denied for leaderboard. Check Firestore security rules. Authenticated users need read access to the 'users' collection.";
+        description = "Permission denied for leaderboard. Check Firestore security rules for 'users' collection (need list access).";
       }
       toast({ title: "Leaderboard Error", description, variant: "destructive", duration: 5000 });
     } finally {
@@ -328,97 +400,27 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [toast]);
 
-  const checkAndAwardAchievements = useCallback(async () => {
-    if (!userData || !user) return;
-
-    let awardedNew = false;
-    for (const achievement of CONFIG.ACHIEVEMENTS) {
-      if (userData.completedAchievements && userData.completedAchievements[achievement.id]) {
-        continue; 
-      }
-
-      let criteriaMet = false;
-      switch (achievement.criteria.type) {
-        case 'tap_count_today':
-          criteriaMet = userData.tapCountToday >= achievement.criteria.value;
-          break;
-        case 'balance_reach':
-          criteriaMet = userData.balance >= achievement.criteria.value;
-          break;
-        case 'referrals_made':
-          criteriaMet = (userData.referralsMadeCount || 0) >= achievement.criteria.value;
-          break;
-        case 'booster_purchase_specific':
-          if (achievement.criteria.boosterId === 'any') {
-            criteriaMet = Object.keys(userData.boostLevels || {}).length > 0;
-          } else {
-            criteriaMet = (userData.boostLevels?.[achievement.criteria.boosterId!] || 0) >= achievement.criteria.value;
-          }
-          break;
-      }
-
-      if (criteriaMet) {
-        const userRef = doc(db, 'users', user.id);
-        try {
-          await runTransaction(db, async (transaction) => {
-            const userDoc = await transaction.get(userRef);
-            if (!userDoc.exists()) throw "User document does not exist!";
-            
-            const currentCompleted = userDoc.data().completedAchievements || {};
-            if (currentCompleted[achievement.id]) return; 
-
-            transaction.update(userRef, {
-              balance: increment(achievement.reward),
-              [`completedAchievements.${achievement.id}`]: serverTimestamp(),
-            });
-          });
-          await addTransaction({
-            amount: achievement.reward,
-            type: 'achievement_reward',
-            status: 'completed',
-            details: achievement.name,
-          });
-          awardedNew = true;
-          toast({ title: "Achievement Unlocked!", description: `You earned ${achievement.reward} ${CONFIG.COIN_SYMBOL} for ${achievement.name}!`, variant: "default" });
-          // Local state update for immediate feedback, snapshot will confirm
-           setUserDataState(prev => prev ? ({
-             ...prev,
-             balance: prev.balance + achievement.reward,
-             completedAchievements: { ...prev.completedAchievements, [achievement.id]: Timestamp.now() } // Use client-side Timestamp for immediate UI
-           }) : null);
-
-        } catch (error) {
-          console.error("Error awarding achievement:", error);
-        }
-      }
-    }
-    if (awardedNew) {
-      // If any achievement was awarded, it might be good to re-fetch user data or rely on snapshot
-      // fetchUserData(); // Or let snapshot handle it
-    }
-  }, [userData, user, addTransaction, toast]);
-
 
   useEffect(() => {
     if (user && !authLoading) {
       fetchUserData();
       fetchTransactions();
-      fetchMarqueeItems(); 
+      fetchMarqueeItems();
       fetchLeaderboardData();
 
       const userDocRef = doc(db, 'users', user.id);
       const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
-          const newUserData = processFirestoreData(data, user)
+          const newUserData = processFirestoreData(data, user);
           setUserDataState(newUserData);
-          if(newUserData) checkAndAwardAchievements(); // Check achievements whenever user data changes
+          if(newUserData) checkAndAwardAchievements();
         }
       }, (error: FirestoreError) => {
         console.error("Error in user snapshot listener:", error);
         toast({ title: "Sync Error", description: "Could not sync user data. Try refreshing.", variant: "destructive" });
       });
-      
+
       const qTransactions = query(collection(db, 'transactions'), where('userId', '==', user.id), orderBy('date', 'desc'));
       const unsubscribeTransactions = onSnapshot(qTransactions, (querySnapshot) => {
          const userTransactions = querySnapshot.docs.map(docSnap => {
@@ -431,6 +433,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         let description = "Could not listen for transaction updates. Please try again later.";
         if (error.code === 'failed-precondition') {
           description = "Transactions require an index: userId (asc), date (desc). Ask admin to create it in Firebase console.";
+        } else if (error.code === 'permission-denied') {
+          description = "Permission denied for transactions. Check Firestore security rules.";
         }
         toast({ title: "Database Error", description, variant: "destructive", duration: 5000 });
       });
@@ -448,11 +452,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setLoadingLeaderboard(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, authLoading, fetchUserData, fetchTransactions, fetchMarqueeItems, fetchLeaderboardData, processFirestoreData, checkAndAwardAchievements]); 
+  }, [user, authLoading, fetchUserData, fetchTransactions, fetchMarqueeItems, fetchLeaderboardData, processFirestoreData]);
+  // Removed checkAndAwardAchievements from this dependency array
+
 
   const updateEnergy = useCallback((newEnergy: number, lastUpdate: Date) => {
     setUserDataState(prev => prev ? { ...prev, currentEnergy: newEnergy, lastEnergyUpdate: lastUpdate } : null);
-  }, []);
+  }, [setUserDataState]);
 
   const purchaseBooster = useCallback(async (boosterId: string) => {
     if (!user || !userData) {
@@ -479,10 +485,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
     try {
       const userRef = doc(db, 'users', user.id);
-      await runTransaction(db, async (transaction) => {
-        const userDoc = await transaction.get(userRef);
+      await runTransaction(db, async (firestoreTransaction) => { // Renamed variable
+        const userDoc = await firestoreTransaction.get(userRef);
         if (!userDoc.exists()) throw new Error("User document does not exist!");
-        
+
         const serverBalance = userDoc.data()?.balance || 0;
         if (serverBalance < cost) throw new Error("Insufficient funds on server.");
 
@@ -495,8 +501,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           updates.tapPower = increment(booster.value);
         } else if (booster.effect_type === 'max_energy') {
           updates.maxEnergy = increment(booster.value);
+           // If max energy increases, also top up current energy to the new max if it's higher
+          const currentMaxEnergy = userDoc.data()?.maxEnergy || CONFIG.INITIAL_MAX_ENERGY;
+          const newMaxEnergy = currentMaxEnergy + booster.value;
+          updates.currentEnergy = newMaxEnergy; // Top up energy to new max
         }
-        transaction.update(userRef, updates);
+        firestoreTransaction.update(userRef, updates);
       });
 
       await addTransaction({
@@ -506,12 +516,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         details: `${booster.name} Lvl ${currentLevel + 1}`,
       });
       toast({ title: "Success", description: `${booster.name} upgraded!`, variant: "default" });
-      await checkAndAwardAchievements(); 
+      // await checkAndAwardAchievements(); // Snapshot will trigger this
     } catch (error: any) {
       console.error("Error purchasing booster:", error);
       toast({ title: "Error", description: error.message || "Failed to purchase booster.", variant: "destructive" });
     }
-  }, [user, userData, addTransaction, toast, checkAndAwardAchievements]);
+  }, [user, userData, addTransaction, toast]);
 
   const claimDailyBonus = useCallback(async () => {
     if (!user || !userData) return;
@@ -522,7 +532,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       toast({ title: "Already Claimed", description: "Daily bonus already claimed for today.", variant: "default" });
       return;
     }
-    
+
     try {
       const userRef = doc(db, 'users', user.id);
       await updateDoc(userRef, {
@@ -535,12 +545,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         status: 'completed',
       });
       toast({ title: "Bonus Claimed!", description: `You received ${CONFIG.DAILY_LOGIN_BONUS} ${CONFIG.COIN_SYMBOL}.`, variant: "default" });
-      await checkAndAwardAchievements();
+      // await checkAndAwardAchievements(); // Snapshot will trigger this
     } catch (error) {
       console.error("Error claiming daily bonus:", error);
       toast({ title: "Error", description: "Failed to claim daily bonus.", variant: "destructive" });
     }
-  }, [user, userData, addTransaction, toast, checkAndAwardAchievements]);
+  }, [user, userData, addTransaction, toast]);
 
   const submitRedeemRequest = useCallback(async (amount: number, paymentMethod: string, paymentDetails: any) => {
     if (!user || !userData) {
@@ -558,12 +568,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
     try {
       const userRef = doc(db, 'users', user.id);
-      await runTransaction(db, async (transaction) => {
-        const userDoc = await transaction.get(userRef);
+      await runTransaction(db, async (firestoreTransaction) => { // Renamed variable
+        const userDoc = await firestoreTransaction.get(userRef);
         if (!userDoc.exists()) throw new Error("User document does not exist!");
         const serverBalance = userDoc.data()?.balance || 0;
         if (serverBalance < amount) throw new Error("Insufficient funds on server.");
-        transaction.update(userRef, { balance: increment(-amount) });
+        firestoreTransaction.update(userRef, { balance: increment(-amount) });
       });
 
       await addTransaction({
@@ -575,12 +585,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         inrAmount: amount * CONFIG.CONVERSION_RATE,
       });
       toast({ title: "Request Submitted", description: "Your redeem request has been submitted.", variant: "default" });
-      await checkAndAwardAchievements();
+      // await checkAndAwardAchievements(); // Snapshot will trigger this
     } catch (error: any) {
       console.error("Error submitting redeem request:", error);
       toast({ title: "Error", description: error.message || "Failed to submit redeem request.", variant: "destructive" });
     }
-  }, [user, userData, addTransaction, toast, checkAndAwardAchievements]);
+  }, [user, userData, addTransaction, toast]);
 
   const resetUserProgress = useCallback(async () => {
     if (!user) return;
@@ -592,14 +602,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         currentEnergy: CONFIG.INITIAL_MAX_ENERGY,
         maxEnergy: CONFIG.INITIAL_MAX_ENERGY, tapPower: CONFIG.INITIAL_TAP_POWER,
         lastEnergyUpdate: now, boostLevels: {}, lastLoginBonusClaimed: null,
-        createdAt: userData?.createdAt || now, 
+        createdAt: userData?.createdAt || now,
         referredBy: userData?.referredBy || null,
         name: userData?.name || user.name || 'User',
         email: userData?.email || user.email || '',
         completedAchievements: {}, referralsMadeCount: 0,
         activeTheme: CONFIG.APP_THEMES[0].id, unlockedThemes: [CONFIG.APP_THEMES[0].id],
       };
-      
+
       await setDoc(userDocRef, {
         ...defaultRawData,
         lastTapDate: Timestamp.fromDate(new Date(defaultRawData.lastTapDate!)),
@@ -614,7 +624,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const batch = writeBatch(db);
       transactionsSnapshot.docs.forEach(docSnap => batch.delete(docSnap.ref));
       await batch.commit();
-      
+
       setTransactions([]);
       toast({ title: "Progress Reset", description: "Your account progress has been reset.", variant: "default" });
     } catch (error) {
@@ -623,7 +633,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [user, userData, toast]);
 
-  const setActiveThemeState = useCallback((themeId: string) => {
+   const setActiveThemeState = useCallback((themeId: string) => {
     if (!user || !userData) return;
     if (userData.unlockedThemes?.includes(themeId)) {
       updateUserFirestoreData({ activeTheme: themeId });
@@ -644,7 +654,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
     if (userData.unlockedThemes?.includes(themeId)) {
       toast({ title: "Already Unlocked", description: "You already own this theme.", variant: "default" });
-      setActiveThemeState(themeId); 
+      setActiveThemeState(themeId);
       return true;
     }
     if (userData.balance < theme.cost) {
@@ -658,26 +668,29 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       await updateDoc(userRef, {
         balance: increment(-theme.cost),
         unlockedThemes: newUnlockedThemes,
-        activeTheme: themeId, 
+        activeTheme: themeId,
       });
-      
+
       setUserDataState(prev => prev ? ({
         ...prev,
         balance: prev.balance - theme.cost,
         unlockedThemes: newUnlockedThemes,
         activeTheme: themeId,
       }) : null);
+      // No need to call addTransaction as this is a direct balance update with theme unlock.
+      // If a transaction record is desired, it can be added.
+      toast({ title: "Theme Unlocked!", description: `${theme.name} unlocked and applied.`, variant: "default"});
       return true;
     } catch (error) {
       console.error("Error purchasing theme:", error);
       toast({ title: "Error", description: "Failed to purchase theme.", variant: "destructive" });
       return false;
     }
-  }, [user, userData, toast, setActiveThemeState]);
+  }, [user, userData, toast, setActiveThemeState, setUserDataState]); // Added setUserDataState
 
 
   return (
-    <AppStateContext.Provider value={{ 
+    <AppStateContext.Provider value={{
       userData, transactions, marqueeItems, leaderboard, achievements,
       loadingUserData, loadingLeaderboard, loadingAchievements,
       setUserDataState, fetchUserData, updateUserFirestoreData, addTransaction,
@@ -697,7 +710,3 @@ export function useAppState() {
   }
   return context;
 }
-
-    
-
-    
