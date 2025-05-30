@@ -140,11 +140,10 @@ body {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
-    @apply max-w-[500px] mx-auto border-l border-r border-border shadow-2xl overflow-x-hidden;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+    @apply bg-background text-foreground; /* Theme colors are driven by CSS variables */
+    min-height: 100vh; /* Ensure body takes full viewport height */
+    display: flex; /* Allows child (ThemeAppContainer) to use flex-grow */
+    flex-direction: column; /* Stack children vertically */
   }
 }
 

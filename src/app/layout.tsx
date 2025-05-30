@@ -27,13 +27,14 @@ function ThemeAppContainer({ children }: { children: React.ReactNode }) {
     <div className={cn(
       // These classes define the main app container style (max-width, layout, etc.)
       'max-w-[500px] mx-auto border-l border-r border-border shadow-2xl overflow-x-hidden',
-      'flex flex-col min-h-screen', // Ensures it takes full height and arranges children vertically
+      'flex flex-col flex-grow', // Ensures it takes available vertical space if body is flex
       activeTheme.cssClass // Apply the theme CSS class itself (e.g., 'theme-crimson-fire')
     )}>
       {children}
     </div>
   );
 }
+
 
 export default function RootLayout({
   children,
@@ -56,7 +57,8 @@ export default function RootLayout({
       <body className={cn(
         'font-sans antialiased'
         // Base body styles. Specific theme background/foreground colors will be
-        // applied via CSS variables set by the activeTheme.cssClass on ThemeAppContainer
+        // applied via CSS variables set by the activeTheme.cssClass on ThemeAppContainer's parent (html/body)
+        // or on ThemeAppContainer itself if its theme class defines them directly.
       )}>
         <AuthProvider>
           <AppStateProvider>
