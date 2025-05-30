@@ -177,7 +177,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       };
       await setDoc(newTransactionRef, newTransaction);
       // Optimistically update local state with client-side date
-      setTransactions(prev => [{...transactionData, id: newTransactionRef.id, userId: user.id, date: new Date()} as Transaction, ...prev].sort((a,b) => ((b.date as Date).getTime() - (a.date as Date).getTime())));
+      setTransactions(prev => [{...transactionData, id: newTransactionRef.id, userId: user.id, date: new Date()} as Transaction, ...prev].sort((a,b) => (((b.date as any) || 0) instanceof Timestamp ? (b.date as Timestamp).toMillis() : new Date(b.date as any || 0).getTime()) - (((a.date as any) || 0) instanceof Timestamp ? (a.date as Timestamp).toMillis() : new Date(a.date as any || 0).getTime())));
       toast({ title: "Success", description: `${String(transactionData.type).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} recorded.`, variant: "default" });
     } catch (error) {
       console.error("Error adding transaction:", error);
@@ -315,10 +315,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (dataToUpdate.lastTapDate && typeof dataToUpdate.lastTapDate === 'string') {
         const dateObj = new Date(dataToUpdate.lastTapDate);
         if (!isNaN(dateObj.getTime())) {
-            // Firestore expects Timestamps for date fields if they were stored as Timestamps
             firestoreReadyData.lastTapDate = Timestamp.fromDate(dateObj);
         } else {
-            delete firestoreReadyData.lastTapDate; // Or handle as an error
+            delete firestoreReadyData.lastTapDate; 
         }
       }
       await updateDoc(userDocRef, firestoreReadyData);
@@ -344,8 +343,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           transactionDate = data.date.toDate();
         } else if (data.date instanceof Date) {
           transactionDate = data.date;
-        } else {
-          transactionDate = new Date(); // Fallback for unexpected null or other types
+        } else { // Handle null or undefined date from serverTimestamp() not yet resolved
+          transactionDate = new Date(); 
         }
         return {
           id: docSnap.id,
@@ -380,9 +379,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       console.error("Detailed error fetching leaderboard data:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
       let description = "Could not load leaderboard. Please try again later.";
       if (error.code === 'failed-precondition') {
-        description = "Leaderboard query failed. Index missing on 'users' for 'balance' (descending). Create it in Firebase console.";
+        description = "Leaderboard: Index missing on 'users' for 'balance' (desc). Create in Firebase console.";
       } else if (error.code === 'permission-denied') {
-        description = "Permission denied for leaderboard. Check Firestore security rules for 'users' collection (needs 'allow list').";
+        description = "Leaderboard: Permission denied. Check Firestore security rules for 'users' collection.";
       }
       toast({ title: "Leaderboard Error", description, variant: "destructive", duration: 5000 });
     } finally {
@@ -419,10 +418,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             if (data.date instanceof Timestamp) {
               transactionDate = data.date.toDate();
             } else if (data.date instanceof Date) {
-              // This case might occur if the snapshot includes local changes not yet confirmed by server
               transactionDate = data.date;
             } else {
-              // Fallback for null or undefined (e.g. serverTimestamp() not resolved yet)
               transactionDate = new Date(); 
             }
             return { id: docSnap.id, ...data, date: transactionDate } as Transaction;
@@ -486,7 +483,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
     if (userData.unlockedThemes?.includes(themeId)) {
       toast({ title: "Already Unlocked", description: "You already own this theme.", variant: "default" });
-      setActiveThemeState(themeId); // Use the correctly ordered function
+      setActiveThemeState(themeId); 
       return true;
     }
     if (userData.balance < theme.cost) {
@@ -503,7 +500,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         activeTheme: themeId,
       });
 
-      // Optimistically update local state
       setUserDataState(prev => prev ? ({
         ...prev,
         balance: prev.balance - theme.cost,
@@ -517,7 +513,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       toast({ title: "Error", description: "Failed to purchase theme.", variant: "destructive" });
       return false;
     }
-  }, [user, userData, toast, setActiveThemeState, setUserDataState]); // Added setActiveThemeState and setUserDataState
+  }, [user, userData, toast, setActiveThemeState, setUserDataState]); 
 
   const purchaseBooster = useCallback(async (boosterId: string) => {
     if (!user || !userData) {
@@ -640,7 +636,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         inrAmount: amount * CONFIG.CONVERSION_RATE,
       });
       toast({ title: "Request Submitted", description: "Your redeem request has been submitted.", variant: "default" });
-    } catch (error: any) => {
+    } catch (error: any) {
       console.error("Error submitting redeem request:", error);
       toast({ title: "Error", description: error.message || "Failed to submit redeem request.", variant: "destructive" });
     }
@@ -722,11 +718,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
               if (userData?.photoURL) {
                 try {
-                  // Create a reference from the full URL
                   const oldFileRef = storageRef(storage, userData.photoURL);
                   await deleteObject(oldFileRef);
                 } catch (deleteError: any) {
-                  // It's okay if the old file doesn't exist, log other errors
                   if (deleteError.code !== 'storage/object-not-found') {
                      console.warn("Could not delete old profile picture:", deleteError);
                   }
@@ -734,7 +728,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               }
               const userDocRef = doc(db, 'users', user.id);
               await updateDoc(userDocRef, { photoURL: downloadURL });
-              // Update local state as well
               setUserDataState(prev => prev ? { ...prev, photoURL: downloadURL } : null);
               toast({ title: 'Success', description: 'Profile picture updated!' });
               resolve(downloadURL);
