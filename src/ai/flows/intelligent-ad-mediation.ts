@@ -97,18 +97,36 @@ const mediateAdFlow = ai.defineFlow(
     inputSchema: MediateAdInputSchema,
     outputSchema: MediateAdOutputSchema,
   },
-  async input => {
-    const {output} = await prompt(input);
-    if (!output) {
-        // Fallback to Adsterra URL banner if AI fails to generate any valid output
+  async (input): Promise<MediateAdOutput> => {
+    try {
+      const { output } = await prompt(input);
+      if (!output) {
+        // This case handles if the LLM returns an empty or structurally invalid response
+        // that doesn't even attempt to match the schema (e.g. undefined, null).
+        console.warn("AI prompt returned falsy output. Falling back to default ad.");
         return {
-            adType: 'url',
-            adUrl: 'https://syndication.adsterra.com/bn.php?ID=26645903&type=banner', // 468x60 banner
-            reason: 'AI failed to generate ad data, defaulting to high-performing URL banner.',
+          adType: 'url',
+          adUrl: 'https://syndication.adsterra.com/bn.php?ID=26645903&type=banner', // 468x60 banner
+          adClient: undefined,
+          adSlot: undefined,
+          reason: 'AI returned empty or invalid data, defaulting to high-performing URL banner.',
         };
+      }
+      // If output exists, Genkit has already validated it against MediateAdOutputSchema.
+      // The .refine calls in the Zod schema would have caused `prompt(input)` to throw if validation failed.
+      // So, if we reach here, output should be valid according to the schema.
+      return output;
+    } catch (error) {
+      // This catch block will handle errors from `prompt(input)`,
+      // including Zod validation errors if the AI output doesn't match MediateAdOutputSchema.
+      console.error("Error during AI prompt execution or schema validation, falling back to default ad:", error);
+      return {
+        adType: 'url',
+        adUrl: 'https://syndication.adsterra.com/bn.php?ID=26645903&type=banner', // 468x60 banner
+        adClient: undefined,
+        adSlot: undefined,
+        reason: 'AI response failed validation or prompt error, defaulting to high-performing URL banner.',
+      };
     }
-    // Zod schema validation (including .refine/.superRefine) will handle ensuring the output is correct.
-    return output;
   }
 );
-
