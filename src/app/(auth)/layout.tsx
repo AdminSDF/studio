@@ -7,12 +7,12 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-background to-secondary/30 p-4">
        <Image 
-        src="https://placehold.co/120x120.png" // Slightly larger logo
+        src="https://placehold.co/100x100.png" 
         alt={`${CONFIG.APP_NAME} Logo`} 
-        width={100} // Increased size
-        height={100} // Increased size
-        className="mb-6 rounded-2xl shadow-lg" // Softer rounding, added shadow
-        data-ai-hint="logo abstract geometric" 
+        width={100}
+        height={100}
+        className="mb-6 rounded-full shadow-lg" 
+        data-ai-hint="Tap Titans circular" 
       />
       <h1 className="text-3xl font-bold text-primary mb-2">{CONFIG.APP_NAME}</h1>
       <p className="text-muted-foreground mb-8 text-center">Tap your way to riches!</p>
