@@ -1,0 +1,81 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users collection rules
+    match /users/{userId} {
+      // Users can get their own full document
+      allow get: if request.auth != null && request.auth.uid == userId;
+      // Authenticated users can list users (for leaderboard functionality)
+      allow list: if request.auth != null;
+      
+      // Users can create their own document with specific fields (as per your original rule)
+      allow create: if request.auth != null 
+                    && request.auth.uid == userId
+                    && request.resource.data.keys().hasAll([
+                      'name', 'email', 'balance', 
+                      'tapCountToday', 'lastTapDate',
+                      'currentEnergy', 'maxEnergy',
+                      'tapPower', 'lastEnergyUpdate',
+                      'boostLevels', 'createdAt'
+                    ])
+                    && request.resource.data.balance is number
+                    && request.resource.data.balance >= 0
+                    && request.resource.data.tapCountToday is number
+                    && request.resource.data.currentEnergy is number
+                    && request.resource.data.maxEnergy is number
+                    && request.resource.data.tapPower is number
+                    && request.resource.data.boostLevels is map;
+      
+      // Users can update their own document with validation (as per your original rule)
+      allow update: if request.auth != null 
+                    && request.auth.uid == userId
+                    // Validate balance updates
+                    && (request.resource.data.balance == resource.data.balance 
+                        || (request.resource.data.balance is number
+                            && request.resource.data.balance >= 0))
+                    // Validate energy fields
+                    && request.resource.data.currentEnergy is number
+                    && request.resource.data.maxEnergy is number
+                    && request.resource.data.currentEnergy <= request.resource.data.maxEnergy
+                    // Validate tap power
+                    && request.resource.data.tapPower is number
+                    && request.resource.data.tapPower > 0
+                    // Validate boost levels
+                    && request.resource.data.boostLevels is map;
+    }
+    
+    // Transactions collection rules
+    match /transactions/{transactionId} {
+      // Users can read their own transactions
+      allow read: if request.auth != null 
+                  && request.auth.uid == resource.data.userId;
+      
+      // Users can create transactions with validation
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.keys().hasAll([ // More generic field check
+                      'userId', 'amount', 'type', 
+                      'status', 'date'
+                    ])
+                    && request.resource.data.amount is number
+                    // Allow positive amounts for bonuses/rewards, and costs for purchases
+                    && request.resource.data.status in ['pending', 'completed'] // Allow pending or completed
+                    && request.resource.data.date is timestamp;
+      
+      // Only admins can update transactions (for status changes)
+      allow update: if false; // Disabled for now - you might want admin access
+    }
+    
+    // App settings (read-only for all authenticated users)
+    match /app_settings/{documentId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only via Firebase console/admin
+    }
+    
+    // Default deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
