@@ -43,12 +43,11 @@ export interface UserData {
   createdAt: Date | null;
   name?: string;
   email?: string;
-  photoURL?: string | null; // Added for profile picture
-  // New fields for suggested features
-  completedAchievements?: Record<string, Timestamp>; // { achievementId: completionTimestamp }
+  photoURL?: string | null;
+  completedAchievements?: Record<string, Timestamp>;
   referralsMadeCount?: number;
-  activeTheme?: string; // ID of the active theme
-  unlockedThemes?: string[]; // Array of unlocked theme IDs
+  activeTheme?: string;
+  unlockedThemes?: string[];
 }
 
 export type PaymentMethod = 'upi' | 'bank' | 'paytm' | 'googlepay' | 'phonepay' | '';
@@ -67,17 +66,19 @@ export interface PaymentDetails {
 
 export interface Transaction {
   id: string;
-  userId: string;
-  userName?: string;
-  userEmail?: string;
-  amount: number;
-  type: 'redeem' | 'booster_purchase' | 'daily_bonus' | 'referral_bonus' | 'achievement_reward' | string;
-  inrAmount?: number;
-  paymentMethod?: PaymentMethod | string;
-  paymentDetails?: PaymentDetails;
+  userId: string; // The user whose transaction history this belongs to
+  userName?: string; // Name of the user (optional, for display)
+  userEmail?: string; // Email of the user (optional, for display)
+  amount: number; // Always positive. For sends/debits, it's an outgoing amount. For receives/credits, it's incoming.
+  type: 'redeem' | 'booster_purchase' | 'daily_bonus' | 'referral_bonus' | 'achievement_reward' | 'p2p_send' | 'p2p_receive' | string;
+  inrAmount?: number; // For redeem transactions
+  paymentMethod?: PaymentMethod | string; // For redeem transactions
+  paymentDetails?: PaymentDetails; // For redeem transactions
   status: 'pending' | 'completed' | 'failed';
   date: Date | Timestamp;
-  details?: string;
+  details?: string; // E.g., booster name, achievement name
+  relatedUserId?: string; // For P2P, this would be the other party's ID
+  relatedUserName?: string; // For P2P, this would be the other party's name
 }
 
 export interface MarqueeItem {
@@ -98,4 +99,3 @@ export interface LeaderboardEntry {
   balance: number;
   rank?: number;
 }
-

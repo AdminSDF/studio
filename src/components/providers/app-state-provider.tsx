@@ -3,9 +3,9 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { db, storage } from '@/lib/firebase'; // Import storage
-import { doc, getDoc, onSnapshot, Timestamp, setDoc, updateDoc, collection, query, where, orderBy, getDocs, runTransaction, writeBatch, serverTimestamp, increment, DocumentData, FirestoreError, limit, collectionGroup } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, Timestamp, setDoc, updateDoc, collection, query, where, orderBy, getDocs, runTransaction, writeBatch, serverTimestamp, increment, DocumentData, FirestoreError, limit } from 'firebase/firestore';
 import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage"; // Firebase storage imports
-import type { UserData, Transaction, MarqueeItem, LeaderboardEntry, Achievement, AppTheme, UserProfile } from '@/types';
+import type { UserData, Transaction, MarqueeItem, LeaderboardEntry, Achievement, UserProfile } from '@/types';
 import { useAuth } from './auth-provider';
 import { CONFIG } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
@@ -35,7 +35,8 @@ interface AppStateContextType {
   checkAndAwardAchievements: () => Promise<void>;
   purchaseTheme: (themeId: string) => Promise<boolean>;
   setActiveThemeState: (themeId: string) => void;
-  uploadProfilePicture: (file: File) => Promise<string | null>; // New function for profile picture
+  uploadProfilePicture: (file: File) => Promise<string | null>;
+  transferToUser: (recipientId: string, amount: number, recipientName?: string) => Promise<boolean>;
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
@@ -173,10 +174,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         ...transactionData,
         id: newTransactionRef.id,
         userId: user.id,
-        date: serverTimestamp() as Timestamp, // Firestore will convert this to Timestamp
+        date: serverTimestamp() as Timestamp, 
       };
       await setDoc(newTransactionRef, newTransaction);
-      // Optimistically update local state with client-side date
+      
       setTransactions(prev => [{...transactionData, id: newTransactionRef.id, userId: user.id, date: new Date()} as Transaction, ...prev].sort((a,b) => (((b.date as any) || 0) instanceof Timestamp ? (b.date as Timestamp).toMillis() : new Date(b.date as any || 0).getTime()) - (((a.date as any) || 0) instanceof Timestamp ? (a.date as Timestamp).toMillis() : new Date(a.date as any || 0).getTime())));
       toast({ title: "Success", description: `${String(transactionData.type).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} recorded.`, variant: "default" });
     } catch (error) {
@@ -186,9 +187,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }, [user, toast]);
 
   const checkAndAwardAchievements = useCallback(async () => {
-    if (!userData || !user) return; // userData is from component state
+    if (!userData || !user) return; 
     setLoadingAchievements(true);
-    let awardedNew = false;
     const currentCompletedAchievements = userData.completedAchievements || {};
 
     for (const achievement of CONFIG.ACHIEVEMENTS) {
@@ -238,9 +238,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             status: 'completed',
             details: achievement.name,
           });
-          awardedNew = true;
           toast({ title: "Achievement Unlocked!", description: `You earned ${achievement.reward} ${CONFIG.COIN_SYMBOL} for ${achievement.name}!`, variant: "default" });
-           setUserDataState(prev => prev ? ({ // This updates userData, potentially triggering the separate effect
+           setUserDataState(prev => prev ? ({ 
              ...prev,
              balance: prev.balance + achievement.reward,
              completedAchievements: { ...prev.completedAchievements, [achievement.id]: Timestamp.now() }
@@ -284,7 +283,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         };
         await setDoc(userDocRef, {
           ...newUser,
-          lastTapDate: Timestamp.fromDate(new Date(newUser.lastTapDate!)), // Ensure this is a Timestamp
+          lastTapDate: Timestamp.fromDate(new Date(newUser.lastTapDate!)),
           lastEnergyUpdate: Timestamp.fromDate(newUser.lastEnergyUpdate as Date),
           lastLoginBonusClaimed: newUser.lastLoginBonusClaimed ? Timestamp.fromDate(newUser.lastLoginBonusClaimed as Date) : null,
           createdAt: Timestamp.fromDate(newUser.createdAt as Date),
@@ -343,7 +342,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           transactionDate = data.date.toDate();
         } else if (data.date instanceof Date) {
           transactionDate = data.date;
-        } else { // Handle null or undefined date from serverTimestamp() not yet resolved
+        } else { 
           transactionDate = new Date(); 
         }
         return {
@@ -357,12 +356,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       console.error("Error fetching transactions:", error);
     }
   }, [user]);
-
-  // Leaderboard Firestore index: users collection, field 'balance', order 'descending'
-  // Leaderboard Firestore security rules for users collection: allow list: if request.auth != null;
+  
   const fetchLeaderboardData = useCallback(async () => {
     setLoadingLeaderboard(true);
     try {
+      // Firestore index: users collection, field 'balance', order 'descending'
+      // Firestore security rules for users collection: allow list: if request.auth != null;
       const q = query(collection(db, 'users'), orderBy('balance', 'desc'), limit(CONFIG.LEADERBOARD_SIZE));
       const querySnapshot = await getDocs(q);
       const leaderboardData = querySnapshot.docs.map((docSnap, index) => {
@@ -449,8 +448,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setLoadingLeaderboard(false);
     }
   }, [user, authLoading, fetchUserData, fetchTransactions, fetchMarqueeItems, fetchLeaderboardData, processFirestoreData, toast]);
-
-  // Separate effect for checking achievements when userData changes
+  
   useEffect(() => {
     if (userData && user) {
       checkAndAwardAchievements();
@@ -663,7 +661,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
       await setDoc(userDocRef, {
         ...defaultRawData,
-        lastTapDate: Timestamp.fromDate(new Date(defaultRawData.lastTapDate!)), // Ensure Timestamp
+        lastTapDate: Timestamp.fromDate(new Date(defaultRawData.lastTapDate!)), 
         lastEnergyUpdate: Timestamp.fromDate(defaultRawData.lastEnergyUpdate as Date),
         lastLoginBonusClaimed: defaultRawData.lastLoginBonusClaimed ? Timestamp.fromDate(defaultRawData.lastLoginBonusClaimed as Date) : null,
         createdAt: Timestamp.fromDate(defaultRawData.createdAt as Date),
@@ -746,6 +744,87 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [user, userData, toast, setUserDataState]);
 
+  const transferToUser = useCallback(async (recipientId: string, amount: number, recipientName?: string): Promise<boolean> => {
+    if (!user || !userData) {
+      toast({ title: "Error", description: "You must be logged in to transfer.", variant: "destructive" });
+      return false;
+    }
+    if (recipientId === user.id) {
+      toast({ title: "Invalid Transfer", description: "You cannot send coins to yourself.", variant: "destructive" });
+      return false;
+    }
+    if (amount <= 0) {
+      toast({ title: "Invalid Amount", description: "Transfer amount must be positive.", variant: "destructive" });
+      return false;
+    }
+    if (userData.balance < amount) {
+      toast({ title: "Insufficient Balance", description: `You don't have enough ${CONFIG.COIN_SYMBOL} to send.`, variant: "destructive" });
+      return false;
+    }
+
+    const senderRef = doc(db, 'users', user.id);
+    const recipientRef = doc(db, 'users', recipientId);
+
+    try {
+      await runTransaction(db, async (firestoreTransaction) => {
+        const senderDoc = await firestoreTransaction.get(senderRef);
+        const recipientDoc = await firestoreTransaction.get(recipientRef);
+
+        if (!senderDoc.exists()) {
+          throw new Error("Sender document does not exist. Please re-login.");
+        }
+        if (!recipientDoc.exists()) {
+          throw new Error(`Recipient with ID "${recipientId}" not found.`);
+        }
+
+        const senderData = senderDoc.data() as UserData;
+        if (senderData.balance < amount) {
+          throw new Error(`Insufficient balance. Current: ${senderData.balance}, trying to send: ${amount}`);
+        }
+
+        // Perform updates
+        firestoreTransaction.update(senderRef, { balance: increment(-amount) });
+        firestoreTransaction.update(recipientRef, { balance: increment(amount) });
+
+        // Log transactions
+        const senderTxRef = doc(collection(db, 'transactions'));
+        firestoreTransaction.set(senderTxRef, {
+          userId: user.id,
+          userName: userData.name || user.name,
+          amount: amount,
+          type: 'p2p_send',
+          status: 'completed',
+          date: serverTimestamp(),
+          details: `Sent to ${recipientName || recipientId}`,
+          relatedUserId: recipientId,
+          relatedUserName: recipientName || 'Unknown User',
+        });
+
+        const recipientTxRef = doc(collection(db, 'transactions'));
+        firestoreTransaction.set(recipientTxRef, {
+          userId: recipientId,
+          userName: recipientName || (recipientDoc.data() as UserData).name || 'Unknown User',
+          amount: amount,
+          type: 'p2p_receive',
+          status: 'completed',
+          date: serverTimestamp(),
+          details: `Received from ${userData.name || user.name}`,
+          relatedUserId: user.id,
+          relatedUserName: userData.name || user.name,
+        });
+      });
+
+      toast({ title: "Transfer Successful!", description: `${formatNumber(amount)} ${CONFIG.COIN_SYMBOL} sent to ${recipientName || recipientId}.`, variant: "default" });
+      // Manually update local balance to reflect the change immediately
+      setUserDataState(prev => prev ? { ...prev, balance: prev.balance - amount } : null);
+      return true;
+    } catch (error: any) {
+      console.error("Error during P2P transfer:", error);
+      toast({ title: "Transfer Failed", description: error.message || "Could not complete the transfer.", variant: "destructive" });
+      return false;
+    }
+  }, [user, userData, toast, setUserDataState]);
+
 
   return (
     <AppStateContext.Provider value={{
@@ -755,7 +834,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       updateEnergy, purchaseBooster, claimDailyBonus, submitRedeemRequest,
       resetUserProgress, isOnline, pageHistory, addPageVisit,
       fetchLeaderboardData, checkAndAwardAchievements, purchaseTheme, setActiveThemeState,
-      uploadProfilePicture
+      uploadProfilePicture, transferToUser
     }}>
       {children}
     </AppStateContext.Provider>
@@ -769,4 +848,3 @@ export function useAppState() {
   }
   return context;
 }
-

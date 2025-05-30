@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAppState } from '@/components/providers/app-state-provider';
@@ -5,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { CONFIG } from '@/lib/constants';
 import { formatNumber } from '@/lib/utils';
 import type { Transaction } from '@/types';
-import { History, TrendingDown, TrendingUp, Gift, Award, CircleHelp } from 'lucide-react';
+import { History, TrendingDown, TrendingUp, Gift, Award, CircleHelp, ArrowRightLeft } from 'lucide-react'; // Added ArrowRightLeft
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { AdContainer } from '@/components/shared/ad-container';
@@ -17,6 +18,9 @@ function getTransactionIcon(type: string) {
     case 'booster_purchase': return <TrendingDown className="text-orange-500" />;
     case 'daily_bonus': return <Gift className="text-green-500" />;
     case 'referral_bonus': return <Award className="text-yellow-500" />;
+    case 'achievement_reward': return <Award className="text-teal-500" />;
+    case 'p2p_send': return <ArrowRightLeft className="text-orange-600" />;
+    case 'p2p_receive': return <ArrowRightLeft className="text-green-600" />;
     default: return <CircleHelp className="text-gray-500" />;
   }
 }
@@ -35,23 +39,42 @@ function TransactionItem({ txn }: { txn: Transaction }) {
   
   let amountDisplay = '';
   let typeDisplay = 'Unknown Transaction';
+  let amountClass = 'text-foreground'; // Default
 
   if (txn.type === 'redeem') {
     amountDisplay = `-${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL} (₹${formatNumber(txn.inrAmount || 0)})`;
     typeDisplay = `Redeem via ${String(txn.paymentMethod).toUpperCase()}`;
+    amountClass = 'text-destructive';
   } else if (txn.type === 'booster_purchase') {
     amountDisplay = `-${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
     typeDisplay = `Booster: ${txn.details || 'Upgrade'}`;
+    amountClass = 'text-destructive';
   } else if (txn.type === 'daily_bonus') {
     amountDisplay = `+${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
     typeDisplay = `Daily Login Bonus`;
+    amountClass = 'text-success';
   } else if (txn.type === 'referral_bonus') {
     amountDisplay = `+${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
     typeDisplay = `Referral Bonus`;
+    amountClass = 'text-success';
+  } else if (txn.type === 'achievement_reward') {
+    amountDisplay = `+${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
+    typeDisplay = `Achievement: ${txn.details || 'Reward'}`;
+    amountClass = 'text-success';
+  } else if (txn.type === 'p2p_send') {
+    amountDisplay = `-${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
+    typeDisplay = `Sent to ${txn.relatedUserName || txn.relatedUserId || 'user'}`;
+    amountClass = 'text-destructive';
+  } else if (txn.type === 'p2p_receive') {
+    amountDisplay = `+${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
+    typeDisplay = `Received from ${txn.relatedUserName || txn.relatedUserId || 'user'}`;
+    amountClass = 'text-success';
   } else {
     amountDisplay = `${txn.amount > 0 ? '+' : ''}${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
     typeDisplay = txn.type ? txn.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Miscellaneous';
+    amountClass = txn.amount < 0 ? 'text-destructive' : 'text-success';
   }
+
 
   return (
     <Card className="mb-3 shadow-sm hover:shadow-md transition-shadow">
@@ -65,7 +88,7 @@ function TransactionItem({ txn }: { txn: Transaction }) {
             <p className="text-sm text-muted-foreground">{dateObj.toLocaleString()}</p>
           </div>
           <div className="text-right">
-            <p className={`font-bold text-lg ${txn.amount < 0 || txn.type === 'redeem' || txn.type === 'booster_purchase' ? 'text-destructive' : 'text-success'}`}>
+            <p className={cn("font-bold text-lg", amountClass)}>
               {amountDisplay}
             </p>
             <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", getTransactionStatusClass(txn.status))}>
@@ -80,6 +103,14 @@ function TransactionItem({ txn }: { txn: Transaction }) {
             {(txn.paymentMethod === 'paytm' || txn.paymentMethod === 'googlepay' || txn.paymentMethod === 'phonepay') && <p>{String(txn.paymentMethod).toUpperCase()}: {String(txn.paymentDetails.number)} ({String(txn.paymentDetails.name)})</p>}
           </div>
         )}
+         {(txn.type === 'p2p_send' || txn.type === 'p2p_receive') && (txn.relatedUserId || txn.relatedUserName) && (
+          <div className="mt-2 pt-2 border-t text-xs text-muted-foreground">
+            <p>
+              {txn.type === 'p2p_send' ? 'To: ' : 'From: '}
+              {txn.relatedUserName || txn.relatedUserId}
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -87,7 +118,7 @@ function TransactionItem({ txn }: { txn: Transaction }) {
 
 export default function TransactionsPage() {
   const { transactions, loadingUserData } = useAppState();
-  const [adTrigger, _setAdTrigger] = useState(false); // Ad trigger, can be changed by other actions if needed
+  const [_adTrigger, _setAdTrigger] = useState(false); 
 
   if (loadingUserData && transactions.length === 0) {
     return (
@@ -122,7 +153,7 @@ export default function TransactionsPage() {
           ))}
         </div>
       )}
-      <AdContainer pageContext="transactions" trigger={adTrigger} />
+      <AdContainer pageContext="transactions" trigger={_adTrigger} />
     </div>
   );
 }

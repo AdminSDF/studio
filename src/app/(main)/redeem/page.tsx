@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, ChangeEvent } from 'react';
@@ -10,10 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CONFIG } from '@/lib/constants';
 import { formatNumber } from '@/lib/utils';
 import type { PaymentMethod, PaymentDetails } from '@/types';
-import { Wallet, Banknote, AlertCircle, Info } from 'lucide-react';
+import { Wallet, Banknote, AlertCircle, Info, Send, Users } from 'lucide-react'; // Added Send, Users
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { AdContainer } from '@/components/shared/ad-container';
+import { Separator } from '@/components/ui/separator';
 
 const paymentMethods: { value: PaymentMethod; label: string }[] = [
   { value: 'upi', label: 'UPI' },
@@ -24,26 +26,44 @@ const paymentMethods: { value: PaymentMethod; label: string }[] = [
 ];
 
 export default function RedeemPage() {
-  const { userData, submitRedeemRequest, loadingUserData } = useAppState();
+  const { userData, submitRedeemRequest, loadingUserData, transferToUser } = useAppState();
   const { toast } = useToast();
 
-  const [amount, setAmount] = useState<string>('');
+  // State for redeem request
+  const [redeemAmount, setRedeemAmount] = useState<string>('');
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('');
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>({});
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [redeemFormError, setRedeemFormError] = useState<string | null>(null);
+  const [isSubmittingRedeem, setIsSubmittingRedeem] = useState(false);
+  
+  // State for P2P transfer
+  const [p2pRecipientId, setP2pRecipientId] = useState<string>('');
+  const [p2pAmount, setP2pAmount] = useState<string>('');
+  const [p2pFormError, setP2pFormError] = useState<string | null>(null);
+  const [isSubmittingP2P, setIsSubmittingP2P] = useState(false);
+
   const [adTrigger, setAdTrigger] = useState(false);
 
 
   useEffect(() => {
-    if (userData && parseFloat(amount) > userData.balance) {
-      setFormError('Insufficient balance.');
-    } else if (parseFloat(amount) < CONFIG.MIN_REDEEM && amount !== '') {
-      setFormError(`Minimum redeem amount is ${CONFIG.MIN_REDEEM} ${CONFIG.COIN_SYMBOL}.`);
+    if (userData && parseFloat(redeemAmount) > userData.balance) {
+      setRedeemFormError('Insufficient balance.');
+    } else if (parseFloat(redeemAmount) < CONFIG.MIN_REDEEM && redeemAmount !== '') {
+      setRedeemFormError(`Minimum redeem amount is ${CONFIG.MIN_REDEEM} ${CONFIG.COIN_SYMBOL}.`);
     } else {
-      setFormError(null);
+      setRedeemFormError(null);
     }
-  }, [amount, userData]);
+  }, [redeemAmount, userData]);
+
+  useEffect(() => {
+    if (userData && parseFloat(p2pAmount) > userData.balance) {
+      setP2pFormError('Insufficient balance to send.');
+    } else if (parseFloat(p2pAmount) <= 0 && p2pAmount !== '') {
+      setP2pFormError('Transfer amount must be positive.');
+    } else {
+      setP2pFormError(null);
+    }
+  }, [p2pAmount, userData]);
 
   const handleDetailChange = (e: ChangeEvent<HTMLInputElement>) => {
     setPaymentDetails(prev => ({ ...prev, [e.target.name]: e.target.value.trim() }));
@@ -54,57 +74,72 @@ export default function RedeemPage() {
     switch (selectedMethod) {
       case 'upi':
         if (!paymentDetails.upiId?.includes('@') || !paymentDetails.upiName) {
-          setFormError("Invalid UPI ID or Name."); return false;
+          setRedeemFormError("Invalid UPI ID or Name."); return false;
         }
         break;
       case 'bank':
         if (!paymentDetails.accNumber || !paymentDetails.ifsc || !paymentDetails.accName || !paymentDetails.bankName) {
-          setFormError("All bank fields are required."); return false;
+          setRedeemFormError("All bank fields are required."); return false;
         }
         if (paymentDetails.accNumber !== paymentDetails.confirmAcc) {
-          setFormError("Account numbers don't match."); return false;
+          setRedeemFormError("Account numbers don't match."); return false;
         }
         if (paymentDetails.ifsc.length !== 11) {
-          setFormError("IFSC code must be 11 characters."); return false;
+          setRedeemFormError("IFSC code must be 11 characters."); return false;
         }
         break;
       case 'paytm': case 'googlepay': case 'phonepay':
         if (!paymentDetails.number || !/^\d{10}$/.test(paymentDetails.number) || !paymentDetails.name) {
-          setFormError(`Invalid ${selectedMethod} number or name. Number must be 10 digits.`); return false;
+          setRedeemFormError(`Invalid ${selectedMethod} number or name. Number must be 10 digits.`); return false;
         }
         break;
       default: return false;
     }
-    setFormError(null); // Clear previous specific errors if details are now valid
+    setRedeemFormError(null); 
     return true;
   };
 
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleRedeemSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userData || formError || !selectedMethod) {
-      toast({ title: "Error", description: formError || "Please select a payment method.", variant: "destructive" });
+    if (!userData || redeemFormError || !selectedMethod) {
+      toast({ title: "Error", description: redeemFormError || "Please select a payment method.", variant: "destructive" });
       return;
     }
     if (!validatePaymentDetails()) {
-       // validatePaymentDetails will setFormError, which will be shown by toast if user clicks submit again
-       toast({ title: "Error", description: formError || "Invalid payment details.", variant: "destructive" });
+       toast({ title: "Error", description: redeemFormError || "Invalid payment details.", variant: "destructive" });
        return;
     }
 
-    setIsSubmitting(true);
+    setIsSubmittingRedeem(true);
     try {
-      await submitRedeemRequest(parseFloat(amount), selectedMethod, paymentDetails);
-      setAmount('');
+      await submitRedeemRequest(parseFloat(redeemAmount), selectedMethod, paymentDetails);
+      setRedeemAmount('');
       setSelectedMethod('');
       setPaymentDetails({});
-      // Toast success is handled within submitRedeemRequest
-      setAdTrigger(prev => !prev); // Trigger ad refresh
+      setAdTrigger(prev => !prev); 
     } catch (error: any) {
-      toast({ title: "Submission Failed", description: error.message || "Could not submit redeem request.", variant: "destructive" });
+      // Error toast handled by submitRedeemRequest
     } finally {
-      setIsSubmitting(false);
+      setIsSubmittingRedeem(false);
     }
+  };
+
+  const handleP2PSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userData || p2pFormError || !p2pRecipientId || !p2pAmount) {
+      toast({ title: "Error", description: p2pFormError || "Please fill all P2P transfer fields.", variant: "destructive" });
+      return;
+    }
+    
+    setIsSubmittingP2P(true);
+    const success = await transferToUser(p2pRecipientId.trim(), parseFloat(p2pAmount));
+    if (success) {
+      setP2pRecipientId('');
+      setP2pAmount('');
+      setAdTrigger(prev => !prev);
+    }
+    setIsSubmittingP2P(false);
   };
   
   if (loadingUserData || !userData) {
@@ -112,6 +147,7 @@ export default function RedeemPage() {
       <div className="p-4 space-y-4">
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-64 w-full" /> 
         <Skeleton className="h-16 w-full" />
       </div>
     );
@@ -131,19 +167,21 @@ export default function RedeemPage() {
         </CardContent>
       </Card>
 
+      {/* Redeem Request Card */}
       <Card className="shadow-md">
         <CardHeader>
-          <CardTitle className="flex items-center text-lg"><Banknote className="mr-2 text-green-600" /> Redeem Request</CardTitle>
+          <CardTitle className="flex items-center text-lg"><Banknote className="mr-2 text-green-600" /> Withdraw to Bank/UPI</CardTitle>
+          <CardDescription>Exchange your {CONFIG.COIN_SYMBOL} for real-world value.</CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleRedeemSubmit}>
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="redeem-amount">Amount ({CONFIG.COIN_SYMBOL})</Label>
               <Input
                 id="redeem-amount"
                 type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                value={redeemAmount}
+                onChange={(e) => setRedeemAmount(e.target.value)}
                 placeholder={`Min ${CONFIG.MIN_REDEEM} ${CONFIG.COIN_SYMBOL}`}
                 min={CONFIG.MIN_REDEEM}
                 max={userData.balance}
@@ -165,7 +203,6 @@ export default function RedeemPage() {
               </Select>
             </div>
 
-            {/* Dynamic Payment Fields */}
             {selectedMethod === 'upi' && (
               <div className="space-y-2 p-3 border rounded-md bg-muted/20 animate-fadeIn">
                 <Label className="font-semibold text-primary">UPI Details</Label>
@@ -190,13 +227,62 @@ export default function RedeemPage() {
                 <div><Label htmlFor={`${selectedMethod}-name`}>Account Name</Label><Input name="name" id={`${selectedMethod}-name`} placeholder="Your full name" onChange={handleDetailChange} value={paymentDetails.name || ''} /></div>
               </div>
             )}
-             {formError && (
-              <p className="text-sm text-destructive flex items-center"><AlertCircle className="h-4 w-4 mr-1" /> {formError}</p>
+             {redeemFormError && (
+              <p className="text-sm text-destructive flex items-center"><AlertCircle className="h-4 w-4 mr-1" /> {redeemFormError}</p>
             )}
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full" disabled={isSubmitting || !!formError || !selectedMethod || !amount}>
-              {isSubmitting ? 'Submitting...' : 'Submit Redeem Request'}
+            <Button type="submit" className="w-full" disabled={isSubmittingRedeem || !!redeemFormError || !selectedMethod || !redeemAmount}>
+              {isSubmittingRedeem ? 'Submitting...' : 'Submit Redeem Request'}
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
+
+      <Separator />
+
+      {/* P2P Transfer Card */}
+      <Card className="shadow-md">
+        <CardHeader>
+          <CardTitle className="flex items-center text-lg"><Users className="mr-2 text-blue-500" /> Send {CONFIG.COIN_SYMBOL} to Another User</CardTitle>
+          <CardDescription>Transfer your {CONFIG.COIN_SYMBOL} directly to a friend.</CardDescription>
+        </CardHeader>
+        <form onSubmit={handleP2PSubmit}>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="p2p-recipient-id">Recipient's User ID</Label>
+              <Input
+                id="p2p-recipient-id"
+                type="text"
+                value={p2pRecipientId}
+                onChange={(e) => setP2pRecipientId(e.target.value)}
+                placeholder="Enter recipient's User ID"
+                required
+              />
+               {/* For future QR code scanning:
+              <Button variant="outline" type="button" className="mt-2">Scan User ID QR Code</Button> 
+              */}
+            </div>
+            <div>
+              <Label htmlFor="p2p-amount">Amount to Send ({CONFIG.COIN_SYMBOL})</Label>
+              <Input
+                id="p2p-amount"
+                type="number"
+                value={p2pAmount}
+                onChange={(e) => setP2pAmount(e.target.value)}
+                placeholder="Enter amount"
+                min="0.01" // Example minimum, adjust as needed
+                step="any"
+                required
+              />
+            </div>
+            {p2pFormError && (
+              <p className="text-sm text-destructive flex items-center"><AlertCircle className="h-4 w-4 mr-1" /> {p2pFormError}</p>
+            )}
+          </CardContent>
+          <CardFooter>
+            <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmittingP2P || !!p2pFormError || !p2pRecipientId || !p2pAmount}>
+              {isSubmittingP2P ? 'Sending...' : <><Send className="mr-2 h-4 w-4" />Send {CONFIG.COIN_SYMBOL}</>}
             </Button>
           </CardFooter>
         </form>
@@ -207,8 +293,9 @@ export default function RedeemPage() {
             <CardTitle className="text-lg flex items-center"><Info className="mr-2 text-blue-500"/>Conversion & Info</CardTitle>
         </CardHeader>
         <CardContent>
-            <p>Conversion Rate: <strong className="text-primary">100 {CONFIG.COIN_SYMBOL} = ₹{formatNumber(100 * CONFIG.CONVERSION_RATE)} INR</strong></p>
+            <p>Withdrawal Conversion Rate: <strong className="text-primary">100 {CONFIG.COIN_SYMBOL} = ₹{formatNumber(100 * CONFIG.CONVERSION_RATE)} INR</strong></p>
             <p className="text-sm text-muted-foreground mt-1">Redeem requests are typically processed within 24-48 hours.</p>
+            <p className="text-sm text-muted-foreground mt-1">P2P transfers are instant but irreversible. Always double-check the recipient ID.</p>
         </CardContent>
       </Card>
       <AdContainer pageContext="redeem" trigger={adTrigger} />
