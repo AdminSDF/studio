@@ -20,8 +20,13 @@ const poppins = Poppins({
 // This component wraps the main content and applies the dynamic theme class and app container styles.
 // It must be a child of AppStateProvider to use the useAppState hook.
 function ThemeAppContainer({ children }: { children: React.ReactNode }) {
-  const { userData } = useAppState();
-  const activeTheme = CONFIG.APP_THEMES.find(t => t.id === userData?.activeTheme) || CONFIG.APP_THEMES[0];
+  const { userData, loadingUserData } = useAppState(); // Added loadingUserData
+  
+  // Determine active theme, default to first theme if userData or activeTheme is not available
+  // or if still loading.
+  const activeTheme = (!loadingUserData && userData?.activeTheme)
+    ? CONFIG.APP_THEMES.find(t => t.id === userData.activeTheme) || CONFIG.APP_THEMES[0]
+    : CONFIG.APP_THEMES[0];
 
   return (
     <div className={cn(
