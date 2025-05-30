@@ -173,10 +173,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         ...transactionData,
         id: newTransactionRef.id,
         userId: user.id,
-        date: serverTimestamp() as Timestamp,
+        date: serverTimestamp() as Timestamp, // Firestore will convert this to Timestamp
       };
       await setDoc(newTransactionRef, newTransaction);
-      setTransactions(prev => [{...newTransaction, date: new Date()} as Transaction, ...prev].sort((a,b) => ((b.date as Date).getTime() - (a.date as Date).getTime())));
+      // Optimistically update local state with client-side date
+      setTransactions(prev => [{...transactionData, id: newTransactionRef.id, userId: user.id, date: new Date()} as Transaction, ...prev].sort((a,b) => ((b.date as Date).getTime() - (a.date as Date).getTime())));
       toast({ title: "Success", description: `${String(transactionData.type).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} recorded.`, variant: "default" });
     } catch (error) {
       console.error("Error adding transaction:", error);
@@ -283,7 +284,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         };
         await setDoc(userDocRef, {
           ...newUser,
-          lastTapDate: Timestamp.fromDate(new Date(newUser.lastTapDate!)),
+          lastTapDate: Timestamp.fromDate(new Date(newUser.lastTapDate!)), // Ensure this is a Timestamp
           lastEnergyUpdate: Timestamp.fromDate(newUser.lastEnergyUpdate as Date),
           lastLoginBonusClaimed: newUser.lastLoginBonusClaimed ? Timestamp.fromDate(newUser.lastLoginBonusClaimed as Date) : null,
           createdAt: Timestamp.fromDate(newUser.createdAt as Date),
@@ -314,9 +315,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (dataToUpdate.lastTapDate && typeof dataToUpdate.lastTapDate === 'string') {
         const dateObj = new Date(dataToUpdate.lastTapDate);
         if (!isNaN(dateObj.getTime())) {
+            // Firestore expects Timestamps for date fields if they were stored as Timestamps
             firestoreReadyData.lastTapDate = Timestamp.fromDate(dateObj);
         } else {
-            delete firestoreReadyData.lastTapDate;
+            delete firestoreReadyData.lastTapDate; // Or handle as an error
         }
       }
       await updateDoc(userDocRef, firestoreReadyData);
@@ -337,10 +339,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const querySnapshot = await getDocs(q);
       const userTransactions = querySnapshot.docs.map(docSnap => {
         const data = docSnap.data();
+        let transactionDate: Date;
+        if (data.date instanceof Timestamp) {
+          transactionDate = data.date.toDate();
+        } else if (data.date instanceof Date) {
+          transactionDate = data.date;
+        } else {
+          transactionDate = new Date(); // Fallback for unexpected null or other types
+        }
         return {
           id: docSnap.id,
           ...data,
-          date: (data.date as Timestamp).toDate(),
+          date: transactionDate,
         } as Transaction;
       });
       setTransactions(userTransactions);
@@ -349,11 +359,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
+  // Leaderboard Firestore index: users collection, field 'balance', order 'descending'
+  // Leaderboard Firestore security rules for users collection: allow list: if request.auth != null;
   const fetchLeaderboardData = useCallback(async () => {
     setLoadingLeaderboard(true);
     try {
-      // Required Firestore index: users collection, field 'balance', order 'descending'
-      // Security rules for users collection: allow list: if request.auth != null;
       const q = query(collection(db, 'users'), orderBy('balance', 'desc'), limit(CONFIG.LEADERBOARD_SIZE));
       const querySnapshot = await getDocs(q);
       const leaderboardData = querySnapshot.docs.map((docSnap, index) => {
@@ -378,7 +388,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoadingLeaderboard(false);
     }
-  }, [toast]); // Removed setLeaderboard from here as it was causing a loop, it's a state setter
+  }, [toast]);
 
 
   // Effect for initial data loading and setting up listeners
@@ -394,7 +404,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         if (docSnap.exists()) {
           const data = docSnap.data();
           const newUserData = processFirestoreData(data, user);
-          setUserDataState(newUserData); // This will trigger the effect below for achievements
+          setUserDataState(newUserData);
         }
       }, (error: FirestoreError) => {
         console.error("Error in user snapshot listener:", error);
@@ -405,7 +415,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const unsubscribeTransactions = onSnapshot(qTransactions, (querySnapshot) => {
          const userTransactions = querySnapshot.docs.map(docSnap => {
             const data = docSnap.data();
-            return { id: docSnap.id, ...data, date: (data.date as Timestamp).toDate() } as Transaction;
+            let transactionDate: Date;
+            if (data.date instanceof Timestamp) {
+              transactionDate = data.date.toDate();
+            } else if (data.date instanceof Date) {
+              // This case might occur if the snapshot includes local changes not yet confirmed by server
+              transactionDate = data.date;
+            } else {
+              // Fallback for null or undefined (e.g. serverTimestamp() not resolved yet)
+              transactionDate = new Date(); 
+            }
+            return { id: docSnap.id, ...data, date: transactionDate } as Transaction;
          });
          setTransactions(userTransactions);
       }, (error: FirestoreError) => {
@@ -431,17 +451,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setLoadingUserData(false);
       setLoadingLeaderboard(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, authLoading, fetchUserData, fetchTransactions, fetchMarqueeItems, fetchLeaderboardData, processFirestoreData]);
-  // Note: `toast` was removed from dependencies as it's stable. Fetch functions are useCallback'd.
+  }, [user, authLoading, fetchUserData, fetchTransactions, fetchMarqueeItems, fetchLeaderboardData, processFirestoreData, toast]);
 
   // Separate effect for checking achievements when userData changes
   useEffect(() => {
-    if (userData && user) { // Ensure userData and user are not null
+    if (userData && user) {
       checkAndAwardAchievements();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userData, user, checkAndAwardAchievements]); // checkAndAwardAchievements is a dependency here
+  }, [userData, user, checkAndAwardAchievements]);
 
 
   const updateEnergy = useCallback((newEnergy: number, lastUpdate: Date) => {
@@ -469,7 +486,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
     if (userData.unlockedThemes?.includes(themeId)) {
       toast({ title: "Already Unlocked", description: "You already own this theme.", variant: "default" });
-      setActiveThemeState(themeId);
+      setActiveThemeState(themeId); // Use the correctly ordered function
       return true;
     }
     if (userData.balance < theme.cost) {
@@ -486,6 +503,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         activeTheme: themeId,
       });
 
+      // Optimistically update local state
       setUserDataState(prev => prev ? ({
         ...prev,
         balance: prev.balance - theme.cost,
@@ -499,7 +517,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       toast({ title: "Error", description: "Failed to purchase theme.", variant: "destructive" });
       return false;
     }
-  }, [user, userData, toast, setActiveThemeState, setUserDataState]); 
+  }, [user, userData, toast, setActiveThemeState, setUserDataState]); // Added setActiveThemeState and setUserDataState
 
   const purchaseBooster = useCallback(async (boosterId: string) => {
     if (!user || !userData) {
@@ -542,7 +560,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           updates.tapPower = increment(booster.value);
         } else if (booster.effect_type === 'max_energy') {
           updates.maxEnergy = increment(booster.value);
-          // Also refill energy to new max upon upgrade if it increases max energy
           const currentMaxEnergy = userDoc.data()?.maxEnergy || CONFIG.INITIAL_MAX_ENERGY;
           updates.currentEnergy = currentMaxEnergy + booster.value; 
         }
@@ -556,7 +573,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         details: `${booster.name} Lvl ${currentLevel + 1}`,
       });
       toast({ title: "Success", description: `${booster.name} upgraded!`, variant: "default" });
-      // No need to call checkAndAwardAchievements here, it's handled by userData listener
     } catch (error: any) {
       console.error("Error purchasing booster:", error);
       toast({ title: "Error", description: error.message || "Failed to purchase booster.", variant: "destructive" });
@@ -624,7 +640,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         inrAmount: amount * CONFIG.CONVERSION_RATE,
       });
       toast({ title: "Request Submitted", description: "Your redeem request has been submitted.", variant: "default" });
-    } catch (error: any) {
+    } catch (error: any) => {
       console.error("Error submitting redeem request:", error);
       toast({ title: "Error", description: error.message || "Failed to submit redeem request.", variant: "destructive" });
     }
@@ -651,7 +667,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
       await setDoc(userDocRef, {
         ...defaultRawData,
-        lastTapDate: Timestamp.fromDate(new Date(defaultRawData.lastTapDate!)),
+        lastTapDate: Timestamp.fromDate(new Date(defaultRawData.lastTapDate!)), // Ensure Timestamp
         lastEnergyUpdate: Timestamp.fromDate(defaultRawData.lastEnergyUpdate as Date),
         lastLoginBonusClaimed: defaultRawData.lastLoginBonusClaimed ? Timestamp.fromDate(defaultRawData.lastLoginBonusClaimed as Date) : null,
         createdAt: Timestamp.fromDate(defaultRawData.createdAt as Date),
@@ -706,9 +722,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
               if (userData?.photoURL) {
                 try {
+                  // Create a reference from the full URL
                   const oldFileRef = storageRef(storage, userData.photoURL);
                   await deleteObject(oldFileRef);
                 } catch (deleteError: any) {
+                  // It's okay if the old file doesn't exist, log other errors
                   if (deleteError.code !== 'storage/object-not-found') {
                      console.warn("Could not delete old profile picture:", deleteError);
                   }
@@ -716,6 +734,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               }
               const userDocRef = doc(db, 'users', user.id);
               await updateDoc(userDocRef, { photoURL: downloadURL });
+              // Update local state as well
               setUserDataState(prev => prev ? { ...prev, photoURL: downloadURL } : null);
               toast({ title: 'Success', description: 'Profile picture updated!' });
               resolve(downloadURL);
