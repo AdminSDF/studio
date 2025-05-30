@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { CONFIG } from '@/lib/constants';
 import { formatNumber } from '@/lib/utils';
-import { UserCircle, CalendarDays, TrendingUp, TrendingDown, Copy, Settings, LogOut, AlertTriangle, KeyRound, Users } from 'lucide-react'; // Added Users for referrals
+import { UserCircle, CalendarDays, TrendingUp, TrendingDown, Copy, Settings, LogOut, AlertTriangle, KeyRound, Users, Hourglass } from 'lucide-react'; // Added Users for referrals, Hourglass for pending
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
@@ -89,6 +89,9 @@ export default function ProfilePage() {
   const joinDate = userData.createdAt ? (userData.createdAt instanceof Date ? userData.createdAt : (userData.createdAt as any).toDate()).toLocaleDateString() : 'N/A';
   const totalEarned = (userData.balance || 0) + transactions.filter(t => (t.status === 'completed' || t.status === 'pending') && t.type === 'redeem').reduce((sum, t) => sum + t.amount, 0);
   const totalWithdrawn = transactions.filter(t => t.status === 'completed' && t.type === 'redeem').reduce((sum, t) => sum + t.amount, 0);
+  const pendingRedeemAmount = transactions
+    .filter(t => t.status === 'pending' && t.type === 'redeem')
+    .reduce((sum, t) => sum + t.amount, 0);
   const referralsMade = userData.referralsMadeCount || 0;
 
   return (
@@ -119,8 +122,16 @@ export default function ProfilePage() {
             <span className="font-medium text-success">{formatNumber(totalEarned)} {CONFIG.COIN_SYMBOL}</span>
           </div>
           <div className="flex justify-between items-center p-2 hover:bg-muted/50 rounded-md transition-colors">
-            <span className="flex items-center text-muted-foreground"><TrendingDown className="inline mr-2 h-4 w-4 text-destructive" />Total Withdrawn:</span> 
-            <span className="font-medium text-destructive">{formatNumber(totalWithdrawn)} {CONFIG.COIN_SYMBOL}</span>
+            <span className="flex items-center text-muted-foreground"><TrendingDown className="inline mr-2 h-4 w-4 text-destructive" />Total Withdrawn:</span>
+            <div className="text-right">
+              <span className="font-medium text-destructive">{formatNumber(totalWithdrawn)} {CONFIG.COIN_SYMBOL}</span>
+              {totalWithdrawn === 0 && pendingRedeemAmount > 0 && (
+                <p className="text-xs text-[hsl(var(--warning))] flex items-center justify-end">
+                  <Hourglass className="h-3 w-3 mr-1" />
+                  {formatNumber(pendingRedeemAmount)} {CONFIG.COIN_SYMBOL} pending
+                </p>
+              )}
+            </div>
           </div>
           <div className="flex justify-between items-center p-2 hover:bg-muted/50 rounded-md transition-colors">
             <span className="flex items-center text-muted-foreground"><Users className="inline mr-2 h-4 w-4 text-blue-500" />Friends Referred:</span> 
