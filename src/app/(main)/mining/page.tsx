@@ -1,19 +1,19 @@
 
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAppState } from '@/components/providers/app-state-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { CONFIG } from '@/lib/constants';
 import { formatNumber } from '@/lib/utils';
-import { Zap, Target, Info, AlertTriangle, Wallet, TrendingUp, CreditCard, Wifi } from 'lucide-react'; // Added CreditCard
+import { Zap, Target, Info, AlertTriangle, Wallet, TrendingUp, CreditCard, Wifi } from 'lucide-react'; 
 import { useToast } from '@/hooks/use-toast';
 import { AdContainer } from '@/components/shared/ad-container';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/components/providers/auth-provider'; // Import useAuth
+import { useAuth } from '@/components/providers/auth-provider'; 
 
 // Helper to show floating tap value
 function showFloatingTapValue(amount: number, coinElementId: string) {
@@ -34,12 +34,26 @@ function showFloatingTapValue(amount: number, coinElementId: string) {
 
 export default function MiningPage() {
   const { userData, updateUserFirestoreData, updateEnergy, isOnline } = useAppState();
-  const { user: authUser } = useAuth(); // Get authUser for display name
+  const { user: authUser } = useAuth(); 
   const { toast } = useToast();
   const [energyRegenTimerText, setEnergyRegenTimerText] = useState("Calculating...");
   const [tapCountForAd, setTapCountForAd] = useState(0);
   const [triggerAd, setTriggerAd] = useState(false);
   const sdfCoinLogoUrl = "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgfE9IHbZO-d0lFy6S3f_ks7gG4Wq47ohPp45dVEssDRApAIvwVv6r8CleAyjiHOAwY8aGhdELKU4xjx0nO9w6IYuwMOryi13qE5wqzsZnFDn8ZwrSd99BlrZuDiugDiwFZ5n0usxjeNeR_I7BUTc9t4r0beiwLfKfUPhAbXPhi8VVO3MWW56bydGdxH7M/s320/file_0000000026446230b5372bc60dd219f3%20%281%29.png";
+
+  const [showTapHint, setShowTapHint] = useState(false);
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const INACTIVITY_TIMEOUT = 5000; // 5 seconds
+
+  const userDataRef = useRef(userData);
+  useEffect(() => {
+    userDataRef.current = userData;
+  }, [userData]);
+
+  const isOnlineRef = useRef(isOnline);
+  useEffect(() => {
+    isOnlineRef.current = isOnline;
+  }, [isOnline]);
 
   // Energy Regeneration Logic
   useEffect(() => {
@@ -91,6 +105,15 @@ export default function MiningPage() {
     return () => clearInterval(intervalId);
   }, [userData, updateUserFirestoreData, updateEnergy, isOnline]);
 
+  // Cleanup for inactivity timer
+  useEffect(() => {
+    return () => {
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+    };
+  }, []);
+
 
   const handleTap = useCallback(async () => {
     if (!isOnline) {
@@ -104,12 +127,18 @@ export default function MiningPage() {
       return;
     }
 
+    // Tap Hint Logic: Clear timer and hide hint on tap
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+    }
+    setShowTapHint(false);
+
     const coinsMined = userData.tapPower;
 
     const coinElement = document.getElementById('tap-coin');
     if (coinElement) {
-      coinElement.classList.add('animate-pulseOnce'); // Add animation class
-      setTimeout(() => coinElement.classList.remove('animate-pulseOnce'), 200); // Remove after animation
+      coinElement.classList.add('animate-pulseOnce'); 
+      setTimeout(() => coinElement.classList.remove('animate-pulseOnce'), 200); 
       showFloatingTapValue(coinsMined, 'tap-coin');
     }
 
@@ -122,21 +151,30 @@ export default function MiningPage() {
     const today = new Date().toDateString();
     const newTapCountToday = userData.lastTapDate === today ? userData.tapCountToday + 1 : 1;
 
-    updateEnergy(userData.currentEnergy -1, new Date());
+    const newEnergyAfterTap = userData.currentEnergy -1;
+    updateEnergy(newEnergyAfterTap, new Date());
 
     try {
       await updateUserFirestoreData({
         balance: (userData.balance || 0) + coinsMined,
         tapCountToday: newTapCountToday,
         lastTapDate: today,
-        currentEnergy: userData.currentEnergy -1,
+        currentEnergy: newEnergyAfterTap,
         lastEnergyUpdate: new Date()
       });
     } catch (error) {
       console.error('Error saving tap:', error);
       toast({ title: 'Sync Error', description: 'Failed to save mining data.', variant: 'destructive' });
     }
-  }, [isOnline, userData, updateUserFirestoreData, updateEnergy, toast, tapCountForAd]);
+
+    // Tap Hint Logic: Set new timer for inactivity
+    inactivityTimerRef.current = setTimeout(() => {
+        if (userDataRef.current && userDataRef.current.currentEnergy >= 1 && isOnlineRef.current) {
+            setShowTapHint(true);
+        }
+    }, INACTIVITY_TIMEOUT);
+
+  }, [isOnline, userData, updateUserFirestoreData, updateEnergy, toast, tapCountForAd, INACTIVITY_TIMEOUT]);
 
   if (!userData) {
     return (
@@ -202,6 +240,24 @@ export default function MiningPage() {
       </Card>
 
       <div className="flex justify-center my-8 relative" id="coin-container">
+        {/* Tap Here Hint */}
+        {showTapHint && isOnline && userData && userData.currentEnergy >= 1 && (
+          <div
+            className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[calc(100%_+_12px)] 
+                       px-3 py-1.5 bg-accent text-accent-foreground text-xs font-semibold rounded-md shadow-lg 
+                       animate-bounce z-20 pointer-events-none"
+          >
+            Tap Here!
+            {/* Arrow pointing down */}
+            <div 
+              className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 
+                         border-l-[6px] border-l-transparent
+                         border-r-[6px] border-r-transparent
+                         border-t-[6px] border-t-accent"
+            />
+          </div>
+        )}
+
         <Button
           id="tap-coin"
           variant="default"
@@ -213,12 +269,12 @@ export default function MiningPage() {
           <Image 
             src={sdfCoinLogoUrl}
             alt={`${CONFIG.COIN_SYMBOL} Coin`}
-            width={150}
-            height={150}
-            className="rounded-full pointer-events-none absolute opacity-90 group-hover:opacity-100 transition-opacity object-cover" // Ensure object-cover if image aspect ratio differs
-            priority // For important images visible on load
+            width={150} // Adjusted for larger button
+            height={150} // Adjusted for larger button
+            className="rounded-full pointer-events-none absolute opacity-90 group-hover:opacity-100 transition-opacity object-contain" // changed to object-contain
+            priority 
             />
-          <span className="relative z-10 font-extrabold text-4xl text-white" style={{textShadow: '2px 2px 4px rgba(0,0,0,0.3)'}}>TAP</span>
+          {/* Removed the "TAP" text span */}
         </Button>
       </div>
 
@@ -252,5 +308,4 @@ export default function MiningPage() {
     </div>
   );
 }
-
     
