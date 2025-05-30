@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -7,10 +8,10 @@ import { cn } from '@/lib/utils';
 import { useAppState } from '../providers/app-state-provider';
 
 const navItems = [
-  { href: '/mining', label: 'Mining', icon: Coins },
-  { href: '/boosters', label: 'Boosters', icon: Rocket },
+  { href: '/mining', label: 'Mine', icon: Coins },
+  { href: '/boosters', label: 'Boosts', icon: Rocket },
   { href: '/redeem', label: 'Redeem', icon: Wallet },
-  { href: '/transactions', label: 'History', icon: History },
+  { href: '/transactions', label: 'Activity', icon: History },
   { href: '/profile', label: 'Profile', icon: User },
 ];
 
@@ -23,7 +24,7 @@ export function AppNavbar() {
   };
 
   return (
-    <nav className="bg-foreground text-background p-2 border-t border-accent flex justify-around flex-shrink-0 sticky bottom-0 z-40">
+    <nav className="bg-card text-foreground p-2 border-t border-border flex justify-around flex-shrink-0 sticky bottom-0 z-50 shadow-top-md">
       {navItems.map((item) => {
         const isActive = pathname.startsWith(item.href);
         return (
@@ -32,12 +33,22 @@ export function AppNavbar() {
             key={item.href}
             onClick={() => handleClick(item.href)}
             className={cn(
-              'flex flex-col items-center gap-1 p-2 rounded-md text-xs w-[19%] text-center transition-colors duration-200 hover:bg-primary hover:text-primary-foreground',
-              isActive ? 'bg-accent text-accent-foreground font-semibold' : 'text-muted-foreground hover:text-primary-foreground'
+              'flex flex-col items-center justify-center gap-1 p-2 rounded-lg text-xs w-[19%] h-14 text-center transition-all duration-200 group',
+              isActive 
+                ? 'bg-primary/10 text-primary scale-105 shadow-inner' 
+                : 'text-muted-foreground hover:bg-primary/5 hover:text-primary'
             )}
+            aria-current={isActive ? "page" : undefined}
           >
-            <item.icon className={cn("h-5 w-5", isActive ? "text-accent-foreground" : "text-muted-foreground group-hover:text-primary-foreground")} />
-            {item.label}
+            <item.icon 
+              className={cn(
+                "h-5 w-5 transition-colors", 
+                isActive ? "text-primary" : "text-muted-foreground group-hover:text-primary"
+              )} 
+            />
+            <span className={cn("transition-colors", isActive ? "font-semibold text-primary" : "group-hover:text-primary")}>
+              {item.label}
+            </span>
           </Link>
         );
       })}

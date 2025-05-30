@@ -1,3 +1,4 @@
+
 'use client';
 import type { ReactNode } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
@@ -24,31 +25,32 @@ export default function MainAppLayout({ children }: { children: ReactNode }) {
   if (loading || !user) {
      return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
-        <div className="w-full max-w-md space-y-6">
-          <Skeleton className="h-16 w-full" /> {/* Header Placeholder */}
-          <Skeleton className="h-8 w-full" /> {/* Marquee Placeholder */}
+        <div className="w-full max-w-md space-y-4">
+          <Skeleton className="h-20 w-full rounded-lg" /> {/* Header Placeholder */}
+          <Skeleton className="h-8 w-full rounded-md" /> {/* Marquee Placeholder */}
           <div className="flex-grow p-4 space-y-4"> {/* Content Placeholder */}
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-32 w-full rounded-lg" />
+            <Skeleton className="h-40 w-full rounded-lg" />
+            <Skeleton className="h-20 w-full rounded-lg" />
           </div>
-          <Skeleton className="h-16 w-full" /> {/* Navbar Placeholder */}
+          <Skeleton className="h-16 w-full rounded-lg" /> {/* Navbar Placeholder */}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-secondary/30"> {/* Slightly off-white background for main content area */}
       <AppHeader />
       <MarqueeBar />
-      <main className="flex-grow overflow-y-auto bg-background">
+      <main className="flex-grow overflow-y-auto bg-background"> {/* Main content background */}
         {children}
       </main>
       <ConnectionStatusIndicator />
       <DailyBonusModal />
       <AppNavbar />
-      <AppFooter />
+      {/* AppFooter is optional if navbar is sticky and provides enough info */}
+      {/* <AppFooter /> */}
     </div>
   );
 }

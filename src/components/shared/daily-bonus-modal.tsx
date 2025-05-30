@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -5,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { useAppState } from '@/components/providers/app-state-provider';
 import { CONFIG } from '@/lib/constants';
-import { Gift } from 'lucide-react';
+import { Gift, Sparkles } from 'lucide-react';
 
 export function DailyBonusModal() {
   const { userData, claimDailyBonus } = useAppState();
@@ -30,23 +31,24 @@ export function DailyBonusModal() {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-md bg-card border-primary shadow-lg">
-        <DialogHeader>
-          <DialogTitle className="text-2xl text-primary flex items-center">
-            <Gift className="mr-2 h-6 w-6 text-accent" />
+      <DialogContent className="sm:max-w-md bg-card border-primary/50 shadow-xl rounded-xl">
+        <DialogHeader className="items-center text-center pt-2">
+           <Sparkles className="h-12 w-12 text-accent mb-3" />
+          <DialogTitle className="text-2xl font-bold text-primary flex items-center justify-center">
+            <Gift className="mr-2.5 h-7 w-7 text-accent" />
             Daily Login Bonus!
           </DialogTitle>
-          <DialogDescription className="text-muted-foreground pt-2">
-            You&apos;ve earned a special bonus for logging in today.
+          <DialogDescription className="text-muted-foreground pt-2 text-base">
+            Welcome back! Here&apos;s a little something for logging in today.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4 text-center">
-          <p className="text-lg">
-            You get <strong className="text-accent font-bold">{CONFIG.DAILY_LOGIN_BONUS} {CONFIG.COIN_SYMBOL}</strong>!
+        <div className="py-6 text-center">
+          <p className="text-3xl font-bold">
+            You get <span className="text-accent">{CONFIG.DAILY_LOGIN_BONUS} {CONFIG.COIN_SYMBOL}</span>!
           </p>
         </div>
         <DialogFooter>
-          <Button onClick={handleClaim} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
+          <Button onClick={handleClaim} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground text-lg py-6 rounded-lg font-semibold">
             Claim Bonus
           </Button>
         </DialogFooter>
