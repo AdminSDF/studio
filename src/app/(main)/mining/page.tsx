@@ -39,6 +39,7 @@ export default function MiningPage() {
   const [energyRegenTimerText, setEnergyRegenTimerText] = useState("Calculating...");
   const [tapCountForAd, setTapCountForAd] = useState(0);
   const [triggerAd, setTriggerAd] = useState(false);
+  const sdfCoinLogoUrl = "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgfE9IHbZO-d0lFy6S3f_ks7gG4Wq47ohPp45dVEssDRApAIvwVv6r8CleAyjiHOAwY8aGhdELKU4xjx0nO9w6IYuwMOryi13qE5wqzsZnFDn8ZwrSd99BlrZuDiugDiwFZ5n0usxjeNeR_I7BUTc9t4r0beiwLfKfUPhAbXPhi8VVO3MWW56bydGdxH7M/s320/file_0000000026446230b5372bc60dd219f3%20%281%29.png";
 
   // Energy Regeneration Logic
   useEffect(() => {
@@ -205,11 +206,18 @@ export default function MiningPage() {
           id="tap-coin"
           variant="default"
           onClick={handleTap}
-          className="relative w-48 h-48 md:w-56 md:h-56 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground text-3xl font-bold shadow-2xl hover:shadow-primary/30 active:scale-95 transition-all duration-150 flex items-center justify-center focus-visible:ring-4 focus-visible:ring-primary/50"
+          className="relative w-48 h-48 md:w-56 md:h-56 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground text-3xl font-bold shadow-2xl hover:shadow-primary/30 active:scale-95 transition-all duration-150 flex items-center justify-center focus-visible:ring-4 focus-visible:ring-primary/50 group"
           aria-label={`Tap to mine ${CONFIG.COIN_SYMBOL}`}
           disabled={!isOnline || userData.currentEnergy < 1}
         >
-          <Image src="https://placehold.co/150x150.png" alt="Coin" width={150} height={150} className="rounded-full pointer-events-none absolute opacity-50 group-hover:opacity-75 transition-opacity" data-ai-hint="gold coin texture" />
+          <Image 
+            src={sdfCoinLogoUrl}
+            alt={`${CONFIG.COIN_SYMBOL} Coin`}
+            width={150}
+            height={150}
+            className="rounded-full pointer-events-none absolute opacity-90 group-hover:opacity-100 transition-opacity object-cover" // Ensure object-cover if image aspect ratio differs
+            priority // For important images visible on load
+            />
           <span className="relative z-10 font-extrabold text-4xl text-white" style={{textShadow: '2px 2px 4px rgba(0,0,0,0.3)'}}>TAP</span>
         </Button>
       </div>
