@@ -152,7 +152,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       referredBy: data.referredBy ?? null,
       name: data.name ?? currentAuthUser?.name ?? 'New User',
       email: data.email ?? currentAuthUser?.email ?? '',
-      photoURL: data.photoURL ?? null, // Handle photoURL
+      photoURL: data.photoURL ?? null,
       lastTapDate: processedLastTapDate,
       lastEnergyUpdate: processedLastEnergyUpdate,
       lastLoginBonusClaimed: processedLastLoginBonusClaimed,
@@ -177,7 +177,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       };
       await setDoc(newTransactionRef, newTransaction);
       setTransactions(prev => [{...newTransaction, date: new Date()} as Transaction, ...prev].sort((a,b) => ((b.date as Date).getTime() - (a.date as Date).getTime())));
-      toast({ title: "Success", description: `${transactionData.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} recorded.`, variant: "default" });
+      toast({ title: "Success", description: `${String(transactionData.type).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} recorded.`, variant: "default" });
     } catch (error) {
       console.error("Error adding transaction:", error);
       toast({ title: "Error", description: "Failed to record transaction.", variant: "destructive" });
@@ -185,7 +185,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }, [user, toast]);
 
   const checkAndAwardAchievements = useCallback(async () => {
-    if (!userData || !user) return;
+    if (!userData || !user) return; // userData is from component state
     setLoadingAchievements(true);
     let awardedNew = false;
     const currentCompletedAchievements = userData.completedAchievements || {};
@@ -239,7 +239,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           });
           awardedNew = true;
           toast({ title: "Achievement Unlocked!", description: `You earned ${achievement.reward} ${CONFIG.COIN_SYMBOL} for ${achievement.name}!`, variant: "default" });
-           setUserDataState(prev => prev ? ({
+           setUserDataState(prev => prev ? ({ // This updates userData, potentially triggering the separate effect
              ...prev,
              balance: prev.balance + achievement.reward,
              completedAchievements: { ...prev.completedAchievements, [achievement.id]: Timestamp.now() }
@@ -277,7 +277,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           lastLoginBonusClaimed: null, referredBy: null,
           createdAt: new Date(user.joinDate || Date.now()),
           name: user.name || 'New User', email: user.email || '',
-          photoURL: null, // Default photoURL
+          photoURL: null,
           completedAchievements: {}, referralsMadeCount: 0,
           activeTheme: CONFIG.APP_THEMES[0].id, unlockedThemes: [CONFIG.APP_THEMES[0].id],
         };
@@ -319,7 +319,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             delete firestoreReadyData.lastTapDate;
         }
       }
-      // No specific conversion needed for photoURL as it's a string or null
       await updateDoc(userDocRef, firestoreReadyData);
     } catch (error) {
       console.error("Error updating user data:", error);
@@ -353,6 +352,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const fetchLeaderboardData = useCallback(async () => {
     setLoadingLeaderboard(true);
     try {
+      // Required Firestore index: users collection, field 'balance', order 'descending'
+      // Security rules for users collection: allow list: if request.auth != null;
       const q = query(collection(db, 'users'), orderBy('balance', 'desc'), limit(CONFIG.LEADERBOARD_SIZE));
       const querySnapshot = await getDocs(q);
       const leaderboardData = querySnapshot.docs.map((docSnap, index) => {
@@ -369,17 +370,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       console.error("Detailed error fetching leaderboard data:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
       let description = "Could not load leaderboard. Please try again later.";
       if (error.code === 'failed-precondition') {
-        description = "Leaderboard query failed. Index missing on 'users' for 'balance' (descending).";
+        description = "Leaderboard query failed. Index missing on 'users' for 'balance' (descending). Create it in Firebase console.";
       } else if (error.code === 'permission-denied') {
-        description = "Permission denied for leaderboard. Check Firestore security rules.";
+        description = "Permission denied for leaderboard. Check Firestore security rules for 'users' collection (needs 'allow list').";
       }
       toast({ title: "Leaderboard Error", description, variant: "destructive", duration: 5000 });
     } finally {
       setLoadingLeaderboard(false);
     }
-  }, [toast]);
+  }, [toast]); // Removed setLeaderboard from here as it was causing a loop, it's a state setter
 
 
+  // Effect for initial data loading and setting up listeners
   useEffect(() => {
     if (user && !authLoading) {
       fetchUserData();
@@ -392,8 +394,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         if (docSnap.exists()) {
           const data = docSnap.data();
           const newUserData = processFirestoreData(data, user);
-          setUserDataState(newUserData);
-          if(newUserData) checkAndAwardAchievements();
+          setUserDataState(newUserData); // This will trigger the effect below for achievements
         }
       }, (error: FirestoreError) => {
         console.error("Error in user snapshot listener:", error);
@@ -430,12 +431,75 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setLoadingUserData(false);
       setLoadingLeaderboard(false);
     }
-  }, [user, authLoading, fetchUserData, fetchTransactions, fetchMarqueeItems, fetchLeaderboardData, processFirestoreData, toast, checkAndAwardAchievements]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authLoading, fetchUserData, fetchTransactions, fetchMarqueeItems, fetchLeaderboardData, processFirestoreData]);
+  // Note: `toast` was removed from dependencies as it's stable. Fetch functions are useCallback'd.
+
+  // Separate effect for checking achievements when userData changes
+  useEffect(() => {
+    if (userData && user) { // Ensure userData and user are not null
+      checkAndAwardAchievements();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData, user, checkAndAwardAchievements]); // checkAndAwardAchievements is a dependency here
 
 
   const updateEnergy = useCallback((newEnergy: number, lastUpdate: Date) => {
     setUserDataState(prev => prev ? { ...prev, currentEnergy: newEnergy, lastEnergyUpdate: lastUpdate } : null);
   }, [setUserDataState]);
+
+  const setActiveThemeState = useCallback((themeId: string) => {
+    if (!user || !userData) return;
+    if (userData.unlockedThemes?.includes(themeId)) {
+      updateUserFirestoreData({ activeTheme: themeId });
+    } else {
+      toast({ title: "Theme Locked", description: "Unlock this theme first.", variant: "destructive" });
+    }
+  }, [user, userData, updateUserFirestoreData, toast]);
+
+  const purchaseTheme = useCallback(async (themeId: string): Promise<boolean> => {
+    if (!user || !userData) {
+      toast({ title: "Error", description: "User not found.", variant: "destructive" });
+      return false;
+    }
+    const theme = CONFIG.APP_THEMES.find(t => t.id === themeId);
+    if (!theme) {
+      toast({ title: "Error", description: "Theme not found.", variant: "destructive" });
+      return false;
+    }
+    if (userData.unlockedThemes?.includes(themeId)) {
+      toast({ title: "Already Unlocked", description: "You already own this theme.", variant: "default" });
+      setActiveThemeState(themeId);
+      return true;
+    }
+    if (userData.balance < theme.cost) {
+      toast({ title: "Insufficient Funds", description: `You need ${theme.cost} ${CONFIG.COIN_SYMBOL} for this theme.`, variant: "destructive" });
+      return false;
+    }
+
+    try {
+      const userRef = doc(db, 'users', user.id);
+      const newUnlockedThemes = [...(userData.unlockedThemes || []), themeId];
+      await updateDoc(userRef, {
+        balance: increment(-theme.cost),
+        unlockedThemes: newUnlockedThemes,
+        activeTheme: themeId,
+      });
+
+      setUserDataState(prev => prev ? ({
+        ...prev,
+        balance: prev.balance - theme.cost,
+        unlockedThemes: newUnlockedThemes,
+        activeTheme: themeId,
+      }) : null);
+      toast({ title: "Theme Unlocked!", description: `${theme.name} unlocked and applied.`, variant: "default"});
+      return true;
+    } catch (error) {
+      console.error("Error purchasing theme:", error);
+      toast({ title: "Error", description: "Failed to purchase theme.", variant: "destructive" });
+      return false;
+    }
+  }, [user, userData, toast, setActiveThemeState, setUserDataState]); 
 
   const purchaseBooster = useCallback(async (boosterId: string) => {
     if (!user || !userData) {
@@ -478,9 +542,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           updates.tapPower = increment(booster.value);
         } else if (booster.effect_type === 'max_energy') {
           updates.maxEnergy = increment(booster.value);
+          // Also refill energy to new max upon upgrade if it increases max energy
           const currentMaxEnergy = userDoc.data()?.maxEnergy || CONFIG.INITIAL_MAX_ENERGY;
-          const newMaxEnergy = currentMaxEnergy + booster.value;
-          updates.currentEnergy = newMaxEnergy; 
+          updates.currentEnergy = currentMaxEnergy + booster.value; 
         }
         firestoreTransaction.update(userRef, updates);
       });
@@ -492,6 +556,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         details: `${booster.name} Lvl ${currentLevel + 1}`,
       });
       toast({ title: "Success", description: `${booster.name} upgraded!`, variant: "default" });
+      // No need to call checkAndAwardAchievements here, it's handled by userData listener
     } catch (error: any) {
       console.error("Error purchasing booster:", error);
       toast({ title: "Error", description: error.message || "Failed to purchase booster.", variant: "destructive" });
@@ -576,7 +641,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         maxEnergy: CONFIG.INITIAL_MAX_ENERGY, tapPower: CONFIG.INITIAL_TAP_POWER,
         lastEnergyUpdate: now, boostLevels: {}, lastLoginBonusClaimed: null,
         createdAt: userData?.createdAt || now,
-        photoURL: null, // Reset photoURL
+        photoURL: null, 
         referredBy: userData?.referredBy || null,
         name: userData?.name || user.name || 'User',
         email: userData?.email || user.email || '',
@@ -607,59 +672,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [user, userData, toast]);
 
-   const setActiveThemeState = useCallback((themeId: string) => {
-    if (!user || !userData) return;
-    if (userData.unlockedThemes?.includes(themeId)) {
-      updateUserFirestoreData({ activeTheme: themeId });
-    } else {
-      toast({ title: "Theme Locked", description: "Unlock this theme first.", variant: "destructive" });
-    }
-  }, [user, userData, updateUserFirestoreData, toast]);
-
-  const purchaseTheme = useCallback(async (themeId: string): Promise<boolean> => {
-    if (!user || !userData) {
-      toast({ title: "Error", description: "User not found.", variant: "destructive" });
-      return false;
-    }
-    const theme = CONFIG.APP_THEMES.find(t => t.id === themeId);
-    if (!theme) {
-      toast({ title: "Error", description: "Theme not found.", variant: "destructive" });
-      return false;
-    }
-    if (userData.unlockedThemes?.includes(themeId)) {
-      toast({ title: "Already Unlocked", description: "You already own this theme.", variant: "default" });
-      setActiveThemeState(themeId); // Ensure this is defined before purchaseTheme
-      return true;
-    }
-    if (userData.balance < theme.cost) {
-      toast({ title: "Insufficient Funds", description: `You need ${theme.cost} ${CONFIG.COIN_SYMBOL} for this theme.`, variant: "destructive" });
-      return false;
-    }
-
-    try {
-      const userRef = doc(db, 'users', user.id);
-      const newUnlockedThemes = [...(userData.unlockedThemes || []), themeId];
-      await updateDoc(userRef, {
-        balance: increment(-theme.cost),
-        unlockedThemes: newUnlockedThemes,
-        activeTheme: themeId,
-      });
-
-      setUserDataState(prev => prev ? ({
-        ...prev,
-        balance: prev.balance - theme.cost,
-        unlockedThemes: newUnlockedThemes,
-        activeTheme: themeId,
-      }) : null);
-      toast({ title: "Theme Unlocked!", description: `${theme.name} unlocked and applied.`, variant: "default"});
-      return true;
-    } catch (error) {
-      console.error("Error purchasing theme:", error);
-      toast({ title: "Error", description: "Failed to purchase theme.", variant: "destructive" });
-      return false;
-    }
-  }, [user, userData, toast, setActiveThemeState, setUserDataState]); 
-
   const uploadProfilePicture = useCallback(async (file: File): Promise<string | null> => {
     if (!user) {
       toast({ title: 'Error', description: 'You must be logged in to upload a photo.', variant: 'destructive' });
@@ -669,7 +681,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       toast({ title: 'Error', description: 'Please select an image file.', variant: 'destructive' });
       return null;
     }
-    // Max size: 2MB
     if (file.size > 2 * 1024 * 1024) {
         toast({ title: 'Error', description: 'Image size cannot exceed 2MB.', variant: 'destructive' });
         return null;
@@ -684,11 +695,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       return new Promise((resolve, reject) => {
         uploadTask.on(
           'state_changed',
-          (snapshot) => {
-            // Optional: Handle progress
-            // const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            // console.log('Upload is ' + progress + '% done');
-          },
+          (snapshot) => {},
           (error) => {
             console.error('Upload failed:', error);
             toast({ title: 'Upload Failed', description: error.message, variant: 'destructive' });
@@ -697,20 +704,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           async () => {
             try {
               const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              
-              // Delete old profile picture if it exists
               if (userData?.photoURL) {
                 try {
                   const oldFileRef = storageRef(storage, userData.photoURL);
                   await deleteObject(oldFileRef);
                 } catch (deleteError: any) {
-                  // Log error but don't fail the whole process if old image deletion fails
                   if (deleteError.code !== 'storage/object-not-found') {
                      console.warn("Could not delete old profile picture:", deleteError);
                   }
                 }
               }
-              
               const userDocRef = doc(db, 'users', user.id);
               await updateDoc(userDocRef, { photoURL: downloadURL });
               setUserDataState(prev => prev ? { ...prev, photoURL: downloadURL } : null);
@@ -740,7 +743,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       updateEnergy, purchaseBooster, claimDailyBonus, submitRedeemRequest,
       resetUserProgress, isOnline, pageHistory, addPageVisit,
       fetchLeaderboardData, checkAndAwardAchievements, purchaseTheme, setActiveThemeState,
-      uploadProfilePicture // Add to context
+      uploadProfilePicture
     }}>
       {children}
     </AppStateContext.Provider>
@@ -754,3 +757,4 @@ export function useAppState() {
   }
   return context;
 }
+
