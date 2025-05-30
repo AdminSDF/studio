@@ -287,12 +287,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       
       let description = "Could not load leaderboard. Please try again later.";
       if (error.code === 'failed-precondition') {
-        description = "Leaderboard query failed. This usually means a required database index is missing or still building. Please ensure an index exists on the 'users' collection for the 'balance' field (sorted descending). Check Firebase console.";
+        description = "Leaderboard query failed. Ensure an index exists on 'users' for 'balance' (descending).";
       } else if (error.code === 'permission-denied') {
-        description = "Permission denied when trying to load leaderboard. Please check your Firestore security rules to allow reading the 'users' collection.";
+        description = "Permission denied for leaderboard. Check Firestore security rules.";
       }
-      // Add more specific error messages based on other common error.codes if needed
-      
       toast({ title: "Leaderboard Error", description, variant: "destructive", duration: 5000 });
     } finally {
       setLoadingLeaderboard(false);
@@ -594,6 +592,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [user, userData, toast]);
 
+  const setActiveThemeState = useCallback((themeId: string) => {
+    if (!user || !userData) return;
+    if (userData.unlockedThemes?.includes(themeId)) {
+      updateUserFirestoreData({ activeTheme: themeId });
+      // setUserDataState(prev => prev ? ({ ...prev, activeTheme: themeId }) : null); // Rely on snapshot listener for this
+    } else {
+      toast({ title: "Theme Locked", description: "Unlock this theme first.", variant: "destructive" });
+    }
+  }, [user, userData, updateUserFirestoreData, toast]);
+
   const purchaseTheme = useCallback(async (themeId: string): Promise<boolean> => {
     if (!user || !userData) {
       toast({ title: "Error", description: "User not found.", variant: "destructive" });
@@ -635,17 +643,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       toast({ title: "Error", description: "Failed to purchase theme.", variant: "destructive" });
       return false;
     }
-  }, [user, userData, toast, setActiveThemeState]); // Added setActiveThemeState to dependencies
-
-  const setActiveThemeState = useCallback((themeId: string) => {
-    if (!user || !userData) return;
-    if (userData.unlockedThemes?.includes(themeId)) {
-      updateUserFirestoreData({ activeTheme: themeId });
-      // setUserDataState(prev => prev ? ({ ...prev, activeTheme: themeId }) : null); // Rely on snapshot listener for this
-    } else {
-      toast({ title: "Theme Locked", description: "Unlock this theme first.", variant: "destructive" });
-    }
-  }, [user, userData, updateUserFirestoreData, toast]);
+  }, [user, userData, toast, setActiveThemeState]);
 
 
   return (
@@ -669,5 +667,7 @@ export function useAppState() {
   }
   return context;
 }
+
+    
 
     
