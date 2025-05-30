@@ -26,23 +26,9 @@ const MediateAdOutputSchema = z.object({
   adClient: z.string().optional().describe("The AdSense client ID (e.g., ca-pub-XXXXXXXXXXXXXXXX) if adType is 'adsense'."),
   adSlot: z.string().optional().describe("The AdSense ad slot ID (e.g., YYYYYYYYYY) if adType is 'adsense'."),
   reason: z.string().describe('The reason for displaying this ad.'),
-}).refine(data => {
-  if (data.adType === 'url') {
-    return !!data.adUrl;
-  }
-  return true;
-}, {
-  message: "adUrl is required when adType is 'url'",
-  path: ["adUrl"],
-}).refine(data => {
-  if (data.adType === 'adsense') {
-    return !!data.adClient && !!data.adSlot;
-  }
-  return true;
-}, {
-  message: "adClient and adSlot are required when adType is 'adsense'",
-  path: ["adClient", "adSlot"],
-}); // adsterra_script type does not require additional fields from AI.
+});
+// Removed .refine() calls to make schema validation less strict at this stage.
+// The AdContainer component will handle checks for required fields based on adType.
 
 export type MediateAdOutput = z.infer<typeof MediateAdOutputSchema>;
 
@@ -101,30 +87,21 @@ const mediateAdFlow = ai.defineFlow(
     try {
       const { output } = await prompt(input);
       if (!output) {
-        // This case handles if the LLM returns an empty or structurally invalid response
-        // that doesn't even attempt to match the schema (e.g. undefined, null).
         console.warn("AI prompt returned falsy output. Falling back to default ad.");
         return {
           adType: 'url',
-          adUrl: 'https://syndication.adsterra.com/bn.php?ID=26645903&type=banner', // 468x60 banner
-          adClient: undefined,
-          adSlot: undefined,
-          reason: 'AI returned empty or invalid data, defaulting to high-performing URL banner.',
+          adUrl: 'https://syndication.adsterra.com/bn.php?ID=26645903&type=banner',
+          reason: 'AI returned empty data, defaulting to high-performing URL banner.',
         };
       }
-      // If output exists, Genkit has already validated it against MediateAdOutputSchema.
-      // The .refine calls in the Zod schema would have caused `prompt(input)` to throw if validation failed.
-      // So, if we reach here, output should be valid according to the schema.
+      // Basic validation still happens from Zod based on the object structure and types.
+      // AdContainer component will perform further checks for conditional fields.
       return output;
     } catch (error) {
-      // This catch block will handle errors from `prompt(input)`,
-      // including Zod validation errors if the AI output doesn't match MediateAdOutputSchema.
       console.error("Error during AI prompt execution or schema validation, falling back to default ad:", error);
       return {
         adType: 'url',
-        adUrl: 'https://syndication.adsterra.com/bn.php?ID=26645903&type=banner', // 468x60 banner
-        adClient: undefined,
-        adSlot: undefined,
+        adUrl: 'https://syndication.adsterra.com/bn.php?ID=26645903&type=banner',
         reason: 'AI response failed validation or prompt error, defaulting to high-performing URL banner.',
       };
     }
