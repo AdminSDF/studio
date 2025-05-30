@@ -8,11 +8,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Progress } from '@/components/ui/progress';
 import { CONFIG } from '@/lib/constants';
 import { formatNumber } from '@/lib/utils';
-import { Zap, DollarSign, Target, Info, AlertTriangle, Wallet, TrendingUp } from 'lucide-react';
+import { Zap, Target, Info, AlertTriangle, Wallet, TrendingUp, CreditCard, Wifi } from 'lucide-react'; // Added CreditCard
 import { useToast } from '@/hooks/use-toast';
 import { AdContainer } from '@/components/shared/ad-container';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/components/providers/auth-provider'; // Import useAuth
 
 // Helper to show floating tap value
 function showFloatingTapValue(amount: number, coinElementId: string) {
@@ -21,7 +22,7 @@ function showFloatingTapValue(amount: number, coinElementId: string) {
 
   const floatEl = document.createElement('div');
   floatEl.className = 'floating-tap-value absolute top-1/2 left-1/2 pointer-events-none text-2xl font-bold text-accent animate-floatUp z-10';
-  floatEl.textContent = `+${formatNumber(amount, 2)}`; 
+  floatEl.textContent = `+${formatNumber(amount, 2)}`;
   coinContainer.appendChild(floatEl);
   setTimeout(() => {
     if (coinContainer.contains(floatEl)) {
@@ -33,6 +34,7 @@ function showFloatingTapValue(amount: number, coinElementId: string) {
 
 export default function MiningPage() {
   const { userData, updateUserFirestoreData, updateEnergy, isOnline } = useAppState();
+  const { user: authUser } = useAuth(); // Get authUser for display name
   const { toast } = useToast();
   const [energyRegenTimerText, setEnergyRegenTimerText] = useState("Calculating...");
   const [tapCountForAd, setTapCountForAd] = useState(0);
@@ -44,25 +46,25 @@ export default function MiningPage() {
 
     const intervalId = setInterval(() => {
       const now = new Date();
-      const lastUpdate = userData.lastEnergyUpdate ? new Date(userData.lastEnergyUpdate as any) : now; 
+      const lastUpdate = userData.lastEnergyUpdate ? new Date(userData.lastEnergyUpdate as any) : now;
       const secondsPassed = Math.floor((now.getTime() - lastUpdate.getTime()) / 1000);
 
       let newEnergy = userData.currentEnergy;
       if (secondsPassed > 0 && userData.currentEnergy < userData.maxEnergy) {
         const energyGained = secondsPassed * CONFIG.ENERGY_REGEN_RATE_PER_SECOND;
         newEnergy = Math.min(userData.maxEnergy, userData.currentEnergy + energyGained);
-        
+
         updateEnergy(newEnergy, now);
-        
+
         updateUserFirestoreData({ currentEnergy: newEnergy, lastEnergyUpdate: now }).catch(error => {
           console.error("Error saving energy update:", error);
         });
       } else if (userData.currentEnergy >= userData.maxEnergy) {
-        if (now.getTime() - lastUpdate.getTime() > 5 * 60 * 1000) { 
+        if (now.getTime() - lastUpdate.getTime() > 5 * 60 * 1000) {
             updateUserFirestoreData({ lastEnergyUpdate: now });
         }
       }
-      
+
       if (newEnergy >= userData.maxEnergy) {
         setEnergyRegenTimerText("⚡ Energy Full!");
       } else {
@@ -70,7 +72,7 @@ export default function MiningPage() {
         const timeToNextEnergyPoint = currentRegenRate > 0 ? Math.ceil(1 / currentRegenRate) : Infinity;
         const energyToFull = userData.maxEnergy - newEnergy;
         const timeToFullSeconds = currentRegenRate > 0 ? Math.ceil(energyToFull / currentRegenRate) : Infinity;
-        
+
         let timerText = `+1 in ~${timeToNextEnergyPoint}s. `;
         if (timeToFullSeconds < Infinity && timeToFullSeconds > 0 && timeToFullSeconds <= 3600 * 2) { // Up to 2 hours
           const hours = Math.floor(timeToFullSeconds / 3600);
@@ -102,32 +104,32 @@ export default function MiningPage() {
     }
 
     const coinsMined = userData.tapPower;
-    
+
     const coinElement = document.getElementById('tap-coin');
     if (coinElement) {
       coinElement.classList.add('animate-pulseOnce'); // Add animation class
       setTimeout(() => coinElement.classList.remove('animate-pulseOnce'), 200); // Remove after animation
       showFloatingTapValue(coinsMined, 'tap-coin');
     }
-    
+
     const newTapCountForAd = tapCountForAd + 1;
     setTapCountForAd(newTapCountForAd);
     if (newTapCountForAd % CONFIG.MAX_TAPS_BEFORE_AD_CHECK === 0) {
-      setTriggerAd(prev => !prev); 
+      setTriggerAd(prev => !prev);
     }
 
     const today = new Date().toDateString();
     const newTapCountToday = userData.lastTapDate === today ? userData.tapCountToday + 1 : 1;
-    
-    updateEnergy(userData.currentEnergy - 1, new Date()); 
-    
+
+    updateEnergy(userData.currentEnergy -1, new Date());
+
     try {
       await updateUserFirestoreData({
         balance: (userData.balance || 0) + coinsMined,
         tapCountToday: newTapCountToday,
-        lastTapDate: today, 
-        currentEnergy: userData.currentEnergy -1, 
-        lastEnergyUpdate: new Date() 
+        lastTapDate: today,
+        currentEnergy: userData.currentEnergy -1,
+        lastEnergyUpdate: new Date()
       });
     } catch (error) {
       console.error('Error saving tap:', error);
@@ -138,9 +140,9 @@ export default function MiningPage() {
   if (!userData) {
     return (
       <div className="p-4 md:p-6 space-y-6">
-        <Skeleton className="h-28 w-full rounded-xl" />
-        <Skeleton className="h-20 w-full rounded-xl" />
-        <Skeleton className="h-48 w-48 mx-auto rounded-full" />
+        <Skeleton className="h-[180px] w-full max-w-sm mx-auto rounded-xl" /> {/* Wallet Card Skeleton */}
+        <Skeleton className="h-20 w-full rounded-xl" /> {/* Energy Card Skeleton */}
+        <Skeleton className="h-48 w-48 mx-auto rounded-full" /> {/* Tap Button Skeleton */}
         <div className="grid grid-cols-2 gap-4">
           <Skeleton className="h-24 w-full rounded-xl" />
           <Skeleton className="h-24 w-full rounded-xl" />
@@ -152,18 +154,40 @@ export default function MiningPage() {
   const energyPercent = userData.maxEnergy > 0 ? (userData.currentEnergy / userData.maxEnergy) * 100 : 0;
   const balanceInrValue = userData.balance * CONFIG.CONVERSION_RATE;
   const remainingToRedeem = Math.max(0, CONFIG.MIN_REDEEM - userData.balance);
+  const userDisplayName = userData.name || authUser?.name || 'Tap Titan';
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-20">
-      <Card className="shadow-lg border-primary/50 rounded-xl">
-        <CardHeader>
-          <CardTitle className="flex items-center text-primary text-xl"><Wallet className="mr-2.5 h-6 w-6" /> Your Wallet</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-4xl font-bold text-primary">{formatNumber(userData.balance)} <span className="text-2xl opacity-80">{CONFIG.COIN_SYMBOL}</span></div>
-          <p className="text-sm text-muted-foreground mt-1">≈ ₹{formatNumber(balanceInrValue)} INR</p>
-        </CardContent>
-      </Card>
+      {/* Wallet Card - Debit/Credit Card Style */}
+      <div className="w-full max-w-sm mx-auto bg-gradient-to-br from-primary via-primary/80 to-accent text-primary-foreground p-5 rounded-xl shadow-2xl relative aspect-[1.586] flex flex-col justify-between">
+        <div>
+          <div className="flex justify-between items-start mb-2">
+            <h2 className="text-xl font-bold">{CONFIG.APP_NAME}</h2>
+            <Wifi className="w-6 h-6 opacity-80" /> {/* Wifi/Contactless symbol */}
+          </div>
+          <div className="w-10 h-8 bg-yellow-300/80 rounded-md mb-3 flex items-center justify-center">
+             {/* Chip Placeholder */}
+            <div className="w-8 h-6 bg-yellow-400/90 rounded-sm border-2 border-yellow-500/50"></div>
+          </div>
+          <p className="text-xs tracking-wider opacity-80">VIRTUAL BALANCE</p>
+          <div className="text-3xl font-bold tracking-wider my-1">
+            {formatNumber(userData.balance)} <span className="text-xl opacity-90">{CONFIG.COIN_SYMBOL}</span>
+          </div>
+        </div>
+        <div className="mt-auto">
+           <div className="flex justify-between items-end">
+            <div>
+                <p className="text-xs opacity-80 uppercase">Card Holder</p>
+                <p className="font-semibold text-sm tracking-wide">{userDisplayName}</p>
+            </div>
+            <div>
+                <p className="text-xs opacity-80 text-right">Approx. Value</p>
+                <p className="font-semibold text-sm text-right">₹{formatNumber(balanceInrValue)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
 
       <Card className="shadow-md rounded-xl border-border">
         <CardHeader>
@@ -175,7 +199,7 @@ export default function MiningPage() {
           <p className="text-xs text-muted-foreground text-center mt-2.5">{energyRegenTimerText}</p>
         </CardContent>
       </Card>
-      
+
       <div className="flex justify-center my-8 relative" id="coin-container">
         <Button
           id="tap-coin"
@@ -214,9 +238,11 @@ export default function MiningPage() {
           )}
         </CardContent>
       </Card>
-      
+
       <AdContainer pageContext="mining" trigger={triggerAd} />
 
     </div>
   );
 }
+
+    
