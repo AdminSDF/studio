@@ -35,6 +35,7 @@ export default function ProfilePage() {
   const [adTrigger, setAdTrigger] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const defaultAvatarUrl = "https://placehold.co/96x96.png";
 
 
   const handleLogout = async () => {
@@ -120,6 +121,7 @@ export default function ProfilePage() {
     .reduce((sum, t) => sum + t.amount, 0);
   const referralsMade = userData.referralsMadeCount || 0;
   const userDisplayName = userData.name || authUser.name || 'User';
+  const avatarSrc = userData.photoURL || defaultAvatarUrl;
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-20">
@@ -130,19 +132,16 @@ export default function ProfilePage() {
               <div className="w-24 h-24 rounded-full bg-card/30 flex items-center justify-center animate-pulse">
                 <UploadCloud className="w-10 h-10 text-primary-foreground/70" />
               </div>
-            ) : userData.photoURL ? (
+            ) : (
               <Image
-                src={userData.photoURL}
+                src={avatarSrc}
                 alt={`${userDisplayName}'s profile picture`}
                 width={96}
                 height={96}
                 className="w-24 h-24 rounded-full object-cover border-4 border-card shadow-lg"
-                data-ai-hint="profile picture"
+                data-ai-hint={userData.photoURL ? "profile picture" : "default avatar"}
+                unoptimized={!userData.photoURL} // Use unoptimized for placeholder to avoid Next.js domain errors
               />
-            ) : (
-              <div className="w-24 h-24 rounded-full bg-card text-primary flex items-center justify-center text-5xl font-bold shadow-lg border-4 border-card">
-                {userDisplayName.charAt(0).toUpperCase()}
-              </div>
             )}
             {!isUploading && (
               <Button
@@ -257,3 +256,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
