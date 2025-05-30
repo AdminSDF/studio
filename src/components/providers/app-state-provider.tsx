@@ -2,8 +2,9 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase'; // Import storage
 import { doc, getDoc, onSnapshot, Timestamp, setDoc, updateDoc, collection, query, where, orderBy, getDocs, runTransaction, writeBatch, serverTimestamp, increment, DocumentData, FirestoreError, limit, collectionGroup } from 'firebase/firestore';
+import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage"; // Firebase storage imports
 import type { UserData, Transaction, MarqueeItem, LeaderboardEntry, Achievement, AppTheme, UserProfile } from '@/types';
 import { useAuth } from './auth-provider';
 import { CONFIG } from '@/lib/constants';
@@ -34,6 +35,7 @@ interface AppStateContextType {
   checkAndAwardAchievements: () => Promise<void>;
   purchaseTheme: (themeId: string) => Promise<boolean>;
   setActiveThemeState: (themeId: string) => void;
+  uploadProfilePicture: (file: File) => Promise<string | null>; // New function for profile picture
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
@@ -150,6 +152,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       referredBy: data.referredBy ?? null,
       name: data.name ?? currentAuthUser?.name ?? 'New User',
       email: data.email ?? currentAuthUser?.email ?? '',
+      photoURL: data.photoURL ?? null, // Handle photoURL
       lastTapDate: processedLastTapDate,
       lastEnergyUpdate: processedLastEnergyUpdate,
       lastLoginBonusClaimed: processedLastLoginBonusClaimed,
@@ -173,8 +176,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         date: serverTimestamp() as Timestamp,
       };
       await setDoc(newTransactionRef, newTransaction);
-      // The snapshot listener should update transactions, but for immediate feedback:
-      // Temporarily cast to Transaction for immediate UI update, actual date will be Timestamp from server
       setTransactions(prev => [{...newTransaction, date: new Date()} as Transaction, ...prev].sort((a,b) => ((b.date as Date).getTime() - (a.date as Date).getTime())));
       toast({ title: "Success", description: `${transactionData.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} recorded.`, variant: "default" });
     } catch (error) {
@@ -217,13 +218,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (criteriaMet) {
         const userRef = doc(db, 'users', user.id);
         try {
-          await runTransaction(db, async (firestoreTransaction) => { // Renamed to avoid conflict
+          await runTransaction(db, async (firestoreTransaction) => { 
             const userDoc = await firestoreTransaction.get(userRef);
             if (!userDoc.exists()) throw "User document does not exist!";
 
             const serverUserData = userDoc.data();
             const serverCompletedAchievements = serverUserData.completedAchievements || {};
-            if (serverCompletedAchievements[achievement.id]) return; // Already awarded by another process
+            if (serverCompletedAchievements[achievement.id]) return; 
 
             firestoreTransaction.update(userRef, {
               balance: increment(achievement.reward),
@@ -246,15 +247,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
         } catch (error) {
           console.error("Error awarding achievement transaction:", error);
-          // Do not toast here if transaction failed, as it might be a race condition or already awarded
         }
       }
     }
     setLoadingAchievements(false);
-    // if (awardedNew) {
-      // Relies on snapshot to update userData fully
-    // }
-  }, [userData, user, addTransaction, toast, setUserDataState]); // Added setUserDataState
+  }, [userData, user, addTransaction, toast, setUserDataState]); 
 
   const fetchUserData = useCallback(async () => {
     if (!user || !firebaseUser) {
@@ -271,7 +268,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         const data = userDocSnap.data();
         const processedData = processFirestoreData(data, user);
         setUserDataState(processedData);
-        // No need to call checkAndAwardAchievements here, snapshot listener will do it.
       } else {
         const now = new Date();
         const newUser: UserData = {
@@ -281,12 +277,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           lastLoginBonusClaimed: null, referredBy: null,
           createdAt: new Date(user.joinDate || Date.now()),
           name: user.name || 'New User', email: user.email || '',
+          photoURL: null, // Default photoURL
           completedAchievements: {}, referralsMadeCount: 0,
           activeTheme: CONFIG.APP_THEMES[0].id, unlockedThemes: [CONFIG.APP_THEMES[0].id],
         };
         await setDoc(userDocRef, {
           ...newUser,
-          // Convert Date objects to Timestamps for Firestore
           lastTapDate: Timestamp.fromDate(new Date(newUser.lastTapDate!)),
           lastEnergyUpdate: Timestamp.fromDate(newUser.lastEnergyUpdate as Date),
           lastLoginBonusClaimed: newUser.lastLoginBonusClaimed ? Timestamp.fromDate(newUser.lastLoginBonusClaimed as Date) : null,
@@ -323,6 +319,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             delete firestoreReadyData.lastTapDate;
         }
       }
+      // No specific conversion needed for photoURL as it's a string or null
       await updateDoc(userDocRef, firestoreReadyData);
     } catch (error) {
       console.error("Error updating user data:", error);
@@ -354,24 +351,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const fetchLeaderboardData = useCallback(async () => {
-    /**
-     * IMPORTANT: For the leaderboard to work, you need:
-     * 1. Firestore Index:
-     *    - Collection ID: `users`
-     *    - Field: `balance`, Sort Order: Descending
-     *    - You can create this in your Firebase console -> Firestore Database -> Indexes.
-     * 2. Firestore Security Rules:
-     *    - Ensure your rules allow authenticated users to read/list the `users` collection.
-     *    - Example rule for `users` collection (adapt to your needs):
-     *      ```rules
-     *      match /users/{userId} {
-     *        allow get: if request.auth != null && request.auth.uid == userId; // User can read their own full doc
-     *        allow list: if request.auth != null; // Authenticated users can list users (for leaderboard)
-     *        allow create: if request.auth != null && request.auth.uid == userId; // User can create their own doc
-     *        allow update: if request.auth != null && request.auth.uid == userId; // User can update their own doc
-     *      }
-     *      ```
-     */
     setLoadingLeaderboard(true);
     try {
       const q = query(collection(db, 'users'), orderBy('balance', 'desc'), limit(CONFIG.LEADERBOARD_SIZE));
@@ -390,9 +369,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       console.error("Detailed error fetching leaderboard data:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
       let description = "Could not load leaderboard. Please try again later.";
       if (error.code === 'failed-precondition') {
-        description = "Leaderboard query failed. Index missing on 'users' for 'balance' (descending). Check Firebase console.";
+        description = "Leaderboard query failed. Index missing on 'users' for 'balance' (descending).";
       } else if (error.code === 'permission-denied') {
-        description = "Permission denied for leaderboard. Check Firestore security rules for 'users' collection (need list access).";
+        description = "Permission denied for leaderboard. Check Firestore security rules.";
       }
       toast({ title: "Leaderboard Error", description, variant: "destructive", duration: 5000 });
     } finally {
@@ -430,9 +409,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
          setTransactions(userTransactions);
       }, (error: FirestoreError) => {
         console.error("Error in transaction snapshot listener:", error);
-        let description = "Could not listen for transaction updates. Please try again later.";
+        let description = "Could not listen for transaction updates.";
         if (error.code === 'failed-precondition') {
-          description = "Transactions require an index: userId (asc), date (desc). Ask admin to create it in Firebase console.";
+          description = "Transactions require an index: userId (asc), date (desc). Create it in Firebase console.";
         } else if (error.code === 'permission-denied') {
           description = "Permission denied for transactions. Check Firestore security rules.";
         }
@@ -451,9 +430,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setLoadingUserData(false);
       setLoadingLeaderboard(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, authLoading, fetchUserData, fetchTransactions, fetchMarqueeItems, fetchLeaderboardData, processFirestoreData]);
-  // Removed checkAndAwardAchievements from this dependency array
+  }, [user, authLoading, fetchUserData, fetchTransactions, fetchMarqueeItems, fetchLeaderboardData, processFirestoreData, toast, checkAndAwardAchievements]);
 
 
   const updateEnergy = useCallback((newEnergy: number, lastUpdate: Date) => {
@@ -485,7 +462,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
     try {
       const userRef = doc(db, 'users', user.id);
-      await runTransaction(db, async (firestoreTransaction) => { // Renamed variable
+      await runTransaction(db, async (firestoreTransaction) => { 
         const userDoc = await firestoreTransaction.get(userRef);
         if (!userDoc.exists()) throw new Error("User document does not exist!");
 
@@ -501,10 +478,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           updates.tapPower = increment(booster.value);
         } else if (booster.effect_type === 'max_energy') {
           updates.maxEnergy = increment(booster.value);
-           // If max energy increases, also top up current energy to the new max if it's higher
           const currentMaxEnergy = userDoc.data()?.maxEnergy || CONFIG.INITIAL_MAX_ENERGY;
           const newMaxEnergy = currentMaxEnergy + booster.value;
-          updates.currentEnergy = newMaxEnergy; // Top up energy to new max
+          updates.currentEnergy = newMaxEnergy; 
         }
         firestoreTransaction.update(userRef, updates);
       });
@@ -516,7 +492,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         details: `${booster.name} Lvl ${currentLevel + 1}`,
       });
       toast({ title: "Success", description: `${booster.name} upgraded!`, variant: "default" });
-      // await checkAndAwardAchievements(); // Snapshot will trigger this
     } catch (error: any) {
       console.error("Error purchasing booster:", error);
       toast({ title: "Error", description: error.message || "Failed to purchase booster.", variant: "destructive" });
@@ -545,7 +520,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         status: 'completed',
       });
       toast({ title: "Bonus Claimed!", description: `You received ${CONFIG.DAILY_LOGIN_BONUS} ${CONFIG.COIN_SYMBOL}.`, variant: "default" });
-      // await checkAndAwardAchievements(); // Snapshot will trigger this
     } catch (error) {
       console.error("Error claiming daily bonus:", error);
       toast({ title: "Error", description: "Failed to claim daily bonus.", variant: "destructive" });
@@ -568,7 +542,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
     try {
       const userRef = doc(db, 'users', user.id);
-      await runTransaction(db, async (firestoreTransaction) => { // Renamed variable
+      await runTransaction(db, async (firestoreTransaction) => { 
         const userDoc = await firestoreTransaction.get(userRef);
         if (!userDoc.exists()) throw new Error("User document does not exist!");
         const serverBalance = userDoc.data()?.balance || 0;
@@ -585,7 +559,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         inrAmount: amount * CONFIG.CONVERSION_RATE,
       });
       toast({ title: "Request Submitted", description: "Your redeem request has been submitted.", variant: "default" });
-      // await checkAndAwardAchievements(); // Snapshot will trigger this
     } catch (error: any) {
       console.error("Error submitting redeem request:", error);
       toast({ title: "Error", description: error.message || "Failed to submit redeem request.", variant: "destructive" });
@@ -603,6 +576,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         maxEnergy: CONFIG.INITIAL_MAX_ENERGY, tapPower: CONFIG.INITIAL_TAP_POWER,
         lastEnergyUpdate: now, boostLevels: {}, lastLoginBonusClaimed: null,
         createdAt: userData?.createdAt || now,
+        photoURL: null, // Reset photoURL
         referredBy: userData?.referredBy || null,
         name: userData?.name || user.name || 'User',
         email: userData?.email || user.email || '',
@@ -654,7 +628,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
     if (userData.unlockedThemes?.includes(themeId)) {
       toast({ title: "Already Unlocked", description: "You already own this theme.", variant: "default" });
-      setActiveThemeState(themeId);
+      setActiveThemeState(themeId); // Ensure this is defined before purchaseTheme
       return true;
     }
     if (userData.balance < theme.cost) {
@@ -677,8 +651,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         unlockedThemes: newUnlockedThemes,
         activeTheme: themeId,
       }) : null);
-      // No need to call addTransaction as this is a direct balance update with theme unlock.
-      // If a transaction record is desired, it can be added.
       toast({ title: "Theme Unlocked!", description: `${theme.name} unlocked and applied.`, variant: "default"});
       return true;
     } catch (error) {
@@ -686,7 +658,78 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       toast({ title: "Error", description: "Failed to purchase theme.", variant: "destructive" });
       return false;
     }
-  }, [user, userData, toast, setActiveThemeState, setUserDataState]); // Added setUserDataState
+  }, [user, userData, toast, setActiveThemeState, setUserDataState]); 
+
+  const uploadProfilePicture = useCallback(async (file: File): Promise<string | null> => {
+    if (!user) {
+      toast({ title: 'Error', description: 'You must be logged in to upload a photo.', variant: 'destructive' });
+      return null;
+    }
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Error', description: 'Please select an image file.', variant: 'destructive' });
+      return null;
+    }
+    // Max size: 2MB
+    if (file.size > 2 * 1024 * 1024) {
+        toast({ title: 'Error', description: 'Image size cannot exceed 2MB.', variant: 'destructive' });
+        return null;
+    }
+
+    const filePath = `profilePictures/${user.id}/${Date.now()}_${file.name}`;
+    const fileRef = storageRef(storage, filePath);
+
+    try {
+      const uploadTask = uploadBytesResumable(fileRef, file);
+
+      return new Promise((resolve, reject) => {
+        uploadTask.on(
+          'state_changed',
+          (snapshot) => {
+            // Optional: Handle progress
+            // const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            // console.log('Upload is ' + progress + '% done');
+          },
+          (error) => {
+            console.error('Upload failed:', error);
+            toast({ title: 'Upload Failed', description: error.message, variant: 'destructive' });
+            reject(null);
+          },
+          async () => {
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              
+              // Delete old profile picture if it exists
+              if (userData?.photoURL) {
+                try {
+                  const oldFileRef = storageRef(storage, userData.photoURL);
+                  await deleteObject(oldFileRef);
+                } catch (deleteError: any) {
+                  // Log error but don't fail the whole process if old image deletion fails
+                  if (deleteError.code !== 'storage/object-not-found') {
+                     console.warn("Could not delete old profile picture:", deleteError);
+                  }
+                }
+              }
+              
+              const userDocRef = doc(db, 'users', user.id);
+              await updateDoc(userDocRef, { photoURL: downloadURL });
+              setUserDataState(prev => prev ? { ...prev, photoURL: downloadURL } : null);
+              toast({ title: 'Success', description: 'Profile picture updated!' });
+              resolve(downloadURL);
+            } catch (error: any) {
+                console.error("Error updating Firestore or getting URL:", error);
+                toast({ title: 'Error', description: 'Failed to save profile picture URL.', variant: 'destructive' });
+                reject(null);
+            }
+          }
+        );
+      });
+    } catch (error) {
+      console.error("Error starting upload:", error);
+      toast({ title: 'Upload Error', description: 'Could not start image upload.', variant: 'destructive' });
+      return null;
+    }
+  }, [user, userData, toast, setUserDataState]);
 
 
   return (
@@ -696,7 +739,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setUserDataState, fetchUserData, updateUserFirestoreData, addTransaction,
       updateEnergy, purchaseBooster, claimDailyBonus, submitRedeemRequest,
       resetUserProgress, isOnline, pageHistory, addPageVisit,
-      fetchLeaderboardData, checkAndAwardAchievements, purchaseTheme, setActiveThemeState
+      fetchLeaderboardData, checkAndAwardAchievements, purchaseTheme, setActiveThemeState,
+      uploadProfilePicture // Add to context
     }}>
       {children}
     </AppStateContext.Provider>

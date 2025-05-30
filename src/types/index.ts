@@ -43,6 +43,7 @@ export interface UserData {
   createdAt: Date | null;
   name?: string;
   email?: string;
+  photoURL?: string | null; // Added for profile picture
   // New fields for suggested features
   completedAchievements?: Record<string, Timestamp>; // { achievementId: completionTimestamp }
   referralsMadeCount?: number;
@@ -97,3 +98,4 @@ export interface LeaderboardEntry {
   balance: number;
   rank?: number;
 }
+

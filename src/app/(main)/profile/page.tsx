@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { CONFIG } from '@/lib/constants';
 import { formatNumber } from '@/lib/utils';
-import { UserCircle, CalendarDays, TrendingUp, TrendingDown, Copy, Settings, LogOut, AlertTriangle, KeyRound, Users, Hourglass } from 'lucide-react'; // Added Users for referrals, Hourglass for pending
+import { UserCircle, CalendarDays, TrendingUp, TrendingDown, Copy, Settings, LogOut, AlertTriangle, KeyRound, Users, Hourglass, Edit3, UploadCloud } from 'lucide-react'; // Added Edit3, UploadCloud
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
@@ -24,13 +24,17 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { AdContainer } from '@/components/shared/ad-container';
-import { useState } from 'react';
+import { useState, useRef, ChangeEvent } from 'react';
+import Image from 'next/image'; // For Next.js optimized images
+import { cn } from '@/lib/utils';
 
 export default function ProfilePage() {
   const { user: authUser, firebaseUser } = useAuth();
-  const { userData, transactions, resetUserProgress, loadingUserData } = useAppState();
+  const { userData, transactions, resetUserProgress, loadingUserData, uploadProfilePicture } = useAppState();
   const { toast } = useToast();
   const [adTrigger, setAdTrigger] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
 
   const handleLogout = async () => {
@@ -70,6 +74,28 @@ export default function ProfilePage() {
     }
   };
 
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setIsUploading(true);
+      try {
+        await uploadProfilePicture(file);
+        // Toast for success/failure is handled within uploadProfilePicture
+      } catch (error) {
+        // Error already toasted by uploadProfilePicture
+        console.error("Profile picture upload error on page:", error);
+      } finally {
+        setIsUploading(false);
+        // Clear the file input so the same file can be selected again if needed
+        if(fileInputRef.current) fileInputRef.current.value = "";
+      }
+    }
+  };
+
   if (loadingUserData || !userData || !authUser) {
     return (
       <div className="p-4 md:p-6 space-y-6">
@@ -80,7 +106,7 @@ export default function ProfilePage() {
             <Skeleton className="h-5 w-64 rounded-md" />
           </div>
         </div>
-        {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-xl" />)} {/* Adjusted skeleton count */}
+        {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-xl" />)}
          <Skeleton className="h-16 w-full rounded-xl" />
       </div>
     );
@@ -93,16 +119,53 @@ export default function ProfilePage() {
     .filter(t => t.status === 'pending' && t.type === 'redeem')
     .reduce((sum, t) => sum + t.amount, 0);
   const referralsMade = userData.referralsMadeCount || 0;
+  const userDisplayName = userData.name || authUser.name || 'User';
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-20">
       <Card className="shadow-xl border-primary/30 rounded-xl overflow-hidden">
         <CardHeader className="flex flex-col items-center space-y-3 bg-gradient-to-br from-primary/80 to-accent/70 p-6 text-primary-foreground">
-          <div className="w-24 h-24 rounded-full bg-card text-primary flex items-center justify-center text-5xl font-bold shadow-lg border-4 border-card">
-            {(userData.name || authUser.name || 'U').charAt(0).toUpperCase()}
+          <div className="relative group">
+            {isUploading ? (
+              <div className="w-24 h-24 rounded-full bg-card/30 flex items-center justify-center animate-pulse">
+                <UploadCloud className="w-10 h-10 text-primary-foreground/70" />
+              </div>
+            ) : userData.photoURL ? (
+              <Image
+                src={userData.photoURL}
+                alt={`${userDisplayName}'s profile picture`}
+                width={96}
+                height={96}
+                className="w-24 h-24 rounded-full object-cover border-4 border-card shadow-lg"
+                data-ai-hint="profile picture"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-card text-primary flex items-center justify-center text-5xl font-bold shadow-lg border-4 border-card">
+                {userDisplayName.charAt(0).toUpperCase()}
+              </div>
+            )}
+            {!isUploading && (
+              <Button
+                variant="outline"
+                size="icon"
+                className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-card text-primary hover:bg-primary/10 group-hover:opacity-100 opacity-70 transition-opacity"
+                onClick={handleAvatarClick}
+                aria-label="Change profile picture"
+              >
+                <Edit3 className="w-4 h-4" />
+              </Button>
+            )}
           </div>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept="image/png, image/jpeg, image/gif"
+            className="hidden"
+            disabled={isUploading}
+          />
           <div className="text-center">
-            <CardTitle className="text-3xl font-bold">{userData.name || authUser.name || 'User'}</CardTitle>
+            <CardTitle className="text-3xl font-bold">{userDisplayName}</CardTitle>
             <CardDescription className="text-primary-foreground/80 text-sm">{userData.email || authUser.email}</CardDescription>
           </div>
         </CardHeader>

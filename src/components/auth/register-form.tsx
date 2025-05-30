@@ -87,6 +87,7 @@ export function RegisterForm() {
         createdAt: Timestamp.fromDate(new Date(firebaseUser.metadata.creationTime || now)),
         name: name,
         email: email,
+        photoURL: null, // Initialize photoURL
         completedAchievements: {},
         referralsMadeCount: 0,
         activeTheme: CONFIG.APP_THEMES[0].id, // Default theme
