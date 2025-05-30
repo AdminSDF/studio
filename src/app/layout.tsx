@@ -1,7 +1,6 @@
 
-'use client'; // Making RootLayout client component to use useAppState for theme
+'use client';
 
-import type { Metadata } from 'next'; // Metadata can still be defined this way
 import { Poppins } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
@@ -18,25 +17,21 @@ const poppins = Poppins({
   variable: '--font-poppins',
 });
 
-// export const metadata: Metadata = { // Metadata needs to be handled differently for client components if dynamic based on state
-//   title: `${CONFIG.APP_NAME} - Tap to Earn`,
-//   description: `Tap to earn cryptocurrency with ${CONFIG.APP_NAME}!`,
-// };
-// For now, a static title can be set in Head, or dynamic title managed via useEffect
-
-function AppBody({ children }: { children: React.ReactNode }) {
+// This component wraps the main content and applies the dynamic theme class.
+// It lives inside AppStateProvider to access theme state.
+function ThemeWrapper({ children }: { children: React.ReactNode }) {
   const { userData } = useAppState();
   const activeTheme = CONFIG.APP_THEMES.find(t => t.id === userData?.activeTheme) || CONFIG.APP_THEMES[0];
 
   return (
-    <body className={cn(
-      poppins.variable,
-      'font-sans antialiased flex flex-col min-h-screen',
-      activeTheme.cssClass // Apply theme class
+    <div className={cn(
+      // These classes define the main app container style and were previously on <body> in globals.css or AppBody
+      'max-w-[500px] mx-auto border-l border-r border-border shadow-2xl overflow-x-hidden',
+      'flex flex-col min-h-screen', // Ensures it takes full height and arranges children vertically
+      activeTheme.cssClass // Apply the theme class itself
     )}>
       {children}
-      <Toaster />
-    </body>
+    </div>
   );
 }
 
@@ -47,9 +42,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={poppins.variable}>
       <head>
-        {/* For dynamic title, you might use a client component with useEffect and document.title */}
         <title>{CONFIG.APP_NAME} - Tap, Earn, Conquer!</title>
         <meta name="description" content={`Tap to earn cryptocurrency with ${CONFIG.APP_NAME}! Conquer the leaderboards and unlock achievements.`} />
         <Script
@@ -59,11 +53,18 @@ export default function RootLayout({
           strategy="afterInteractive"
         />
       </head>
-      <AuthProvider>
-        <AppStateProvider>
-          <AppBody>{children}</AppBody>
-        </AppStateProvider>
-      </AuthProvider>
+      <body className={cn(
+        'font-sans antialiased'
+        // The bg-background and text-foreground will be applied via globals.css,
+        // picking up theme variables set by ThemeWrapper's activeTheme.cssClass
+      )}>
+        <AuthProvider>
+          <AppStateProvider>
+            <ThemeWrapper>{children}</ThemeWrapper>
+          </AppStateProvider>
+        </AuthProvider>
+        <Toaster />
+      </body>
     </html>
   );
 }
