@@ -87,52 +87,97 @@ body {
     --ring: 170 65% 55%;
   }
 
-  /* Example Theme: Crimson Fire */
+  /* Theme: Crimson Fire */
   .theme-crimson-fire {
-    --background: 0 0% 15%; /* Dark grey/black */
-    --foreground: 0 0% 90%; /* Light grey text */
-    --card: 0 0% 20%; /* Slightly lighter dark grey for cards */
+    --background: 0 0% 15%; 
+    --foreground: 0 0% 90%; 
+    --card: 0 0% 20%; 
     --card-foreground: 0 0% 85%;
     --popover: 0 0% 18%;
     --popover-foreground: 0 0% 85%;
-    --primary: 0 70% 50%; /* Crimson Red */
-    --primary-foreground: 0 0% 100%; /* White */
-    --secondary: 0 50% 30%; /* Darker Crimson */
+    --primary: 0 70% 50%; 
+    --primary-foreground: 0 0% 100%; 
+    --secondary: 0 50% 30%; 
     --secondary-foreground: 0 0% 90%;
     --muted: 0 0% 25%;
     --muted-foreground: 0 0% 60%;
-    --accent: 30 90% 55%; /* Fiery Orange */
-    --accent-foreground: 0 0% 0%; /* Black text on orange */
+    --accent: 30 90% 55%; 
+    --accent-foreground: 0 0% 0%; 
     --border: 0 0% 30%;
     --input: 0 0% 22%;
-    --ring: 0 70% 50%; /* Crimson Red for ring */
-    --success: 120 60% 40%; /* Darker Green */
-    --warning: 45 80% 50%; /* Gold/Yellow */
+    --ring: 0 70% 50%; 
+    --success: 120 60% 40%; 
+    --warning: 45 80% 50%; 
   }
   
-  /* Example Theme: Emerald Forest */
+  /* Theme: Emerald Forest */
   .theme-emerald-forest {
-    --background: 120 10% 95%; /* Very light green/off-white */
-    --foreground: 150 30% 20%; /* Dark forest green text */
-    --card: 130 15% 100%; /* White with a hint of green */
+    --background: 120 10% 95%; 
+    --foreground: 150 30% 20%; 
+    --card: 130 15% 100%; 
     --card-foreground: 150 30% 20%;
     --popover: 130 15% 100%;
     --popover-foreground: 150 30% 20%;
-    --primary: 140 60% 45%; /* Emerald Green */
-    --primary-foreground: 0 0% 100%; /* White */
-    --secondary: 140 40% 85%; /* Light Emerald */
+    --primary: 140 60% 45%; 
+    --primary-foreground: 0 0% 100%; 
+    --secondary: 140 40% 85%; 
     --secondary-foreground: 140 60% 30%;
-    --muted: 130 20% 90%; /* Light grey-green */
+    --muted: 130 20% 90%; 
     --muted-foreground: 150 20% 50%;
-    --accent: 100 50% 50%; /* Bright Leaf Green */
-    --accent-foreground: 0 0% 0%; /* Black text on leaf green */
+    --accent: 100 50% 50%; 
+    --accent-foreground: 0 0% 0%; 
     --border: 130 20% 80%;
     --input: 130 15% 92%;
-    --ring: 140 60% 45%; /* Emerald Green for ring */
+    --ring: 140 60% 45%; 
     --success: 100 60% 40%;
     --warning: 50 90% 55%;
   }
 
+  /* Theme: Neon Glow */
+  .theme-neon-glow {
+    --background: 220 15% 10%; /* Very dark blue/black */
+    --foreground: 220 10% 85%; /* Light grey */
+    --card: 220 15% 15%; /* Darker blue/black for cards */
+    --card-foreground: 220 10% 80%;
+    --popover: 220 15% 12%;
+    --popover-foreground: 220 10% 80%;
+    --primary: 330 100% 60%; /* Neon Pink */
+    --primary-foreground: 0 0% 100%; /* White */
+    --secondary: 330 80% 40%; /* Darker Neon Pink */
+    --secondary-foreground: 220 10% 85%;
+    --muted: 220 10% 25%; /* Dark Grey */
+    --muted-foreground: 220 10% 60%;
+    --accent: 180 100% 50%; /* Neon Blue/Cyan */
+    --accent-foreground: 0 0% 0%; /* Black text on cyan */
+    --border: 220 15% 25%;
+    --input: 220 15% 18%;
+    --ring: 330 100% 60%; /* Neon Pink for ring */
+    --success: 140 70% 50%; /* Bright Green */
+    --warning: 60 100% 55%; /* Bright Yellow */
+  }
+
+  /* Theme: Solaris Flare */
+  .theme-solaris-flare {
+    --background: 30 5% 15%; /* Deep Grey/Charcoal */
+    --foreground: 30 10% 85%; /* Off-white/light warm grey */
+    --card: 30 5% 20%; /* Slightly lighter charcoal for cards */
+    --card-foreground: 30 10% 80%;
+    --popover: 30 5% 18%;
+    --popover-foreground: 30 10% 80%;
+    --primary: 30 100% 60%; /* Bright Orange */
+    --primary-foreground: 0 0% 0%; /* Black text on orange */
+    --secondary: 30 60% 40%; /* Muted Orange/Brown */
+    --secondary-foreground: 30 10% 85%;
+    --muted: 30 5% 30%; /* Darker Grey */
+    --muted-foreground: 30 10% 60%;
+    --accent: 50 100% 55%; /* Vibrant Yellow */
+    --accent-foreground: 0 0% 0%; /* Black text on yellow */
+    --border: 30 5% 25%;
+    --input: 30 5% 22%;
+    --ring: 30 100% 60%; /* Bright Orange for ring */
+    --success: 120 70% 45%; /* Rich Green */
+    --warning: 40 100% 60%; /* Gold/Orange */
+  }
 }
 
 @layer base {
@@ -140,10 +185,10 @@ body {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground; /* Theme colors are driven by CSS variables */
-    min-height: 100vh; /* Ensure body takes full viewport height */
-    display: flex; /* Allows child (ThemeAppContainer) to use flex-grow */
-    flex-direction: column; /* Stack children vertically */
+    @apply bg-background text-foreground; 
+    min-height: 100vh; 
+    display: flex; 
+    flex-direction: column; 
   }
 }
 
@@ -161,6 +206,31 @@ body {
   0% { transform: translateX(0); }
   100% { transform: translateX(-100%); }
 }
+
+@layer utilities {
+  .animate-neon-glow-pink {
+    /* --neon-color-value: 255 0 255; RGB for pink #FF00FF */
+    /* --neon-color-value: hsl(327, 100%, 50%) For a HSL variant of pink */
+    --neon-color-actual: theme('colors.pink.500'); /* Using Tailwind's pink-500 for consistency */
+    border: 2px solid var(--neon-color-actual);
+    animation: neon-glow-animation-pink 1.5s infinite alternate;
+  }
+
+  @keyframes neon-glow-animation-pink {
+    from {
+      box-shadow: 0 0 5px var(--neon-color-actual),
+                  0 0 10px var(--neon-color-actual),
+                  0 0 15px var(--neon-color-actual);
+    }
+    to {
+      box-shadow: 0 0 10px var(--neon-color-actual),
+                  0 0 20px var(--neon-color-actual),
+                  0 0 30px var(--neon-color-actual),
+                  0 0 35px var(--neon-color-actual);
+    }
+  }
+}
+
 
 .animate-fadeIn {
   animation: fadeIn 0.5s ease-in-out;
@@ -180,3 +250,4 @@ body {
 .coin:active {
   transform: scale(0.95);
 }
+

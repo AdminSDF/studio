@@ -8,12 +8,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Progress } from '@/components/ui/progress';
 import { CONFIG } from '@/lib/constants';
 import { formatNumber } from '@/lib/utils';
-import { Zap, Target, Info, AlertTriangle, Wallet, TrendingUp, CreditCard, Wifi } from 'lucide-react'; 
+import { Zap, Target, Info, AlertTriangle, Wallet, TrendingUp, CreditCard, Wifi } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AdContainer } from '@/components/shared/ad-container';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/components/providers/auth-provider'; 
+import { useAuth } from '@/components/providers/auth-provider';
 
 // Helper to show floating tap value
 function showFloatingTapValue(amount: number, coinElementId: string) {
@@ -34,7 +34,7 @@ function showFloatingTapValue(amount: number, coinElementId: string) {
 
 export default function MiningPage() {
   const { userData, updateUserFirestoreData, updateEnergy, isOnline } = useAppState();
-  const { user: authUser } = useAuth(); 
+  const { user: authUser } = useAuth();
   const { toast } = useToast();
   const [energyRegenTimerText, setEnergyRegenTimerText] = useState("Calculating...");
   const [tapCountForAd, setTapCountForAd] = useState(0);
@@ -137,8 +137,8 @@ export default function MiningPage() {
 
     const coinElement = document.getElementById('tap-coin');
     if (coinElement) {
-      coinElement.classList.add('animate-pulseOnce'); 
-      setTimeout(() => coinElement.classList.remove('animate-pulseOnce'), 200); 
+      // coinElement.classList.add('animate-pulseOnce'); // Keep or remove based on new neon pulse
+      // setTimeout(() => coinElement.classList.remove('animate-pulseOnce'), 200);
       showFloatingTapValue(coinsMined, 'tap-coin');
     }
 
@@ -181,7 +181,7 @@ export default function MiningPage() {
       <div className="p-4 md:p-6 space-y-6">
         <Skeleton className="h-[180px] w-full max-w-sm mx-auto rounded-xl" /> {/* Wallet Card Skeleton */}
         <Skeleton className="h-20 w-full rounded-xl" /> {/* Energy Card Skeleton */}
-        <Skeleton className="h-48 w-48 mx-auto rounded-full" /> {/* Tap Button Skeleton */}
+        <Skeleton className="h-56 w-56 mx-auto rounded-full" /> {/* Tap Button Skeleton */}
         <div className="grid grid-cols-2 gap-4">
           <Skeleton className="h-24 w-full rounded-xl" />
           <Skeleton className="h-24 w-full rounded-xl" />
@@ -243,14 +243,14 @@ export default function MiningPage() {
         {/* Tap Here Hint */}
         {showTapHint && isOnline && userData && userData.currentEnergy >= 1 && (
           <div
-            className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[calc(100%_+_12px)] 
-                       px-3 py-1.5 bg-accent text-accent-foreground text-xs font-semibold rounded-md shadow-lg 
+            className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[calc(100%_+_12px)]
+                       px-3 py-1.5 bg-accent text-accent-foreground text-xs font-semibold rounded-md shadow-lg
                        animate-bounce z-20 pointer-events-none"
           >
             Tap Here!
             {/* Arrow pointing down */}
-            <div 
-              className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 
+            <div
+              className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0
                          border-l-[6px] border-l-transparent
                          border-r-[6px] border-r-transparent
                          border-t-[6px] border-t-accent"
@@ -262,19 +262,18 @@ export default function MiningPage() {
           id="tap-coin"
           variant="default"
           onClick={handleTap}
-          className="relative w-48 h-48 md:w-56 md:h-56 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground text-3xl font-bold shadow-2xl hover:shadow-primary/30 active:scale-95 transition-all duration-150 flex items-center justify-center focus-visible:ring-4 focus-visible:ring-primary/50 group"
+          className="relative w-56 h-56 rounded-full bg-slate-900 animate-neon-glow-pink active:scale-95 transition-transform duration-150 flex items-center justify-center focus-visible:ring-4 focus-visible:ring-pink-500/50 group"
           aria-label={`Tap to mine ${CONFIG.COIN_SYMBOL}`}
           disabled={!isOnline || userData.currentEnergy < 1}
         >
-          <Image 
+          <Image
             src={sdfCoinLogoUrl}
             alt={`${CONFIG.COIN_SYMBOL} Coin`}
-            width={150} // Adjusted for larger button
-            height={150} // Adjusted for larger button
-            className="rounded-full pointer-events-none absolute opacity-90 group-hover:opacity-100 transition-opacity object-contain" // changed to object-contain
-            priority 
+            width={210}
+            height={210}
+            className="rounded-full pointer-events-none absolute opacity-90 group-hover:opacity-100 transition-opacity object-contain"
+            priority
             />
-          {/* Removed the "TAP" text span */}
         </Button>
       </div>
 
@@ -308,4 +307,3 @@ export default function MiningPage() {
     </div>
   );
 }
-    
