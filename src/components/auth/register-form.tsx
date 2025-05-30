@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -7,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { auth, db } from '@/lib/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, Timestamp, getDoc } from 'firebase/firestore';
+import { doc, setDoc, Timestamp, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { CONFIG } from '@/lib/constants';
 import type { UserData } from '@/types';
@@ -44,7 +45,6 @@ export function RegisterForm() {
       const firebaseUser = userCredential.user;
       await updateProfile(firebaseUser, { displayName: name });
 
-      // Initialize user data in Firestore
       let initialBalance = 0;
       let referredByUID: string | null = null;
 
@@ -55,14 +55,20 @@ export function RegisterForm() {
           if (referrerDoc.exists() && referrerDoc.id !== firebaseUser.uid) {
             initialBalance += CONFIG.REFERRAL_BONUS_FOR_NEW_USER;
             referredByUID = referralCode;
-            // Note: Consider giving bonus to referrer as well (server-side function recommended for security)
+            
+            // Increment referrer's referralsMadeCount
+            await updateDoc(referrerDocRef, {
+              referralsMadeCount: increment(1)
+            });
+            // Consider giving bonus to referrer as well (server-side function recommended for security)
+            // For now, just tracking count. Bonus logic can be added later.
             toast({ title: 'Referral Applied!', description: `You received ${CONFIG.REFERRAL_BONUS_FOR_NEW_USER} ${CONFIG.COIN_SYMBOL} bonus!`, variant: 'default' });
           } else {
             toast({ title: 'Invalid Referral', description: 'Referral code is invalid or cannot be self-referral.', variant: 'destructive' });
           }
         } catch (err) {
-          console.warn("Error validating referral code:", err);
-          toast({ title: 'Referral Error', description: 'Could not validate referral code.', variant: 'destructive' });
+          console.warn("Error validating or updating referrer:", err);
+          toast({ title: 'Referral Error', description: 'Could not process referral code.', variant: 'destructive' });
         }
       }
       
@@ -81,6 +87,10 @@ export function RegisterForm() {
         createdAt: Timestamp.fromDate(new Date(firebaseUser.metadata.creationTime || now)),
         name: name,
         email: email,
+        completedAchievements: {},
+        referralsMadeCount: 0,
+        activeTheme: CONFIG.APP_THEMES[0].id, // Default theme
+        unlockedThemes: [CONFIG.APP_THEMES[0].id], // Default theme is unlocked
       };
 
       await setDoc(doc(db, 'users', firebaseUser.uid), newUserDoc);

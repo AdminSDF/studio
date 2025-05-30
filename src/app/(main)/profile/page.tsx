@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { CONFIG } from '@/lib/constants';
 import { formatNumber } from '@/lib/utils';
-import { UserCircle, CalendarDays, TrendingUp, TrendingDown, Copy, Settings, LogOut, AlertTriangle, KeyRound, ShieldCheck } from 'lucide-react';
+import { UserCircle, CalendarDays, TrendingUp, TrendingDown, Copy, Settings, LogOut, AlertTriangle, KeyRound, Users } from 'lucide-react'; // Added Users for referrals
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
@@ -80,7 +80,7 @@ export default function ProfilePage() {
             <Skeleton className="h-5 w-64 rounded-md" />
           </div>
         </div>
-        {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-xl" />)}
+        {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-xl" />)} {/* Adjusted skeleton count */}
          <Skeleton className="h-16 w-full rounded-xl" />
       </div>
     );
@@ -89,18 +89,18 @@ export default function ProfilePage() {
   const joinDate = userData.createdAt ? (userData.createdAt instanceof Date ? userData.createdAt : (userData.createdAt as any).toDate()).toLocaleDateString() : 'N/A';
   const totalEarned = (userData.balance || 0) + transactions.filter(t => (t.status === 'completed' || t.status === 'pending') && t.type === 'redeem').reduce((sum, t) => sum + t.amount, 0);
   const totalWithdrawn = transactions.filter(t => t.status === 'completed' && t.type === 'redeem').reduce((sum, t) => sum + t.amount, 0);
-
+  const referralsMade = userData.referralsMadeCount || 0;
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-20">
       <Card className="shadow-xl border-primary/30 rounded-xl overflow-hidden">
         <CardHeader className="flex flex-col items-center space-y-3 bg-gradient-to-br from-primary/80 to-accent/70 p-6 text-primary-foreground">
           <div className="w-24 h-24 rounded-full bg-card text-primary flex items-center justify-center text-5xl font-bold shadow-lg border-4 border-card">
-            {(authUser.name || 'U').charAt(0).toUpperCase()}
+            {(userData.name || authUser.name || 'U').charAt(0).toUpperCase()}
           </div>
           <div className="text-center">
-            <CardTitle className="text-3xl font-bold">{authUser.name || 'User'}</CardTitle>
-            <CardDescription className="text-primary-foreground/80 text-sm">{authUser.email}</CardDescription>
+            <CardTitle className="text-3xl font-bold">{userData.name || authUser.name || 'User'}</CardTitle>
+            <CardDescription className="text-primary-foreground/80 text-sm">{userData.email || authUser.email}</CardDescription>
           </div>
         </CardHeader>
       </Card>
@@ -121,6 +121,10 @@ export default function ProfilePage() {
           <div className="flex justify-between items-center p-2 hover:bg-muted/50 rounded-md transition-colors">
             <span className="flex items-center text-muted-foreground"><TrendingDown className="inline mr-2 h-4 w-4 text-destructive" />Total Withdrawn:</span> 
             <span className="font-medium text-destructive">{formatNumber(totalWithdrawn)} {CONFIG.COIN_SYMBOL}</span>
+          </div>
+          <div className="flex justify-between items-center p-2 hover:bg-muted/50 rounded-md transition-colors">
+            <span className="flex items-center text-muted-foreground"><Users className="inline mr-2 h-4 w-4 text-blue-500" />Friends Referred:</span> 
+            <span className="font-medium text-blue-500">{referralsMade}</span>
           </div>
           <div className="flex justify-between items-center p-2 hover:bg-muted/50 rounded-md transition-colors">
             <span className="flex items-center text-muted-foreground"><Copy className="inline mr-2 h-4 w-4" />Referral ID:</span>
