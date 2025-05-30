@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { CONFIG } from '@/lib/constants';
 import { formatNumber } from '@/lib/utils';
-import { UserCircle, CalendarDays, TrendingUp, TrendingDown, Copy, Settings, LogOut, AlertTriangle, KeyRound, Users, Hourglass, Edit3, UploadCloud } from 'lucide-react'; // Added Edit3, UploadCloud
+import { UserCircle, CalendarDays, TrendingUp, TrendingDown, Copy, Settings, LogOut, AlertTriangle, KeyRound, Users, Hourglass, Edit3, UploadCloud, QrCode as QrCodeIcon } from 'lucide-react'; // Added QrCodeIcon
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
@@ -25,8 +25,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AdContainer } from '@/components/shared/ad-container';
 import { useState, useRef, ChangeEvent } from 'react';
-import Image from 'next/image'; // For Next.js optimized images
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { QRCodeCanvas } from 'qrcode.react'; // Import QRCodeCanvas
 
 export default function ProfilePage() {
   const { user: authUser, firebaseUser } = useAuth();
@@ -85,13 +86,10 @@ export default function ProfilePage() {
       setIsUploading(true);
       try {
         await uploadProfilePicture(file);
-        // Toast for success/failure is handled within uploadProfilePicture
       } catch (error) {
-        // Error already toasted by uploadProfilePicture
         console.error("Profile picture upload error on page:", error);
       } finally {
         setIsUploading(false);
-        // Clear the file input so the same file can be selected again if needed
         if(fileInputRef.current) fileInputRef.current.value = "";
       }
     }
@@ -107,7 +105,7 @@ export default function ProfilePage() {
             <Skeleton className="h-5 w-64 rounded-md" />
           </div>
         </div>
-        {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-xl" />)}
+        {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)} {/* Increased one Skeleton card */}
          <Skeleton className="h-16 w-full rounded-xl" />
       </div>
     );
@@ -140,7 +138,7 @@ export default function ProfilePage() {
                 height={96}
                 className="w-24 h-24 rounded-full object-cover border-4 border-card shadow-lg"
                 data-ai-hint={userData.photoURL ? "profile picture" : "default avatar"}
-                unoptimized={!userData.photoURL} // Use unoptimized for placeholder to avoid Next.js domain errors
+                unoptimized={!userData.photoURL} 
               />
             )}
             {!isUploading && (
@@ -205,6 +203,23 @@ export default function ProfilePage() {
               {authUser.id.substring(0,10)+'...'} <Copy className="ml-1.5 h-3 w-3" />
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-lg rounded-xl border-border">
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center font-semibold text-foreground"><QrCodeIcon className="mr-2.5 h-6 w-6 text-primary" /> Your User ID QR Code</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center justify-center p-4 space-y-2">
+          <div className='p-3 bg-white rounded-lg shadow-md border border-muted'>
+             <QRCodeCanvas value={authUser.id} size={160} bgColor="#ffffff" fgColor="#000000" level="L" />
+          </div>
+          <p className="text-xs text-muted-foreground text-center">
+            Share this QR code for others to send you {CONFIG.COIN_SYMBOL}.
+          </p>
+           <Button variant="ghost" size="sm" onClick={handleCopyReferral} className="w-full font-mono bg-muted hover:bg-primary/10 hover:text-primary px-2 py-1 h-auto text-xs rounded-md">
+              <Copy className="mr-1.5 h-3 w-3" /> Copy User ID: {authUser.id.substring(0,10)+'...'}
+            </Button>
         </CardContent>
       </Card>
 

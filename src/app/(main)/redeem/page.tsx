@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, ChangeEvent } from 'react';
+import { useState, useEffect, ChangeEvent, useRef } from 'react'; // Added useRef
 import { useAppState } from '@/components/providers/app-state-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,11 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CONFIG } from '@/lib/constants';
 import { formatNumber } from '@/lib/utils';
 import type { PaymentMethod, PaymentDetails } from '@/types';
-import { Wallet, Banknote, AlertCircle, Info, Send, Users } from 'lucide-react'; // Added Send, Users
+import { Wallet, Banknote, AlertCircle, Info, Send, Users, QrCode as QrCodeIcon } from 'lucide-react'; // Added QrCodeIcon
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { AdContainer } from '@/components/shared/ad-container';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Html5QrcodeScanner, type Html5QrcodeError, type Html5QrcodeResult } from 'html5-qrcode'; // Import html5-qrcode
 
 const paymentMethods: { value: PaymentMethod; label: string }[] = [
   { value: 'upi', label: 'UPI' },
@@ -25,24 +27,28 @@ const paymentMethods: { value: PaymentMethod; label: string }[] = [
   { value: 'phonepay', label: 'PhonePe' },
 ];
 
+// Element ID for the QR code reader
+const QR_READER_ELEMENT_ID_REDEEM = "qr-reader-redeem";
+
 export default function RedeemPage() {
   const { userData, submitRedeemRequest, loadingUserData, transferToUser } = useAppState();
   const { toast } = useToast();
 
-  // State for redeem request
   const [redeemAmount, setRedeemAmount] = useState<string>('');
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('');
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>({});
   const [redeemFormError, setRedeemFormError] = useState<string | null>(null);
   const [isSubmittingRedeem, setIsSubmittingRedeem] = useState(false);
   
-  // State for P2P transfer
   const [p2pRecipientId, setP2pRecipientId] = useState<string>('');
   const [p2pAmount, setP2pAmount] = useState<string>('');
   const [p2pFormError, setP2pFormError] = useState<string | null>(null);
   const [isSubmittingP2P, setIsSubmittingP2P] = useState(false);
 
   const [adTrigger, setAdTrigger] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const html5QrCodeScannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const [qrScanError, setQrScanError] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -141,6 +147,53 @@ export default function RedeemPage() {
     }
     setIsSubmittingP2P(false);
   };
+
+  const onScanSuccess = (decodedText: string, result: Html5QrcodeResult) => {
+    setP2pRecipientId(decodedText);
+    setIsScannerOpen(false); 
+    toast({ title: "QR Scanned!", description: "Recipient ID populated." });
+    if (html5QrCodeScannerRef.current) {
+      html5QrCodeScannerRef.current.clear().catch(err => console.error("Failed to clear scanner on success", err));
+      html5QrCodeScannerRef.current = null;
+    }
+  };
+
+  const onScanFailure = (error: string | Html5QrcodeError) => {
+     // You can choose to show a toast or update the UI within the dialog
+     // console.warn(`Code scan error = ${error}`);
+     // setQrScanError("Failed to scan QR code. Point camera at QR code."); // Example error message
+  };
+  
+  useEffect(() => {
+    if (isScannerOpen) {
+      // Check if element exists before initializing
+      const qrReaderElement = document.getElementById(QR_READER_ELEMENT_ID_REDEEM);
+      if (qrReaderElement && !html5QrCodeScannerRef.current) {
+        const scanner = new Html5QrcodeScanner(
+          QR_READER_ELEMENT_ID_REDEEM,
+          { fps: 10, qrbox: { width: 250, height: 250 }, supportedScanTypes: [] }, // supportedScanTypes: [] for camera only
+          /* verbose= */ false
+        );
+        scanner.render(onScanSuccess, onScanFailure);
+        html5QrCodeScannerRef.current = scanner;
+        setQrScanError(null);
+      }
+    } else {
+      if (html5QrCodeScannerRef.current) {
+        html5QrCodeScannerRef.current.clear().catch(err => console.error("Failed to clear scanner on close", err));
+        html5QrCodeScannerRef.current = null;
+      }
+    }
+  
+    // Cleanup function for when the component unmounts or isScannerOpen changes
+    return () => {
+      if (html5QrCodeScannerRef.current) {
+        html5QrCodeScannerRef.current.clear().catch(err => console.error("Failed to clear scanner on unmount/dependency change", err));
+        html5QrCodeScannerRef.current = null;
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isScannerOpen]); // Only re-run when isScannerOpen changes
   
   if (loadingUserData || !userData) {
     return (
@@ -167,7 +220,6 @@ export default function RedeemPage() {
         </CardContent>
       </Card>
 
-      {/* Redeem Request Card */}
       <Card className="shadow-md">
         <CardHeader>
           <CardTitle className="flex items-center text-lg"><Banknote className="mr-2 text-green-600" /> Withdraw to Bank/UPI</CardTitle>
@@ -241,7 +293,6 @@ export default function RedeemPage() {
 
       <Separator />
 
-      {/* P2P Transfer Card */}
       <Card className="shadow-md">
         <CardHeader>
           <CardTitle className="flex items-center text-lg"><Users className="mr-2 text-blue-500" /> Send {CONFIG.COIN_SYMBOL} to Another User</CardTitle>
@@ -251,17 +302,38 @@ export default function RedeemPage() {
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="p2p-recipient-id">Recipient's User ID</Label>
-              <Input
-                id="p2p-recipient-id"
-                type="text"
-                value={p2pRecipientId}
-                onChange={(e) => setP2pRecipientId(e.target.value)}
-                placeholder="Enter recipient's User ID"
-                required
-              />
-               {/* For future QR code scanning:
-              <Button variant="outline" type="button" className="mt-2">Scan User ID QR Code</Button> 
-              */}
+              <div className="flex space-x-2 items-end">
+                <Input
+                  id="p2p-recipient-id"
+                  type="text"
+                  value={p2pRecipientId}
+                  onChange={(e) => setP2pRecipientId(e.target.value)}
+                  placeholder="Enter or scan User ID"
+                  required
+                  className="flex-grow"
+                />
+                <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" type="button" size="icon" aria-label="Scan QR Code">
+                      <QrCodeIcon className="h-5 w-5" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Scan User ID QR Code</DialogTitle>
+                    </DialogHeader>
+                    <div id={QR_READER_ELEMENT_ID_REDEEM} style={{ width: '100%', minHeight: '250px' }} className="my-4 border rounded-md overflow-hidden">
+                      {/* QR Scanner will render here */}
+                    </div>
+                     {qrScanError && <p className="text-destructive text-sm text-center">{qrScanError}</p>}
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button type="button" variant="outline">Cancel Scan</Button>
+                      </DialogClose>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
             <div>
               <Label htmlFor="p2p-amount">Amount to Send ({CONFIG.COIN_SYMBOL})</Label>
@@ -271,7 +343,7 @@ export default function RedeemPage() {
                 value={p2pAmount}
                 onChange={(e) => setP2pAmount(e.target.value)}
                 placeholder="Enter amount"
-                min="0.01" // Example minimum, adjust as needed
+                min="0.01" 
                 step="any"
                 required
               />
