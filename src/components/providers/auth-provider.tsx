@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { User } from 'firebase/auth';
@@ -11,7 +12,7 @@ interface AuthContextType {
   user: UserProfile | null;
   firebaseUser: User | null;
   loading: boolean;
-  isAppReady: boolean; // True after initial auth check and user data load attempt
+  // isAppReady has been removed as it was not fully managed by AuthProvider
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,7 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAppReady, setIsAppReady] = useState(false);
+  // isAppReady state removed
   const pathname = usePathname();
   const router = useRouter();
 
@@ -38,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
       }
       setLoading(false);
-      // setIsAppReady will be set to true by AppStateProvider after data load
+      // Comment about setIsAppReady by AppStateProvider is no longer relevant here
     });
 
     return () => unsubscribe();
@@ -56,11 +57,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, loading, pathname, router]);
 
 
-  // isAppReady is controlled by AppStateProvider, this is just for initial auth check
-  const contextValue = { user, firebaseUser, loading, isAppReady };
+  const contextValue = { user, firebaseUser, loading };
 
-  if (loading && !isAppReady) {
-    return (
+  if (loading) { // Skeleton display now only depends on loading state
+     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
         <div className="w-full max-w-md space-y-6">
           <Skeleton className="h-12 w-full" />
