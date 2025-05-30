@@ -267,6 +267,39 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const fetchLeaderboardData = useCallback(async () => {
+    /**
+     * IMPORTANT: For the leaderboard to work, you need:
+     * 1. Firestore Index:
+     *    - Collection ID: `users`
+     *    - Field: `balance`, Sort Order: Descending
+     *    - You can create this in your Firebase console -> Firestore Database -> Indexes.
+     * 2. Firestore Security Rules:
+     *    - Ensure your rules allow authenticated users to read the `users` collection.
+     *    - A basic rule might look like:
+     *      ```rules
+     *      rules_version = '2';
+     *      service cloud.firestore {
+     *        match /databases/{database}/documents {
+     *          // Allow reading users collection for leaderboard if user is authenticated
+     *          match /users/{userId} {
+     *            allow read: if request.auth != null;
+     *            // Allow user to write to their own document
+     *            allow write: if request.auth != null && request.auth.uid == userId;
+     *          }
+     *          // Allow user to read/write their own transactions
+     *          match /transactions/{transactionId} {
+     *            allow read, write: if request.auth != null && request.resource.data.userId == request.auth.uid;
+     *          }
+     *          // Allow reading app_settings for news_ticker
+     *          match /app_settings/news_ticker {
+     *             allow read: if true; // Or if request.auth != null depending on your needs
+     *          }
+     *        }
+     *      }
+     *      ```
+     *    - Modify these rules according to your app's security needs.
+     *    - Apply these rules in your Firebase console -> Firestore Database -> Rules.
+     */
     setLoadingLeaderboard(true);
     try {
       const q = query(collection(db, 'users'), orderBy('balance', 'desc'), limit(CONFIG.LEADERBOARD_SIZE));
@@ -282,14 +315,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       });
       setLeaderboard(leaderboardData);
     } catch (error: any) {
-      // Log the full error object for better debugging
       console.error("Detailed error fetching leaderboard data:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
-      
       let description = "Could not load leaderboard. Please try again later.";
       if (error.code === 'failed-precondition') {
-        description = "Leaderboard query failed. Ensure an index exists on 'users' for 'balance' (descending).";
+        description = "Leaderboard query failed. Ensure an index exists on 'users' for 'balance' (descending). Check Firebase console.";
       } else if (error.code === 'permission-denied') {
-        description = "Permission denied for leaderboard. Check Firestore security rules.";
+        description = "Permission denied for leaderboard. Check Firestore security rules. Authenticated users need read access to the 'users' collection.";
       }
       toast({ title: "Leaderboard Error", description, variant: "destructive", duration: 5000 });
     } finally {
@@ -596,7 +627,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     if (!user || !userData) return;
     if (userData.unlockedThemes?.includes(themeId)) {
       updateUserFirestoreData({ activeTheme: themeId });
-      // setUserDataState(prev => prev ? ({ ...prev, activeTheme: themeId }) : null); // Rely on snapshot listener for this
     } else {
       toast({ title: "Theme Locked", description: "Unlock this theme first.", variant: "destructive" });
     }
