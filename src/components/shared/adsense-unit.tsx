@@ -38,6 +38,7 @@ export const AdSenseUnit: React.FC<AdSenseUnitProps> = ({
         data-ad-client={adClient}
         data-ad-slot={adSlot}
         data-ad-format={adFormat}
+ data-nscript="beforeInteractive"
         data-full-width-responsive={fullWidthResponsive ? "true" : undefined}
         data-ad-layout-key={layoutKey}
       ></ins>

@@ -178,6 +178,51 @@ body {
     --success: 120 70% 45%; /* Rich Green */
     --warning: 40 100% 60%; /* Gold/Orange */
   }
+   /* Theme: Oceanic Calm */
+  .theme-oceanic-calm {
+    --background: 210 100% 97%; /* Very light, slightly desaturated blue */
+    --foreground: 210 30% 30%; /* Soft dark blue */
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 210 30% 30%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 30% 30%;
+    --primary: 190 70% 50%; /* Calm Teal */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 190 50% 85%; /* Light Teal */
+    --secondary-foreground: 190 70% 35%;
+    --muted: 210 50% 92%; /* Lighter blue-grey */
+    --muted-foreground: 210 25% 60%;
+    --accent: 160 60% 65%; /* Seafoam Green */
+    --accent-foreground: 210 30% 20%; /* Darker text on seafoam */
+    --border: 200 40% 88%;
+    --input: 200 50% 95%;
+    --ring: 190 70% 50%;
+    --success: 130 55% 50%;
+    --warning: 45 80% 60%;
+  }
+
+  /* Theme: Sunset Vibes */
+  .theme-sunset-vibes {
+    --background: 25 80% 94%; /* Warm off-white, like a canvas */
+    --foreground: 20 40% 25%; /* Deep warm brown */
+    --card: 15 50% 98%; /* Very light peach */
+    --card-foreground: 20 40% 25%;
+    --popover: 15 50% 98%;
+    --popover-foreground: 20 40% 25%;
+    --primary: 10 85% 60%; /* Fiery Orange */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 80% 80%; /* Soft yellow/orange */
+    --secondary-foreground: 10 70% 30%;
+    --muted: 30 60% 90%; /* Light peach/yellow */
+    --muted-foreground: 25 30% 50%;
+    --accent: 340 70% 65%; /* Deep Pink/Magenta */
+    --accent-foreground: 0 0% 100%;
+    --border: 25 50% 85%;
+    --input: 25 60% 92%;
+    --ring: 10 85% 60%;
+    --success: 90 50% 55%;
+    --warning: 40 90% 60%;
+  }
 }
 
 @layer base {
@@ -209,9 +254,7 @@ body {
 
 @layer utilities {
   .animate-neon-glow-pink {
-    /* --neon-color-value: 255 0 255; RGB for pink #FF00FF */
-    /* --neon-color-value: hsl(327, 100%, 50%) For a HSL variant of pink */
-    --neon-color-actual: theme('colors.pink.500'); /* Using Tailwind's pink-500 for consistency */
+    --neon-color-actual: theme('colors.pink.500'); 
     border: 2px solid var(--neon-color-actual);
     animation: neon-glow-animation-pink 1.5s infinite alternate;
   }
@@ -231,7 +274,6 @@ body {
   }
 }
 
-
 .animate-fadeIn {
   animation: fadeIn 0.5s ease-in-out;
 }
@@ -249,5 +291,56 @@ body {
 }
 .coin:active {
   transform: scale(0.95);
+}
+
+/* Animations for Auth Page */
+.animated-auth-background {
+  background: linear-gradient(-45deg, hsl(var(--primary)/.6), hsl(var(--accent)/.5), hsl(var(--secondary)/.6), hsl(var(--primary)/.5));
+  background-size: 400% 400%;
+  animation: animatedGradient 15s ease infinite;
+}
+
+@keyframes animatedGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes fadeInSlideUp {
+  from { opacity: 0; transform: translateY(30px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-fadeInSlideUp {
+  animation: fadeInSlideUp 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  animation-delay: 0.2s; 
+}
+
+@keyframes subtleTextGlow {
+  0%, 100% { text-shadow: 0 0 5px hsl(var(--primary) / 0.3), 0 0 10px hsl(var(--primary) / 0.2), 0 0 2px hsl(var(--primary-foreground)/0.2); }
+  50% { text-shadow: 0 0 10px hsl(var(--primary) / 0.5), 0 0 15px hsl(var(--primary) / 0.3), 0 0 2px hsl(var(--primary-foreground)/0.2); }
+}
+.animate-subtle-glow {
+  animation: subtleTextGlow 2.5s ease-in-out infinite;
+}
+
+@keyframes delayedFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-delayedFadeIn-tagline {
+  animation: delayedFadeIn 0.7s ease-out forwards;
+  animation-delay: 0.5s; 
+}
+.animate-delayedFadeIn-copyright {
+  animation: delayedFadeIn 0.7s ease-out forwards;
+  animation-delay: 0.7s; 
+}
+
+/* For Help Page Accordion */
+.accordion-content-custom[data-state="open"] {
+  animation: fadeIn 0.3s ease-out;
+}
+.accordion-content-custom[data-state="closed"] {
+ /* No specific closing animation to keep it simple, relies on Radix default */
 }
 
