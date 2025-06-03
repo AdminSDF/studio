@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { CONFIG } from '@/lib/constants';
 import { formatNumber } from '@/lib/utils';
 import type { Transaction } from '@/types';
-import { History, TrendingDown, TrendingUp, Gift, Award, CircleHelp, ArrowRightLeft } from 'lucide-react'; // Added ArrowRightLeft
+import { History, TrendingDown, TrendingUp, Gift, Award, CircleHelp, ArrowRightLeft, Palette, Clock, Zap } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { AdContainer } from '@/components/shared/ad-container';
@@ -15,12 +15,15 @@ import { useState } from 'react';
 function getTransactionIcon(type: string) {
   switch (type) {
     case 'redeem': return <TrendingDown className="text-red-500" />;
-    case 'booster_purchase': return <TrendingDown className="text-orange-500" />;
+    case 'booster_purchase': return <Zap className="text-orange-500" />; // Changed from TrendingDown to Zap
     case 'daily_bonus': return <Gift className="text-green-500" />;
     case 'referral_bonus': return <Award className="text-yellow-500" />;
     case 'achievement_reward': return <Award className="text-teal-500" />;
     case 'p2p_send': return <ArrowRightLeft className="text-orange-600" />;
     case 'p2p_receive': return <ArrowRightLeft className="text-green-600" />;
+    case 'quest_reward': return <Star className="text-purple-500" />; // Assuming Star for quest
+    case 'theme_purchase': return <Palette className="text-pink-500" />;
+    case 'offline_earnings': return <Clock className="text-blue-500" />;
     default: return <CircleHelp className="text-gray-500" />;
   }
 }
@@ -39,53 +42,82 @@ function TransactionItem({ txn }: { txn: Transaction }) {
   
   let amountDisplay = '';
   let typeDisplay = 'Unknown Transaction';
-  let amountClass = 'text-foreground'; // Default
+  let amountClass = 'text-foreground'; 
 
-  if (txn.type === 'redeem') {
-    amountDisplay = `-${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL} (₹${formatNumber(txn.inrAmount || 0)})`;
-    typeDisplay = `Redeem via ${String(txn.paymentMethod).toUpperCase()}`;
-    amountClass = 'text-destructive';
-  } else if (txn.type === 'booster_purchase') {
-    amountDisplay = `-${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
-    typeDisplay = `Booster: ${txn.details || 'Upgrade'}`;
-    amountClass = 'text-destructive';
-  } else if (txn.type === 'daily_bonus') {
-    amountDisplay = `+${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
-    typeDisplay = `Daily Login Bonus`;
-    amountClass = 'text-success';
-  } else if (txn.type === 'referral_bonus') {
-    amountDisplay = `+${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
-    typeDisplay = `Referral Bonus`;
-    amountClass = 'text-success';
-  } else if (txn.type === 'achievement_reward') {
-    amountDisplay = `+${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
-    typeDisplay = `Achievement: ${txn.details || 'Reward'}`;
-    amountClass = 'text-success';
-  } else if (txn.type === 'p2p_send') {
-    amountDisplay = `-${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
-    typeDisplay = `Sent to ${txn.relatedUserName || txn.relatedUserId || 'user'}`;
-    amountClass = 'text-destructive';
-  } else if (txn.type === 'p2p_receive') {
-    amountDisplay = `+${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
-    typeDisplay = `Received from ${txn.relatedUserName || txn.relatedUserId || 'user'}`;
-    amountClass = 'text-success';
-  } else {
-    amountDisplay = `${txn.amount > 0 ? '+' : ''}${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
-    typeDisplay = txn.type ? txn.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Miscellaneous';
-    amountClass = txn.amount < 0 ? 'text-destructive' : 'text-success';
+  const formatTypeDisplay = (typeStr: string, details?: string) => {
+    let base = typeStr.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    if (details) base += `: ${details}`;
+    return base;
+  }
+
+  switch (txn.type) {
+    case 'redeem':
+      amountDisplay = `-${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL} (₹${formatNumber(txn.inrAmount || 0)})`;
+      typeDisplay = `Redeem via ${String(txn.paymentMethod).toUpperCase()}`;
+      amountClass = 'text-destructive';
+      break;
+    case 'booster_purchase':
+      amountDisplay = `-${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
+      typeDisplay = formatTypeDisplay('Booster Purchase', txn.details);
+      amountClass = 'text-destructive';
+      break;
+    case 'daily_bonus':
+      amountDisplay = `+${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
+      typeDisplay = `Daily Login Bonus`;
+      amountClass = 'text-success';
+      break;
+    case 'referral_bonus':
+      amountDisplay = `+${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
+      typeDisplay = formatTypeDisplay('Referral Bonus', txn.details);
+      amountClass = 'text-success';
+      break;
+    case 'achievement_reward':
+      amountDisplay = `+${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
+      typeDisplay = formatTypeDisplay('Achievement Reward', txn.details);
+      amountClass = 'text-success';
+      break;
+    case 'p2p_send':
+      amountDisplay = `-${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
+      typeDisplay = `Sent to ${txn.relatedUserName || txn.relatedUserId || 'user'}`;
+      amountClass = 'text-destructive';
+      break;
+    case 'p2p_receive':
+      amountDisplay = `+${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
+      typeDisplay = `Received from ${txn.relatedUserName || txn.relatedUserId || 'user'}`;
+      amountClass = 'text-success';
+      break;
+    case 'quest_reward':
+      amountDisplay = `+${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
+      typeDisplay = formatTypeDisplay('Quest Reward', txn.details);
+      amountClass = 'text-success';
+      break;
+    case 'theme_purchase':
+      amountDisplay = `-${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
+      typeDisplay = formatTypeDisplay('Theme Purchase', txn.details);
+      amountClass = 'text-destructive';
+      break;
+    case 'offline_earnings':
+      amountDisplay = `+${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
+      typeDisplay = `Offline Earnings`;
+      amountClass = 'text-success';
+      break;
+    default:
+      amountDisplay = `${txn.amount > 0 ? '+' : ''}${formatNumber(txn.amount)} ${CONFIG.COIN_SYMBOL}`;
+      typeDisplay = txn.type ? txn.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Miscellaneous';
+      amountClass = txn.amount < 0 ? 'text-destructive' : 'text-success';
   }
 
 
   return (
-    <Card className="mb-3 shadow-sm hover:shadow-md transition-shadow">
+    <Card className="mb-3 shadow-sm hover:shadow-md transition-shadow rounded-lg border-border/70">
       <CardContent className="p-4">
         <div className="flex justify-between items-start">
           <div>
             <div className="flex items-center mb-1">
               {getTransactionIcon(txn.type)}
-              <p className="ml-2 font-semibold text-primary">{typeDisplay}</p>
+              <p className="ml-2 font-semibold text-foreground text-base">{typeDisplay}</p>
             </div>
-            <p className="text-sm text-muted-foreground">{dateObj.toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground">{dateObj.toLocaleString()}</p>
           </div>
           <div className="text-right">
             <p className={cn("font-bold text-lg", amountClass)}>
@@ -97,14 +129,14 @@ function TransactionItem({ txn }: { txn: Transaction }) {
           </div>
         </div>
         {txn.type === 'redeem' && txn.paymentDetails && (
-          <div className="mt-2 pt-2 border-t text-xs text-muted-foreground">
+          <div className="mt-2 pt-2 border-t border-border/50 text-xs text-muted-foreground">
             {txn.paymentMethod === 'upi' && <p>UPI: {String(txn.paymentDetails.upiId)} ({String(txn.paymentDetails.upiName)})</p>}
             {txn.paymentMethod === 'bank' && <p>Bank: A/C ending {String(txn.paymentDetails.accNumber).slice(-4)} ({String(txn.paymentDetails.bankName)})</p>}
             {(txn.paymentMethod === 'paytm' || txn.paymentMethod === 'googlepay' || txn.paymentMethod === 'phonepay') && <p>{String(txn.paymentMethod).toUpperCase()}: {String(txn.paymentDetails.number)} ({String(txn.paymentDetails.name)})</p>}
           </div>
         )}
          {(txn.type === 'p2p_send' || txn.type === 'p2p_receive') && (txn.relatedUserId || txn.relatedUserName) && (
-          <div className="mt-2 pt-2 border-t text-xs text-muted-foreground">
+          <div className="mt-2 pt-2 border-t border-border/50 text-xs text-muted-foreground">
             <p>
               {txn.type === 'p2p_send' ? 'To: ' : 'From: '}
               {txn.relatedUserName || txn.relatedUserId}
@@ -122,27 +154,27 @@ export default function TransactionsPage() {
 
   if (loadingUserData && transactions.length === 0) {
     return (
-      <div className="p-4 space-y-3">
-        <Skeleton className="h-10 w-1/2 mb-4" />
-        {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+      <div className="p-4 md:p-6 space-y-3">
+        <Skeleton className="h-10 w-1/2 mb-4 rounded-lg" />
+        {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}
       </div>
     );
   }
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-20">
-      <Card className="shadow-lg border-primary">
+      <Card className="shadow-xl border-primary/30 rounded-xl bg-gradient-to-br from-card to-secondary/20">
         <CardHeader>
-          <CardTitle className="flex items-center text-primary"><History className="mr-2" /> Transaction History</CardTitle>
-          <CardDescription>View your recent account activity.</CardDescription>
+          <CardTitle className="flex items-center text-primary text-2xl"><History className="mr-2.5 h-7 w-7" /> Transaction History</CardTitle>
+          <CardDescription className="text-base">View your recent account activity.</CardDescription>
         </CardHeader>
       </Card>
 
       {transactions.length === 0 ? (
-        <Card>
+        <Card className="rounded-xl">
           <CardContent className="p-6 text-center text-muted-foreground">
             <CircleHelp className="mx-auto h-12 w-12 mb-4 text-gray-400" />
-            <p>No transactions yet.</p>
+            <p className="text-lg font-semibold">No transactions yet.</p>
             <p className="text-sm">Start mining and redeem your {CONFIG.COIN_SYMBOL} to see your history here.</p>
           </CardContent>
         </Card>
