@@ -10,6 +10,7 @@ import { Rocket, TrendingUp, Zap, CheckCircle, ShoppingCart, HelpCircle } from '
 import { Skeleton } from '@/components/ui/skeleton';
 import { AdContainer } from '@/components/shared/ad-container';
 import { useState } from 'react';
+import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-display';
 
 const getBoosterIcon = (effectType: Booster['effect_type']) => {
   switch (effectType) {
@@ -114,6 +115,7 @@ export default function BoostersPage() {
           );
         })}
       </div>
+      <PersonalizedTipDisplay />
       <AdContainer pageContext="boosters" trigger={adTrigger} />
     </div>
   );

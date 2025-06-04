@@ -9,6 +9,7 @@ import { formatNumber } from '@/lib/utils';
 import type { LeaderboardEntry } from '@/types';
 import { Trophy, UserCircle, Medal } from 'lucide-react';
 import Image from 'next/image';
+import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-display';
 
 const getMedalColor = (rank: number) => {
   if (rank === 1) return 'text-yellow-500';
@@ -83,6 +84,7 @@ export default function LeaderboardPage() {
           ))}
         </div>
       )}
+       <PersonalizedTipDisplay />
        <p className="text-xs text-center text-muted-foreground mt-6">
         Leaderboard updates periodically. Top {CONFIG.LEADERBOARD_SIZE} players are shown.
       </p>

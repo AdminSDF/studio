@@ -6,11 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { CONFIG } from '@/lib/constants';
 import { formatNumber } from '@/lib/utils';
 import type { Transaction } from '@/types';
-import { History, TrendingDown, TrendingUp, Gift, Award, CircleHelp, ArrowRightLeft, Palette, Clock, Zap } from 'lucide-react';
+import { History, TrendingDown, TrendingUp, Gift, Award, CircleHelp, ArrowRightLeft, Palette, Clock, Zap, Star } from 'lucide-react'; // Added Star
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { AdContainer } from '@/components/shared/ad-container';
 import { useState } from 'react';
+import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-display';
 
 function getTransactionIcon(type: string) {
   switch (type) {
@@ -185,6 +186,7 @@ export default function TransactionsPage() {
           ))}
         </div>
       )}
+      <PersonalizedTipDisplay />
       <AdContainer pageContext="transactions" trigger={_adTrigger} />
     </div>
   );

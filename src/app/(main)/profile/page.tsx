@@ -28,6 +28,7 @@ import { useState, useRef, ChangeEvent } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { QRCodeCanvas } from 'qrcode.react'; // Import QRCodeCanvas
+import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-display';
 
 export default function ProfilePage() {
   const { user: authUser, firebaseUser } = useAuth();
@@ -267,9 +268,8 @@ export default function ProfilePage() {
             </Button>
          </CardFooter>
       </Card>
+      <PersonalizedTipDisplay />
       <AdContainer pageContext="profile" trigger={adTrigger} />
     </div>
   );
 }
-
-    

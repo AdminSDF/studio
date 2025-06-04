@@ -11,6 +11,7 @@ import { formatNumber } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-display';
 
 export default function StorePage() {
   const { userData, loadingUserData, purchaseTheme, setActiveThemeState } = useAppState();
@@ -121,6 +122,7 @@ export default function StorePage() {
           );
         })}
       </div>
+      <PersonalizedTipDisplay />
        <p className="text-xs text-center text-muted-foreground mt-6">
         More themes coming soon!
       </p>

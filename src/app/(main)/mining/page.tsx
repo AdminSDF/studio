@@ -14,6 +14,7 @@ import { AdContainer } from '@/components/shared/ad-container';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/components/providers/auth-provider';
+import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-display'; // Import the new component
 
 // Helper to show floating tap value
 function showFloatingTapValue(amount: number, coinElementId: string) {
@@ -273,6 +274,7 @@ export default function MiningPage() {
             height={210}
             className="rounded-full pointer-events-none absolute opacity-90 group-hover:opacity-100 transition-opacity object-contain"
             priority
+            data-ai-hint="coin logo"
             />
         </Button>
       </div>
@@ -302,6 +304,7 @@ export default function MiningPage() {
         </CardContent>
       </Card>
 
+      <PersonalizedTipDisplay />
       <AdContainer pageContext="mining" trigger={triggerAd} />
 
     </div>

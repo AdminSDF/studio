@@ -18,6 +18,7 @@ import { AdContainer } from '@/components/shared/ad-container';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Html5QrcodeScanner, type Html5QrcodeError, type Html5QrcodeResult } from 'html5-qrcode'; // Import html5-qrcode
+import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-display';
 
 const paymentMethods: { value: PaymentMethod; label: string }[] = [
   { value: 'upi', label: 'UPI' },
@@ -370,6 +371,7 @@ export default function RedeemPage() {
             <p className="text-sm text-muted-foreground mt-1">P2P transfers are instant but irreversible. Always double-check the recipient ID.</p>
         </CardContent>
       </Card>
+      <PersonalizedTipDisplay />
       <AdContainer pageContext="redeem" trigger={adTrigger} />
     </div>
   );

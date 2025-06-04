@@ -10,6 +10,7 @@ import { Award, CheckCircle, Star, TrendingUp, Zap } from 'lucide-react';
 import { formatNumber } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-display';
 
 const getAchievementProgress = (achievement: Achievement, userData: any): number => {
   if (!userData) return 0;
@@ -102,7 +103,7 @@ export default function AchievementsPage() {
           );
         })}
       </div>
+      <PersonalizedTipDisplay />
     </div>
   );
 }
-
