@@ -322,6 +322,34 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [user, toast]);
 
+  const fetchLeaderboardData = useCallback(async () => {
+    setLoadingLeaderboard(true);
+    try {
+      const q = query(collection(db, 'users'), orderBy('balance', 'desc'), limit(CONFIG.LEADERBOARD_SIZE));
+      const querySnapshot = await getDocs(q);
+      const leaderboardData = querySnapshot.docs.map((docSnap, index) => {
+        const data = docSnap.data();
+        return {
+          userId: docSnap.id,
+          name: data.name || 'Anonymous Titan',
+          balance: data.balance || 0,
+          rank: index + 1,
+        } as LeaderboardEntry;
+      });
+      setLeaderboard(leaderboardData);
+    } catch (error: any) {
+      console.error("Detailed error fetching leaderboard data:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      let description = "Could not load leaderboard. Please try again later.";
+      if (error.code === 'failed-precondition') {
+        description = "Leaderboard: Index missing on 'users' for 'balance' (desc). Create in Firebase console.";
+      } else if (error.code === 'permission-denied') {
+        description = "Leaderboard: Permission denied. Check Firestore security rules for 'users' collection.";
+      }
+      toast({ title: "Leaderboard Error", description, variant: "destructive", duration: 5000 });
+    } finally {
+      setLoadingLeaderboard(false);
+    }
+  }, [toast]);
 
   const checkAndAwardAchievements = useCallback(async () => {
     if (!userData || !user) return;
@@ -1239,37 +1267,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     });
     toast({ title: "ENERGY SURGE!", description: `Taps cost 0 energy for ${CONFIG.ENERGY_SURGE_DURATION_SECONDS} seconds!`, duration: 3000 });
   }, [user, userData, updateUserFirestoreData, toast]);
-
-
-  const fetchLeaderboardData = useCallback(async () => {
-    setLoadingLeaderboard(true);
-    try {
-      const q = query(collection(db, 'users'), orderBy('balance', 'desc'), limit(CONFIG.LEADERBOARD_SIZE));
-      const querySnapshot = await getDocs(q);
-      const leaderboardData = querySnapshot.docs.map((docSnap, index) => {
-        const data = docSnap.data();
-        return {
-          userId: docSnap.id,
-          name: data.name || 'Anonymous Titan',
-          balance: data.balance || 0,
-          rank: index + 1,
-        } as LeaderboardEntry;
-      });
-      setLeaderboard(leaderboardData);
-    } catch (error: any) {
-      console.error("Detailed error fetching leaderboard data:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
-      let description = "Could not load leaderboard. Please try again later.";
-      if (error.code === 'failed-precondition') {
-        description = "Leaderboard: Index missing on 'users' for 'balance' (desc). Create in Firebase console.";
-      } else if (error.code === 'permission-denied') {
-        description = "Leaderboard: Permission denied. Check Firestore security rules for 'users' collection.";
-      }
-      toast({ title: "Leaderboard Error", description, variant: "destructive", duration: 5000 });
-    } finally {
-      setLoadingLeaderboard(false);
-    }
-  }, [toast]);
-
 
   return (
     <AppStateContext.Provider value={{
