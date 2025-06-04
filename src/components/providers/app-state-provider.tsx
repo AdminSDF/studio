@@ -350,6 +350,134 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setLoadingLeaderboard(false);
     }
   }, [toast]);
+  
+  const fetchFaqs = useCallback(async () => {
+    setLoadingFaqs(true);
+    try {
+      const faqsCollectionRef = collection(db, 'faqs');
+      const q = query(faqsCollectionRef, orderBy('category'), orderBy('order'));
+      const querySnapshot = await getDocs(q);
+      const fetchedFaqs = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as FAQEntry));
+
+      if (fetchedFaqs.length === 0 && CONFIG.DEFAULT_FAQS.length > 0) {
+        // Populate with default FAQs if collection is empty
+        const batch = writeBatch(db);
+        CONFIG.DEFAULT_FAQS.forEach(faqData => {
+          const newFaqRef = doc(collection(db, 'faqs'));
+          batch.set(newFaqRef, faqData);
+        });
+        await batch.commit();
+        // Re-fetch after populating
+        const populatedSnapshot = await getDocs(q);
+        const populatedFaqs = populatedSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as FAQEntry));
+        setFaqs(populatedFaqs);
+      } else {
+        setFaqs(fetchedFaqs);
+      }
+
+    } catch (error) {
+      console.error("Error fetching FAQs:", error);
+      toast({ title: "Error", description: "Could not load FAQs.", variant: "destructive" });
+    } finally {
+      setLoadingFaqs(false);
+    }
+  }, [toast]);
+
+  // Effect for initial data loading and setting up listeners
+  useEffect(() => {
+    if (user && !authLoading) {
+      fetchUserData(); // This will now also trigger initial offline earnings check
+      fetchTransactions();
+      fetchMarqueeItems();
+      fetchLeaderboardData();
+      fetchFaqs(); // Fetch FAQs on load
+      refreshUserQuests(); // Fetch/Refresh quests on load
+
+      const userDocRef = doc(db, 'users', user.id);
+      const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const newUserData = processFirestoreData(data, user);
+          setUserDataState(newUserData);
+        }
+      }, (error: FirestoreError) => {
+        console.error("Error in user snapshot listener:", error);
+        toast({ title: "Sync Error", description: "Could not sync user data. Try refreshing.", variant: "destructive" });
+      });
+
+      const qTransactions = query(collection(db, 'transactions'), where('userId', '==', user.id), orderBy('date', 'desc'));
+      const unsubscribeTransactions = onSnapshot(qTransactions, (querySnapshot) => {
+        const userTransactions = querySnapshot.docs.map(docSnap => {
+          const data = docSnap.data();
+          let transactionDate: Date;
+          if (data.date instanceof Timestamp) {
+            transactionDate = data.date.toDate();
+          } else if (data.date instanceof Date) {
+            transactionDate = data.date;
+          } else {
+            transactionDate = new Date();
+          }
+          return { id: docSnap.id, ...data, date: transactionDate } as Transaction;
+        });
+        setTransactions(userTransactions);
+      }, (error: FirestoreError) => {
+        console.error("Error in transaction snapshot listener:", error);
+        let description = "Could not listen for transaction updates.";
+        if (error.code === 'failed-precondition') {
+          description = "Transactions require an index: userId (asc), date (desc). Create it in Firebase console.";
+        } else if (error.code === 'permission-denied') {
+          description = "Permission denied for transactions. Check Firestore security rules.";
+        }
+        toast({ title: "Database Error", description, variant: "destructive", duration: 5000 });
+      });
+
+      const userQuestsRef = doc(db, 'user_quests', user.id);
+      const unsubscribeUserQuests = onSnapshot(userQuestsRef, async (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const lastRefresh = data.lastQuestRefresh ? (data.lastQuestRefresh as Timestamp).toDate() : null;
+          const today = new Date();
+          // If last refresh was not today, refresh quests
+          if (!lastRefresh || lastRefresh.toDateString() !== today.toDateString()) {
+            await refreshUserQuests();
+          } else {
+            // Fetch details for active quests
+            const activeQuestIds = data.activeDailyQuestIds || [];
+            const fetchedQuests: UserQuest[] = [];
+            for (const questId of activeQuestIds) {
+              const questDetailRef = doc(db, `user_quests/${user.id}/daily_quests`, questId);
+              const questDetailSnap = await getDoc(questDetailRef);
+              if (questDetailSnap.exists()) {
+                fetchedQuests.push({ id: questId, ...questDetailSnap.data() } as UserQuest);
+              }
+            }
+            setUserQuests(fetchedQuests);
+          }
+        } else {
+          // No quest document, refresh to create one
+          await refreshUserQuests();
+        }
+      });
+
+
+      return () => {
+        unsubscribeUser();
+        unsubscribeTransactions();
+        unsubscribeUserQuests();
+      };
+
+    } else if (!user && !authLoading) {
+      setUserDataState(null);
+      setTransactions([]);
+      setLeaderboard([]);
+      setUserQuests([]);
+      setFaqs([]);
+      setLoadingUserData(false);
+      setLoadingLeaderboard(false);
+      setLoadingQuests(false);
+      setLoadingFaqs(false);
+    }
+  }, [user, authLoading, fetchUserData, fetchTransactions, fetchMarqueeItems, fetchLeaderboardData, processFirestoreData, toast, fetchFaqs, refreshUserQuests]); // Added fetchFaqs and refreshUserQuests
 
   const checkAndAwardAchievements = useCallback(async () => {
     if (!userData || !user) return;
@@ -456,103 +584,98 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [user, userData, addTransaction, toast]);
 
+  const updateQuestProgress = useCallback(async (questId: string, progressIncrement: number) => {
+    if (!user || !userQuests.find(q => q.id === questId && !q.completed)) return;
 
-  // Effect for initial data loading and setting up listeners
-  useEffect(() => {
-    if (user && !authLoading) {
-      fetchUserData(); // This will now also trigger initial offline earnings check
-      fetchTransactions();
-      fetchMarqueeItems();
-      fetchLeaderboardData();
-      fetchFaqs(); // Fetch FAQs on load
-      refreshUserQuests(); // Fetch/Refresh quests on load
-
-      const userDocRef = doc(db, 'users', user.id);
-      const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          const newUserData = processFirestoreData(data, user);
-          setUserDataState(newUserData);
-        }
-      }, (error: FirestoreError) => {
-        console.error("Error in user snapshot listener:", error);
-        toast({ title: "Sync Error", description: "Could not sync user data. Try refreshing.", variant: "destructive" });
-      });
-
-      const qTransactions = query(collection(db, 'transactions'), where('userId', '==', user.id), orderBy('date', 'desc'));
-      const unsubscribeTransactions = onSnapshot(qTransactions, (querySnapshot) => {
-        const userTransactions = querySnapshot.docs.map(docSnap => {
-          const data = docSnap.data();
-          let transactionDate: Date;
-          if (data.date instanceof Timestamp) {
-            transactionDate = data.date.toDate();
-          } else if (data.date instanceof Date) {
-            transactionDate = data.date;
-          } else {
-            transactionDate = new Date();
-          }
-          return { id: docSnap.id, ...data, date: transactionDate } as Transaction;
-        });
-        setTransactions(userTransactions);
-      }, (error: FirestoreError) => {
-        console.error("Error in transaction snapshot listener:", error);
-        let description = "Could not listen for transaction updates.";
-        if (error.code === 'failed-precondition') {
-          description = "Transactions require an index: userId (asc), date (desc). Create it in Firebase console.";
-        } else if (error.code === 'permission-denied') {
-          description = "Permission denied for transactions. Check Firestore security rules.";
-        }
-        toast({ title: "Database Error", description, variant: "destructive", duration: 5000 });
-      });
-
-      const userQuestsRef = doc(db, 'user_quests', user.id);
-      const unsubscribeUserQuests = onSnapshot(userQuestsRef, async (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          const lastRefresh = data.lastQuestRefresh ? (data.lastQuestRefresh as Timestamp).toDate() : null;
-          const today = new Date();
-          // If last refresh was not today, refresh quests
-          if (!lastRefresh || lastRefresh.toDateString() !== today.toDateString()) {
-            await refreshUserQuests();
-          } else {
-            // Fetch details for active quests
-            const activeQuestIds = data.activeDailyQuestIds || [];
-            const fetchedQuests: UserQuest[] = [];
-            for (const questId of activeQuestIds) {
-              const questDetailRef = doc(db, `user_quests/${user.id}/daily_quests`, questId);
-              const questDetailSnap = await getDoc(questDetailRef);
-              if (questDetailSnap.exists()) {
-                fetchedQuests.push({ id: questId, ...questDetailSnap.data() } as UserQuest);
-              }
-            }
-            setUserQuests(fetchedQuests);
-          }
-        } else {
-          // No quest document, refresh to create one
-          await refreshUserQuests();
-        }
-      });
-
-
-      return () => {
-        unsubscribeUser();
-        unsubscribeTransactions();
-        unsubscribeUserQuests();
-      };
-
-    } else if (!user && !authLoading) {
-      setUserDataState(null);
-      setTransactions([]);
-      setLeaderboard([]);
-      setUserQuests([]);
-      setFaqs([]);
-      setLoadingUserData(false);
-      setLoadingLeaderboard(false);
-      setLoadingQuests(false);
-      setLoadingFaqs(false);
+    const questRef = doc(db, `user_quests/${user.id}/daily_quests`, questId);
+    try {
+      await updateDoc(questRef, { progress: increment(progressIncrement) });
+      // Local state will update via snapshot listener or checkAndCompleteQuests
+    } catch (error) {
+      console.error(`Error updating progress for quest ${questId}:`, error);
     }
-  }, [user, authLoading, fetchUserData, fetchTransactions, fetchMarqueeItems, fetchLeaderboardData, processFirestoreData, toast, fetchFaqs, refreshUserQuests]); // Added fetchFaqs and refreshUserQuests
+  }, [user, userQuests]);
 
+  const checkAndCompleteQuests = useCallback(async (
+    eventType?: QuestDefinition['criteria']['type'],
+    eventDetail?: string | number, // e.g., boosterId, pageName, or value for balance_increase
+    eventIncrement?: number // e.g., number of taps, amount of balance increase
+  ) => {
+    if (!user || !userData || userQuests.length === 0) return;
+
+    let questsUpdated = false;
+    for (const quest of userQuests) {
+      if (quest.completed) continue;
+
+      let progressMadeThisCheck = 0;
+      let criteriaMetNow = false;
+
+      const { type, value, page } = quest.definition.criteria;
+
+      if (eventType === type) {
+        switch (type) {
+          case 'tap_count_total_session': // This would be taps since quest assigned or app opened.
+            if (eventIncrement) progressMadeThisCheck = eventIncrement;
+            break;
+          case 'balance_increase_session': // More complex, need initial balance at quest assignment. Simpler: check current balance if that's the goal.
+                                           // For now, let's assume it's 'reach_balance_value'
+            if (userData.balance >= value) criteriaMetNow = true; // Simplified for this example.
+            break;
+          case 'visit_page':
+            if (eventDetail === page) progressMadeThisCheck = 1; // Mark as 1 visit
+            break;
+          case 'interact_ad': // Needs specific ad interaction tracking
+            if (eventIncrement) progressMadeThisCheck = eventIncrement;
+            break;
+          case 'booster_purchase_specific':
+            if (eventDetail === quest.definition.criteria.boosterId || quest.definition.criteria.boosterId === 'any') {
+              progressMadeThisCheck = 1;
+            }
+            break;
+        }
+      }
+
+      if (progressMadeThisCheck > 0) {
+        const newProgress = (quest.progress || 0) + progressMadeThisCheck;
+        if (newProgress >= quest.definition.criteria.value) {
+          criteriaMetNow = true;
+        }
+        if (!criteriaMetNow) { // Only update progress if not yet met via this check
+           await updateQuestProgress(quest.id, progressMadeThisCheck);
+           questsUpdated = true;
+        }
+      }
+      
+      // Check if overall criteria met now (e.g. total taps for day, current balance)
+      // This covers cases where progress isn't incremental from an event, but based on current state.
+      if (!criteriaMetNow) {
+        switch (type) {
+            case 'tap_count_total_session': // This should actually reflect total taps today from userData
+                if (userData.tapCountToday >= value && (quest.progress || 0) < value) {
+                    await updateDoc(doc(db, `user_quests/${user.id}/daily_quests`, quest.id), { progress: userData.tapCountToday});
+                    if(userData.tapCountToday >= value) criteriaMetNow = true;
+                }
+                break;
+            // Other non-incremental checks can be added here.
+        }
+      }
+
+
+      if (criteriaMetNow && !quest.completed) {
+        const questRef = doc(db, `user_quests/${user.id}/daily_quests`, quest.id);
+        await updateDoc(questRef, { completed: true, progress: quest.definition.criteria.value });
+        toast({ title: "Quest Complete!", description: `You've completed: ${quest.definition.name}`, variant: "default" });
+        questsUpdated = true;
+      }
+    }
+    if(questsUpdated){
+        // Snapshot listener should update local state
+    }
+
+  }, [user, userData, userQuests, toast, updateQuestProgress]);
+
+
+  // Effect for ongoing checks (achievements, milestones, quests)
   useEffect(() => {
     if (userData && user) {
       checkAndAwardAchievements();
@@ -1012,97 +1135,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setLoadingQuests(false);
   }, [user]);
 
-  const updateQuestProgress = useCallback(async (questId: string, progressIncrement: number) => {
-    if (!user || !userQuests.find(q => q.id === questId && !q.completed)) return;
-
-    const questRef = doc(db, `user_quests/${user.id}/daily_quests`, questId);
-    try {
-      await updateDoc(questRef, { progress: increment(progressIncrement) });
-      // Local state will update via snapshot listener or checkAndCompleteQuests
-    } catch (error) {
-      console.error(`Error updating progress for quest ${questId}:`, error);
-    }
-  }, [user, userQuests]);
-
-  const checkAndCompleteQuests = useCallback(async (
-    eventType?: QuestDefinition['criteria']['type'],
-    eventDetail?: string | number, // e.g., boosterId, pageName, or value for balance_increase
-    eventIncrement?: number // e.g., number of taps, amount of balance increase
-  ) => {
-    if (!user || !userData || userQuests.length === 0) return;
-
-    let questsUpdated = false;
-    for (const quest of userQuests) {
-      if (quest.completed) continue;
-
-      let progressMadeThisCheck = 0;
-      let criteriaMetNow = false;
-
-      const { type, value, page } = quest.definition.criteria;
-
-      if (eventType === type) {
-        switch (type) {
-          case 'tap_count_total_session': // This would be taps since quest assigned or app opened.
-            if (eventIncrement) progressMadeThisCheck = eventIncrement;
-            break;
-          case 'balance_increase_session': // More complex, need initial balance at quest assignment. Simpler: check current balance if that's the goal.
-                                           // For now, let's assume it's 'reach_balance_value'
-            if (userData.balance >= value) criteriaMetNow = true; // Simplified for this example.
-            break;
-          case 'visit_page':
-            if (eventDetail === page) progressMadeThisCheck = 1; // Mark as 1 visit
-            break;
-          case 'interact_ad': // Needs specific ad interaction tracking
-            if (eventIncrement) progressMadeThisCheck = eventIncrement;
-            break;
-          case 'booster_purchase_specific':
-            if (eventDetail === quest.definition.criteria.boosterId || quest.definition.criteria.boosterId === 'any') {
-              progressMadeThisCheck = 1;
-            }
-            break;
-        }
-      }
-
-      if (progressMadeThisCheck > 0) {
-        const newProgress = (quest.progress || 0) + progressMadeThisCheck;
-        if (newProgress >= quest.definition.criteria.value) {
-          criteriaMetNow = true;
-        }
-        if (!criteriaMetNow) { // Only update progress if not yet met via this check
-           await updateQuestProgress(quest.id, progressMadeThisCheck);
-           questsUpdated = true;
-        }
-      }
-      
-      // Check if overall criteria met now (e.g. total taps for day, current balance)
-      // This covers cases where progress isn't incremental from an event, but based on current state.
-      if (!criteriaMetNow) {
-        switch (type) {
-            case 'tap_count_total_session': // This should actually reflect total taps today from userData
-                if (userData.tapCountToday >= value && (quest.progress || 0) < value) {
-                    await updateDoc(doc(db, `user_quests/${user.id}/daily_quests`, quest.id), { progress: userData.tapCountToday});
-                    if(userData.tapCountToday >= value) criteriaMetNow = true;
-                }
-                break;
-            // Other non-incremental checks can be added here.
-        }
-      }
-
-
-      if (criteriaMetNow && !quest.completed) {
-        const questRef = doc(db, `user_quests/${user.id}/daily_quests`, quest.id);
-        await updateDoc(questRef, { completed: true, progress: quest.definition.criteria.value });
-        toast({ title: "Quest Complete!", description: `You've completed: ${quest.definition.name}`, variant: "default" });
-        questsUpdated = true;
-      }
-    }
-    if(questsUpdated){
-        // Snapshot listener should update local state
-    }
-
-  }, [user, userData, userQuests, toast, updateQuestProgress]);
-
-
   const claimQuestReward = useCallback(async (questId: string) => {
     if (!user || !userData) return;
     const quest = userQuests.find(q => q.id === questId);
@@ -1140,39 +1172,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       toast({ title: "Claim Error", description: error.message || "Failed to claim quest reward.", variant: "destructive" });
     }
   }, [user, userData, userQuests, addTransaction, toast]);
-
-
-  const fetchFaqs = useCallback(async () => {
-    setLoadingFaqs(true);
-    try {
-      const faqsCollectionRef = collection(db, 'faqs');
-      const q = query(faqsCollectionRef, orderBy('category'), orderBy('order'));
-      const querySnapshot = await getDocs(q);
-      const fetchedFaqs = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as FAQEntry));
-
-      if (fetchedFaqs.length === 0 && CONFIG.DEFAULT_FAQS.length > 0) {
-        // Populate with default FAQs if collection is empty
-        const batch = writeBatch(db);
-        CONFIG.DEFAULT_FAQS.forEach(faqData => {
-          const newFaqRef = doc(collection(db, 'faqs'));
-          batch.set(newFaqRef, faqData);
-        });
-        await batch.commit();
-        // Re-fetch after populating
-        const populatedSnapshot = await getDocs(q);
-        const populatedFaqs = populatedSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as FAQEntry));
-        setFaqs(populatedFaqs);
-      } else {
-        setFaqs(fetchedFaqs);
-      }
-
-    } catch (error) {
-      console.error("Error fetching FAQs:", error);
-      toast({ title: "Error", description: "Could not load FAQs.", variant: "destructive" });
-    } finally {
-      setLoadingFaqs(false);
-    }
-  }, [toast]);
 
   const submitSupportTicket = useCallback(async (category: string, description: string): Promise<boolean> => {
     if (!user || !userData) {
