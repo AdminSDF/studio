@@ -297,6 +297,31 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [user, firebaseUser, toast, processFirestoreData, setUserDataState, updateUserFirestoreData]);
 
+  const fetchTransactions = useCallback(async () => {
+    if (!user) return;
+    try {
+      const q = query(collection(db, 'transactions'), where('userId', '==', user.id), orderBy('date', 'desc'));
+      const querySnapshot = await getDocs(q);
+      const userTransactions = querySnapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        let transactionDate: Date;
+        if (data.date instanceof Timestamp) {
+          transactionDate = data.date.toDate();
+        } else if (data.date instanceof Date) {
+          transactionDate = data.date;
+        } else {
+          // Fallback for potentially malformed data or older entries; consider logging this
+          transactionDate = new Date();
+        }
+        return { id: docSnap.id, ...data, date: transactionDate } as Transaction;
+      });
+      setTransactions(userTransactions);
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+      toast({ title: "Error", description: "Could not load transaction history.", variant: "destructive" });
+    }
+  }, [user, toast]);
+
 
   const checkAndAwardAchievements = useCallback(async () => {
     if (!userData || !user) return;
@@ -1273,3 +1298,4 @@ export function useAppState() {
   }
   return context;
 }
+
