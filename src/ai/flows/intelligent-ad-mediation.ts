@@ -4,33 +4,10 @@
  * @fileOverview An intelligent ad mediation AI agent.
  *
  * - mediateAd - A function that handles the ad mediation process.
- * - MediateAdInput - The input type for the mediateAd function.
- * - MediateAdOutput - The return type for the mediateAd function.
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-
-const MediateAdInputSchema = z.object({
-  tappingFrequency: z
-    .number()
-    .describe('The frequency with which the user is tapping.'),
-  boosterUsage: z.string().describe('The description of the booster usage.'),
-  pageVisits: z.string().describe('The history of the page visits.'),
-});
-export type MediateAdInput = z.infer<typeof MediateAdInputSchema>;
-
-const MediateAdOutputSchema = z.object({
-  adType: z.enum(['url', 'adsense', 'adsterra_script']).describe("The type of ad content to render. Use 'url' for direct ad links, 'adsense' for Google AdSense units, or 'adsterra_script' for a specific Adsterra JS-based ad unit (728x90)."),
-  adUrl: z.string().url({ message: "Ad URL must be a valid URL." }).optional().describe("The URL of the ad to display if adType is 'url'. This must be a complete and valid URL string (e.g., https://example.com/ad_target). Do not provide conversational text or error messages here."),
-  adClient: z.string().optional().describe("The AdSense client ID (e.g., ca-pub-XXXXXXXXXXXXXXXX) if adType is 'adsense'."),
-  adSlot: z.string().optional().describe("The AdSense ad slot ID (e.g., YYYYYYYYYY) if adType is 'adsense'."),
-  reason: z.string().describe('The reason for displaying this ad.'),
-});
-// Removed .refine() calls to make schema validation less strict at this stage.
-// The AdContainer component will handle checks for required fields based on adType.
-
-export type MediateAdOutput = z.infer<typeof MediateAdOutputSchema>;
+import { MediateAdInputSchema, MediateAdOutputSchema, type MediateAdInput, type MediateAdOutput } from '@/types';
 
 export async function mediateAd(input: MediateAdInput): Promise<MediateAdOutput> {
   return mediateAdFlow(input);
@@ -94,8 +71,6 @@ const mediateAdFlow = ai.defineFlow(
           reason: 'AI returned empty data, defaulting to high-performing URL banner.',
         };
       }
-      // Basic validation still happens from Zod based on the object structure and types.
-      // AdContainer component will perform further checks for conditional fields.
       return output;
     } catch (error) {
       console.error("Error during AI prompt execution or schema validation, falling back to default ad:", error);

@@ -4,35 +4,11 @@
  * @fileOverview A personalized user tips AI agent.
  *
  * - personalizedTip - A function that handles generating personalized tips.
- * - PersonalizedTipInput - The input type for the personalizedTip function.
- * - PersonalizedTipOutput - The return type for the personalizedTip function.
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
 import { CONFIG } from '@/lib/constants';
-
-export const PersonalizedTipInputSchema = z.object({
-  userId: z.string().describe("The user's unique identifier."),
-  currentBalance: z.number().describe('The current in-app currency balance of the user.'),
-  tapCountToday: z.number().describe('How many times the user has tapped today.'),
-  maxEnergy: z.number().describe('The maximum energy capacity of the user.'),
-  tapPower: z.number().describe('How much currency the user earns per tap.'),
-  activeBoosters: z.array(z.object({
-    id: z.string(),
-    level: z.number(),
-  })).describe('A list of boosters currently active for the user and their levels.'),
-  recentPageVisits: z.array(z.string()).describe('A list of recently visited pages/features in the app (e.g., "mining", "boosters", "redeem").'),
-  completedAchievementsCount: z.number().describe('The number of achievements the user has completed.'),
-  activeTheme: z.string().describe('The name of the currently active theme.'),
-});
-export type PersonalizedTipInput = z.infer<typeof PersonalizedTipInputSchema>;
-
-export const PersonalizedTipOutputSchema = z.object({
-  tip: z.string().describe("A concise, actionable, and personalized tip for the user based on their activity. The tip should be encouraging and aim to improve their engagement or guide them towards useful features. Mention specific game elements like SDF coins, boosters, achievements, or themes if relevant. Keep it under 150 characters."),
-  confidence: z.number().min(0).max(1).optional().describe("The AI's confidence in this tip's relevance (0 to 1)."),
-});
-export type PersonalizedTipOutput = z.infer<typeof PersonalizedTipOutputSchema>;
+import { PersonalizedTipInputSchema, PersonalizedTipOutputSchema, type PersonalizedTipInput, type PersonalizedTipOutput } from '@/types';
 
 export async function personalizedTip(input: PersonalizedTipInput): Promise<PersonalizedTipOutput> {
   return personalizedTipFlow(input);
