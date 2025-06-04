@@ -383,6 +383,64 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [toast]);
 
+  const refreshUserQuests = useCallback(async () => {
+    if (!user) return;
+    setLoadingQuests(true);
+
+    const userQuestsRef = doc(db, 'user_quests', user.id);
+    const userQuestsSnap = await getDoc(userQuestsRef);
+    const today = new Date();
+    let lastRefreshDate: Date | null = null;
+
+    if (userQuestsSnap.exists()) {
+      lastRefreshDate = (userQuestsSnap.data().lastQuestRefresh as Timestamp)?.toDate();
+    }
+
+    // Check if quests need refreshing (daily reset)
+    if (!lastRefreshDate || lastRefreshDate.toDateString() !== today.toDateString()) {
+      const batch = writeBatch(db);
+      const oldDailyQuestsCollectionRef = collection(db, `user_quests/${user.id}/daily_quests`);
+      const oldDailyQuestsSnapshot = await getDocs(oldDailyQuestsCollectionRef);
+      oldDailyQuestsSnapshot.forEach(docSnap => batch.delete(docSnap.ref));
+
+      const availableQuests = CONFIG.QUESTS.filter(q => q.type === 'daily');
+      const shuffledQuests = [...availableQuests].sort(() => 0.5 - Math.random());
+      const newActiveQuestDefinitions = shuffledQuests.slice(0, CONFIG.MAX_DAILY_QUESTS_ASSIGNED);
+      const newActiveQuestIds = newActiveQuestDefinitions.map(q => q.id);
+
+      batch.set(userQuestsRef, { lastQuestRefresh: serverTimestamp(), activeDailyQuestIds: newActiveQuestIds }, { merge: true });
+
+      const newQuestsForState: UserQuest[] = [];
+      for (const questDef of newActiveQuestDefinitions) {
+        const newQuestDocRef = doc(db, `user_quests/${user.id}/daily_quests`, questDef.id);
+        const questData: Omit<UserQuest, 'id'> = {
+          definition: questDef,
+          progress: 0,
+          completed: false,
+          claimed: false,
+          assignedAt: serverTimestamp() as Timestamp,
+        };
+        batch.set(newQuestDocRef, questData);
+        newQuestsForState.push({ id: questDef.id, ...questData, assignedAt: today });
+      }
+      await batch.commit();
+      setUserQuests(newQuestsForState);
+    } else if (userQuestsSnap.exists()){
+      // Quests already set for today, just fetch them
+      const activeQuestIds = userQuestsSnap.data().activeDailyQuestIds || [];
+      const fetchedQuests: UserQuest[] = [];
+      for (const questId of activeQuestIds) {
+        const questDetailRef = doc(db, `user_quests/${user.id}/daily_quests`, questId);
+        const questDetailSnap = await getDoc(questDetailRef);
+        if (questDetailSnap.exists()) {
+          fetchedQuests.push({ id: questId, ...questDetailSnap.data() } as UserQuest);
+        }
+      }
+      setUserQuests(fetchedQuests);
+    }
+    setLoadingQuests(false);
+  }, [user]);
+
   // Effect for initial data loading and setting up listeners
   useEffect(() => {
     if (user && !authLoading) {
@@ -1076,64 +1134,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [user, userData, toast]);
 
-
-  const refreshUserQuests = useCallback(async () => {
-    if (!user) return;
-    setLoadingQuests(true);
-
-    const userQuestsRef = doc(db, 'user_quests', user.id);
-    const userQuestsSnap = await getDoc(userQuestsRef);
-    const today = new Date();
-    let lastRefreshDate: Date | null = null;
-
-    if (userQuestsSnap.exists()) {
-      lastRefreshDate = (userQuestsSnap.data().lastQuestRefresh as Timestamp)?.toDate();
-    }
-
-    // Check if quests need refreshing (daily reset)
-    if (!lastRefreshDate || lastRefreshDate.toDateString() !== today.toDateString()) {
-      const batch = writeBatch(db);
-      const oldDailyQuestsCollectionRef = collection(db, `user_quests/${user.id}/daily_quests`);
-      const oldDailyQuestsSnapshot = await getDocs(oldDailyQuestsCollectionRef);
-      oldDailyQuestsSnapshot.forEach(docSnap => batch.delete(docSnap.ref));
-
-      const availableQuests = CONFIG.QUESTS.filter(q => q.type === 'daily');
-      const shuffledQuests = [...availableQuests].sort(() => 0.5 - Math.random());
-      const newActiveQuestDefinitions = shuffledQuests.slice(0, CONFIG.MAX_DAILY_QUESTS_ASSIGNED);
-      const newActiveQuestIds = newActiveQuestDefinitions.map(q => q.id);
-
-      batch.set(userQuestsRef, { lastQuestRefresh: serverTimestamp(), activeDailyQuestIds: newActiveQuestIds }, { merge: true });
-
-      const newQuestsForState: UserQuest[] = [];
-      for (const questDef of newActiveQuestDefinitions) {
-        const newQuestDocRef = doc(db, `user_quests/${user.id}/daily_quests`, questDef.id);
-        const questData: Omit<UserQuest, 'id'> = {
-          definition: questDef,
-          progress: 0,
-          completed: false,
-          claimed: false,
-          assignedAt: serverTimestamp() as Timestamp,
-        };
-        batch.set(newQuestDocRef, questData);
-        newQuestsForState.push({ id: questDef.id, ...questData, assignedAt: today });
-      }
-      await batch.commit();
-      setUserQuests(newQuestsForState);
-    } else if (userQuestsSnap.exists()){
-      // Quests already set for today, just fetch them
-      const activeQuestIds = userQuestsSnap.data().activeDailyQuestIds || [];
-      const fetchedQuests: UserQuest[] = [];
-      for (const questId of activeQuestIds) {
-        const questDetailRef = doc(db, `user_quests/${user.id}/daily_quests`, questId);
-        const questDetailSnap = await getDoc(questDetailRef);
-        if (questDetailSnap.exists()) {
-          fetchedQuests.push({ id: questId, ...questDetailSnap.data() } as UserQuest);
-        }
-      }
-      setUserQuests(fetchedQuests);
-    }
-    setLoadingQuests(false);
-  }, [user]);
 
   const claimQuestReward = useCallback(async (questId: string) => {
     if (!user || !userData) return;
