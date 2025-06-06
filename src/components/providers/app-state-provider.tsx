@@ -8,11 +8,13 @@ import {
   runTransaction, writeBatch, serverTimestamp, increment, DocumentData, FirestoreError, limit, collectionGroup
 } from 'firebase/firestore';
 import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
-import type { UserData, Transaction, MarqueeItem, LeaderboardEntry, Achievement, UserProfile, QuestDefinition, UserQuest, FAQEntry, SupportTicket, PersonalizedTipInput, Booster, AppTheme } from '@/types';
+import type { UserData, Transaction, MarqueeItem, LeaderboardEntry, UserProfile, QuestDefinition, UserQuest, FAQEntry, SupportTicket } from '@/types';
+import { Achievement, AppTheme, PaymentDetails, PaymentMethod, SupportTicketCategory } from '@/types'; // Added missing imports from previous turn
 import { useAuth } from './auth-provider';
 import { CONFIG, getReferralMilestoneReward } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
 import { formatNumber } from '@/lib/utils';
+import { PersonalizedTipInput, PersonalizedTipOutput } from '@/types'; // Ensure these are correctly imported from types
 import { getPersonalizedTip } from '@/app/actions';
 
 interface AppStateContextType {
@@ -35,7 +37,7 @@ interface AppStateContextType {
   updateEnergy: (newEnergy: number, lastUpdate: Date) => void;
   purchaseBooster: (boosterId: string) => Promise<void>;
   claimDailyBonus: () => Promise<void>;
-  submitRedeemRequest: (amount: number, paymentMethod: string, paymentDetails: any) => Promise<void>;
+  submitRedeemRequest: (amount: number, paymentMethod: PaymentMethod, paymentDetails: PaymentDetails) => Promise<void>;
   resetUserProgress: () => Promise<void>;
   isOnline: boolean;
   pageHistory: string[];
@@ -66,6 +68,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const { user, firebaseUser, loading: authLoading } = useAuth();
   const [userData, setUserDataState] = useState<UserData | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  // Initialize marqueeItems directly from CONFIG
   const [marqueeItems, setMarqueeItems] = useState<MarqueeItem[]>(CONFIG.DEFAULT_MARQUEE_ITEMS.map(text => ({ text })));
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [achievements] = useState<Achievement[]>(CONFIG.ACHIEVEMENTS);
@@ -75,7 +78,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(true);
   const [loadingAchievements, setLoadingAchievements] = useState(false);
   const [loadingQuests, setLoadingQuests] = useState(false);
-  const [loadingFaqs, setLoadingFaqs] = useState(true); // Start as true
+  const [loadingFaqs, setLoadingFaqs] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
   const [pageHistory, setPageHistory] = useState<string[]>([]);
   const [currentPersonalizedTip, setCurrentPersonalizedTip] = useState<string | null>(null);
@@ -92,7 +95,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
 
   const addPageVisit = useCallback((page: string) => {
-    setPageHistory(prev => [...prev, page].slice(-10)); 
+    setPageHistory(prev => [...prev, page].slice(-10));
     if (page === 'boosters' || page === 'store' || page === 'profile') {
     }
   }, []);
@@ -114,21 +117,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('offline', updateOnlineStatus);
     };
   }, [toast]);
-
-  const fetchMarqueeItems = useCallback(async () => {
-    try {
-      const newsDocRef = doc(db, 'app_settings', 'news_ticker');
-      const newsDoc = await getDoc(newsDocRef);
-      if (newsDoc.exists()) {
-        const items = newsDoc.data()?.items as string[];
-        if (items && items.length > 0) {
-          setMarqueeItems(items.map(text => ({ text })));
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching marquee items:", error);
-    }
-  }, []);
 
   const processFirestoreData = useCallback((data: DocumentData, currentAuthUser: UserProfile | null): UserData => {
     const now = new Date();
@@ -308,9 +296,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         return { id: docSnap.id, ...data, date: transactionDate } as Transaction;
       });
       setTransactions(userTransactions);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching transactions:", error);
-      toast({ title: "Error", description: "Could not load transaction history.", variant: "destructive" });
+      let description = "Could not load transaction history.";
+       if (error.code === 'failed-precondition') {
+        description = "Transactions: Index missing on 'transactions' for 'userId' (asc) and 'date' (desc). Create in Firebase console.";
+      } else if (error.code === 'permission-denied') {
+        description = "Transactions: Permission denied. Check Firestore security rules for 'transactions' collection.";
+      }
+      toast({ title: "Transactions Error", description, variant: "destructive", duration: 5000 });
     }
   }, [user, toast]);
   
@@ -355,12 +349,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         console.log("No FAQs found in Firestore, attempting to populate defaults...");
         const batch = writeBatch(db);
         CONFIG.DEFAULT_FAQS.forEach(faqData => {
-          const newFaqRef = doc(collection(db, 'faqs')); // Generate new ID
+          const newFaqRef = doc(collection(db, 'faqs'));
           batch.set(newFaqRef, faqData);
         });
         await batch.commit();
         console.log("Default FAQs populated. Re-fetching...");
-        const populatedSnapshot = await getDocs(q); // Re-fetch
+        const populatedSnapshot = await getDocs(q);
         fetchedFaqs = populatedSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as FAQEntry));
       }
       setFaqs(fetchedFaqs);
@@ -370,7 +364,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Error fetching/populating FAQs:", error);
       toast({ title: "FAQ Error", description: "Could not load FAQs. Please check console for details.", variant: "destructive" });
-      setFaqs([]); // Ensure faqs is an empty array on error
+      setFaqs([]); 
     } finally {
       setLoadingFaqs(false);
     }
@@ -436,7 +430,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     if (user && !authLoading) {
       fetchUserData(); 
       fetchTransactions();
-      fetchMarqueeItems();
+      // fetchMarqueeItems removed
       fetchLeaderboardData();
       fetchFaqs(); 
       refreshUserQuests(); 
@@ -523,7 +517,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setLoadingQuests(false);
       setLoadingFaqs(false);
     }
-  }, [user, authLoading, fetchUserData, fetchTransactions, fetchMarqueeItems, fetchLeaderboardData, processFirestoreData, toast, fetchFaqs, refreshUserQuests]);
+  }, [user, authLoading, fetchUserData, fetchTransactions, fetchLeaderboardData, processFirestoreData, toast, fetchFaqs, refreshUserQuests]);
 
   const checkAndAwardAchievements = useCallback(async () => {
     if (!userData || !user) return;
@@ -882,7 +876,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [user, userData, addTransaction, toast]);
 
-  const submitRedeemRequest = useCallback(async (amount: number, paymentMethod: string, paymentDetails: any) => {
+  const submitRedeemRequest = useCallback(async (amount: number, paymentMethod: PaymentMethod, paymentDetails: PaymentDetails) => {
     if (!user || !userData) {
       toast({ title: "Error", description: "User not found.", variant: "destructive" });
       return;
@@ -1268,3 +1262,4 @@ export function useAppState() {
   }
   return context;
 }
+
