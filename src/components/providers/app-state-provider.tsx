@@ -94,7 +94,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const addPageVisit = useCallback((page: string) => {
     setPageHistory(prev => [...prev, page].slice(-10)); // Keep last 10 visits
     if (page === 'boosters' || page === 'store' || page === 'profile') {
-      updateQuestProgress('daily_visit_boosters', 1); // Example: Specific quest update on page visit
+      // updateQuestProgress('daily_visit_boosters', 1); // Example: Specific quest update on page visit
     }
   }, []);
 
@@ -310,7 +310,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         } else if (data.date instanceof Date) {
           transactionDate = data.date;
         } else {
-          // Fallback for potentially malformed data or older entries; consider logging this
           transactionDate = new Date();
         }
         return { id: docSnap.id, ...data, date: transactionDate } as Transaction;
@@ -459,8 +458,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           setUserDataState(newUserData);
         }
       }, (error: FirestoreError) => {
-        console.error("Error in user snapshot listener:", error);
-        toast({ title: "Sync Error", description: "Could not sync user data. Try refreshing.", variant: "destructive" });
+        console.error("Error in USER snapshot listener (Firestore Permission Denied?):", error.code, error.message);
+        toast({ title: "Sync Error: User Data", description: `Could not sync user data. (${error.code})`, variant: "destructive" });
       });
 
       const qTransactions = query(collection(db, 'transactions'), where('userId', '==', user.id), orderBy('date', 'desc'));
@@ -479,14 +478,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         });
         setTransactions(userTransactions);
       }, (error: FirestoreError) => {
-        console.error("Error in transaction snapshot listener:", error);
-        let description = "Could not listen for transaction updates.";
+        console.error("Error in TRANSACTIONS snapshot listener (Firestore Permission Denied?):", error.code, error.message);
+        let description = `Could not listen for transaction updates. (${error.code})`;
         if (error.code === 'failed-precondition') {
           description = "Transactions require an index: userId (asc), date (desc). Create it in Firebase console.";
-        } else if (error.code === 'permission-denied') {
-          description = "Permission denied for transactions. Check Firestore security rules.";
         }
-        toast({ title: "Database Error", description, variant: "destructive", duration: 5000 });
+        toast({ title: "Database Error: Transactions", description, variant: "destructive", duration: 5000 });
       });
 
       const userQuestsRef = doc(db, 'user_quests', user.id);
@@ -515,6 +512,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           // No quest document, refresh to create one
           await refreshUserQuests();
         }
+      },(error: FirestoreError) => {
+        console.error("Error in USER_QUESTS snapshot listener (Firestore Permission Denied?):", error.code, error.message);
+        toast({ title: "Database Error: Quests", description: `Could not sync quest data. (${error.code})`, variant: "destructive" });
       });
 
 
@@ -535,7 +535,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setLoadingQuests(false);
       setLoadingFaqs(false);
     }
-  }, [user, authLoading, fetchUserData, fetchTransactions, fetchMarqueeItems, fetchLeaderboardData, processFirestoreData, toast, fetchFaqs, refreshUserQuests]); // Added fetchFaqs and refreshUserQuests
+  }, [user, authLoading, fetchUserData, fetchTransactions, fetchMarqueeItems, fetchLeaderboardData, processFirestoreData, toast, fetchFaqs, refreshUserQuests]);
 
   const checkAndAwardAchievements = useCallback(async () => {
     if (!userData || !user) return;
