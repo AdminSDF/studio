@@ -179,7 +179,7 @@ export interface FAQEntry {
   answer: string;
   category: string;
   order: number;
-  icon?: React.ElementType;
+  iconName?: string; // Changed from icon: React.ElementType to store icon name as string
 }
 
 export interface SupportTicketCategory {

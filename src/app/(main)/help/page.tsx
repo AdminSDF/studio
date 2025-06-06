@@ -7,11 +7,29 @@ import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/ca
 import { Skeleton } from '@/components/ui/skeleton';
 import { CONFIG } from '@/lib/constants';
 import type { FAQEntry } from '@/types';
-import { HelpCircle, Lightbulb, Zap, Briefcase, Star, Users } from 'lucide-react'; // Added more icons
+import { HelpCircle, Lightbulb, Zap, Briefcase, Star, Users, Palette, Rocket, Gem, BarChartBig, CheckCircle, Award as AwardIcon } from 'lucide-react'; // Added more icons
 import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-display';
 
-// Helper to get an icon based on category, falling back to a default
-const getCategoryIcon = (category: string, defaultIcon: React.ElementType = HelpCircle) => {
+const iconMap: Record<string, React.ElementType> = {
+  "Lightbulb": Lightbulb,
+  "Zap": Zap,
+  "Briefcase": Briefcase,
+  "Star": Star,
+  "Users": Users,
+  "Palette": Palette,
+  "Rocket": Rocket,
+  "Gem": Gem,
+  "BarChartBig": BarChartBig,
+  "CheckCircle": CheckCircle,
+  "Award": AwardIcon,
+  "HelpCircle": HelpCircle,
+};
+
+// Helper to get an icon based on category or specific iconName, falling back to a default
+const getFaqIcon = (category?: string, iconName?: string, defaultIcon: React.ElementType = HelpCircle): React.ElementType => {
+  if (iconName && iconMap[iconName]) {
+    return iconMap[iconName];
+  }
   switch (category?.toLowerCase()) {
     case 'general': return Lightbulb;
     case 'gameplay': return Zap;
@@ -77,7 +95,7 @@ export default function HelpPage() {
             <h2 className="text-xl font-semibold text-foreground mb-3 mt-4 pl-1">{category}</h2>
             <Accordion type="single" collapsible className="w-full space-y-2">
               {items.map((faq, index) => {
-                const IconComponent = faq.icon || getCategoryIcon(faq.category);
+                const IconComponent = getFaqIcon(faq.category, faq.iconName);
                 return (
                   <AccordionItem value={`item-${category}-${index}`} key={faq.id || index} className="bg-card border border-border/70 rounded-lg shadow-sm hover:shadow-md transition-shadow">
                     <AccordionTrigger className="p-4 text-left hover:no-underline text-base font-medium text-foreground">
