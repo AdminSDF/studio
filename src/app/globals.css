@@ -87,141 +87,214 @@ body {
     --ring: 170 65% 55%;
   }
 
-  /* Theme: Crimson Fire */
-  .theme-crimson-fire {
-    --background: 0 0% 15%; 
-    --foreground: 0 0% 90%; 
-    --card: 0 0% 20%; 
-    --card-foreground: 0 0% 85%;
-    --popover: 0 0% 18%;
-    --popover-foreground: 0 0% 85%;
-    --primary: 0 70% 50%; 
-    --primary-foreground: 0 0% 100%; 
-    --secondary: 0 50% 30%; 
-    --secondary-foreground: 0 0% 90%;
-    --muted: 0 0% 25%;
-    --muted-foreground: 0 0% 60%;
-    --accent: 30 90% 55%; 
-    --accent-foreground: 0 0% 0%; 
-    --border: 0 0% 30%;
-    --input: 0 0% 22%;
-    --ring: 0 70% 50%; 
-    --success: 120 60% 40%; 
-    --warning: 45 80% 50%; 
-  }
-  
-  /* Theme: Emerald Forest */
-  .theme-emerald-forest {
-    --background: 120 10% 95%; 
-    --foreground: 150 30% 20%; 
-    --card: 130 15% 100%; 
-    --card-foreground: 150 30% 20%;
-    --popover: 130 15% 100%;
-    --popover-foreground: 150 30% 20%;
-    --primary: 140 60% 45%; 
-    --primary-foreground: 0 0% 100%; 
-    --secondary: 140 40% 85%; 
-    --secondary-foreground: 140 60% 30%;
-    --muted: 130 20% 90%; 
-    --muted-foreground: 150 20% 50%;
-    --accent: 100 50% 50%; 
-    --accent-foreground: 0 0% 0%; 
-    --border: 130 20% 80%;
-    --input: 130 15% 92%;
-    --ring: 140 60% 45%; 
-    --success: 100 60% 40%;
-    --warning: 50 90% 55%;
-  }
-
-  /* Theme: Neon Glow */
-  .theme-neon-glow {
-    --background: 220 15% 10%; /* Very dark blue/black */
-    --foreground: 220 10% 85%; /* Light grey */
-    --card: 220 15% 15%; /* Darker blue/black for cards */
-    --card-foreground: 220 10% 80%;
-    --popover: 220 15% 12%;
-    --popover-foreground: 220 10% 80%;
-    --primary: 330 100% 60%; /* Neon Pink */
-    --primary-foreground: 0 0% 100%; /* White */
-    --secondary: 330 80% 40%; /* Darker Neon Pink */
-    --secondary-foreground: 220 10% 85%;
-    --muted: 220 10% 25%; /* Dark Grey */
-    --muted-foreground: 220 10% 60%;
-    --accent: 180 100% 50%; /* Neon Blue/Cyan */
-    --accent-foreground: 0 0% 0%; /* Black text on cyan */
-    --border: 220 15% 25%;
-    --input: 220 15% 18%;
-    --ring: 330 100% 60%; /* Neon Pink for ring */
-    --success: 140 70% 50%; /* Bright Green */
-    --warning: 60 100% 55%; /* Bright Yellow */
-  }
-
-  /* Theme: Solaris Flare */
-  .theme-solaris-flare {
-    --background: 30 5% 15%; /* Deep Grey/Charcoal */
-    --foreground: 30 10% 85%; /* Off-white/light warm grey */
-    --card: 30 5% 20%; /* Slightly lighter charcoal for cards */
-    --card-foreground: 30 10% 80%;
-    --popover: 30 5% 18%;
-    --popover-foreground: 30 10% 80%;
-    --primary: 30 100% 60%; /* Bright Orange */
-    --primary-foreground: 0 0% 0%; /* Black text on orange */
-    --secondary: 30 60% 40%; /* Muted Orange/Brown */
-    --secondary-foreground: 30 10% 85%;
-    --muted: 30 5% 30%; /* Darker Grey */
-    --muted-foreground: 30 10% 60%;
-    --accent: 50 100% 55%; /* Vibrant Yellow */
-    --accent-foreground: 0 0% 0%; /* Black text on yellow */
-    --border: 30 5% 25%;
-    --input: 30 5% 22%;
-    --ring: 30 100% 60%; /* Bright Orange for ring */
-    --success: 120 70% 45%; /* Rich Green */
-    --warning: 40 100% 60%; /* Gold/Orange */
-  }
-   /* Theme: Oceanic Calm */
-  .theme-oceanic-calm {
-    --background: 210 100% 97%; /* Very light, slightly desaturated blue */
-    --foreground: 210 30% 30%; /* Soft dark blue */
-    --card: 0 0% 100%; /* White */
-    --card-foreground: 210 30% 30%;
+  /* Theme: Futuristic Neon */
+  .theme-futuristic-neon {
+    --background: 210 20% 96%; /* pale gray */
+    --foreground: 210 20% 25%; 
+    --card: 0 0% 100%;
+    --card-foreground: 210 20% 25%;
     --popover: 0 0% 100%;
-    --popover-foreground: 210 30% 30%;
-    --primary: 190 70% 50%; /* Calm Teal */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 190 50% 85%; /* Light Teal */
-    --secondary-foreground: 190 70% 35%;
-    --muted: 210 50% 92%; /* Lighter blue-grey */
-    --muted-foreground: 210 25% 60%;
-    --accent: 160 60% 65%; /* Seafoam Green */
-    --accent-foreground: 210 30% 20%; /* Darker text on seafoam */
-    --border: 200 40% 88%;
-    --input: 200 50% 95%;
-    --ring: 190 70% 50%;
-    --success: 130 55% 50%;
-    --warning: 45 80% 60%;
+    --popover-foreground: 210 20% 25%;
+    --primary: 180 70% 60%; /* light teal */
+    --primary-foreground: 210 20% 15%; /* Darker for contrast */
+    --secondary: 180 60% 85%; /* Lighter teal */
+    --secondary-foreground: 180 70% 30%; 
+    --muted: 210 20% 92%;
+    --muted-foreground: 210 15% 55%;
+    --accent: 320 70% 70%; /* soft magenta */
+    --accent-foreground: 210 20% 15%; /* Darker for contrast */
+    --border: 210 20% 88%;
+    --input: 210 20% 90%;
+    --ring: 180 70% 60%;
   }
 
-  /* Theme: Sunset Vibes */
-  .theme-sunset-vibes {
-    --background: 25 80% 94%; /* Warm off-white, like a canvas */
-    --foreground: 20 40% 25%; /* Deep warm brown */
-    --card: 15 50% 98%; /* Very light peach */
-    --card-foreground: 20 40% 25%;
-    --popover: 15 50% 98%;
-    --popover-foreground: 20 40% 25%;
-    --primary: 10 85% 60%; /* Fiery Orange */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 30 80% 80%; /* Soft yellow/orange */
-    --secondary-foreground: 10 70% 30%;
-    --muted: 30 60% 90%; /* Light peach/yellow */
-    --muted-foreground: 25 30% 50%;
-    --accent: 340 70% 65%; /* Deep Pink/Magenta */
-    --accent-foreground: 0 0% 100%;
-    --border: 25 50% 85%;
-    --input: 25 60% 92%;
-    --ring: 10 85% 60%;
-    --success: 90 50% 55%;
-    --warning: 40 90% 60%;
+  /* Theme: Galaxy Glow */
+  .theme-galaxy-glow {
+    --background: 0 0% 98%; /* snow white */
+    --foreground: 210 20% 25%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 20% 25%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 20% 25%;
+    --primary: 250 60% 75%; /* lavender */
+    --primary-foreground: 210 20% 15%; 
+    --secondary: 250 50% 90%; /* Lighter lavender */
+    --secondary-foreground: 250 60% 30%;
+    --muted: 0 0% 94%;
+    --muted-foreground: 210 15% 55%;
+    --accent: 230 50% 65%; /* soft indigo */
+    --accent-foreground: 210 20% 15%; 
+    --border: 0 0% 90%;
+    --input: 0 0% 92%;
+    --ring: 250 60% 75%;
+  }
+
+  /* Theme: Dark Matte (Light Variant) */
+  .theme-dark-matte-light {
+    --background: 210 10% 94%; /* sky gray */
+    --foreground: 210 20% 25%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 20% 25%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 20% 25%;
+    --primary: 220 30% 70%; /* silver blue */
+    --primary-foreground: 210 20% 15%;
+    --secondary: 220 25% 85%; /* Lighter silver blue */
+    --secondary-foreground: 220 30% 30%;
+    --muted: 210 10% 90%;
+    --muted-foreground: 210 15% 50%;
+    --accent: 210 15% 80%; /* light ash */
+    --accent-foreground: 210 20% 15%;
+    --border: 210 10% 85%;
+    --input: 210 10% 88%;
+    --ring: 220 30% 70%;
+  }
+
+  /* Theme: Matrix Lite */
+  .theme-matrix-lite {
+    --background: 60 30% 96%; /* ivory */
+    --foreground: 210 20% 25%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 20% 25%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 20% 25%;
+    --primary: 150 60% 70%; /* mint green */
+    --primary-foreground: 210 20% 15%;
+    --secondary: 150 50% 88%; /* Lighter mint */
+    --secondary-foreground: 150 60% 30%;
+    --muted: 60 25% 92%;
+    --muted-foreground: 210 15% 55%;
+    --accent: 70 40% 70%; /* pastel olive */
+    --accent-foreground: 210 20% 15%;
+    --border: 60 25% 88%;
+    --input: 60 30% 90%;
+    --ring: 150 60% 70%;
+  }
+
+  /* Theme: Gold Rush */
+  .theme-gold-rush {
+    --background: 40 20% 97%; /* off-white */
+    --foreground: 210 20% 25%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 20% 25%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 20% 25%;
+    --primary: 50 70% 70%; /* pale gold */
+    --primary-foreground: 210 20% 15%;
+    --secondary: 50 60% 88%; /* Lighter gold */
+    --secondary-foreground: 50 70% 30%;
+    --muted: 40 15% 93%;
+    --muted-foreground: 210 15% 55%;
+    --accent: 40 50% 80%; /* light beige */
+    --accent-foreground: 210 20% 15%;
+    --border: 40 15% 88%;
+    --input: 40 20% 90%;
+    --ring: 50 70% 70%;
+  }
+
+  /* Theme: Minimal Classic */
+  .theme-minimal-classic {
+    --background: 0 0% 100%; /* white */
+    --foreground: 210 20% 25%;
+    --card: 0 0% 98%; /* Slightly off-white card */
+    --card-foreground: 210 20% 25%;
+    --popover: 0 0% 98%;
+    --popover-foreground: 210 20% 25%;
+    --primary: 180 50% 75%; /* light aqua */
+    --primary-foreground: 210 20% 15%;
+    --secondary: 180 40% 90%; /* Lighter aqua */
+    --secondary-foreground: 180 50% 30%;
+    --muted: 210 10% 95%;
+    --muted-foreground: 210 15% 60%;
+    --accent: 210 10% 50%; /* stone gray */
+    --accent-foreground: 0 0% 100%; /* White on stone gray */
+    --border: 210 10% 90%;
+    --input: 210 10% 92%;
+    --ring: 180 50% 75%;
+  }
+
+  /* Theme: Tech Blue */
+  .theme-tech-blue {
+    --background: 210 20% 98%; /* cloud white */
+    --foreground: 210 20% 25%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 20% 25%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 20% 25%;
+    --primary: 200 80% 75%; /* baby blue */
+    --primary-foreground: 210 20% 15%;
+    --secondary: 200 70% 90%; /* Lighter baby blue */
+    --secondary-foreground: 200 80% 30%;
+    --muted: 210 15% 94%;
+    --muted-foreground: 210 15% 55%;
+    --accent: 210 40% 60%; /* steel blue accent */
+    --accent-foreground: 210 20% 15%;
+    --border: 210 15% 88%;
+    --input: 210 20% 92%;
+    --ring: 200 80% 75%;
+  }
+
+  /* Theme: Game Mode Light */
+  .theme-game-mode-light {
+    --background: 40 50% 96%; /* ivory */
+    --foreground: 210 20% 25%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 20% 25%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 20% 25%;
+    --primary: 30 90% 75%; /* orange pastel */
+    --primary-foreground: 210 20% 15%;
+    --secondary: 30 80% 90%; /* Lighter orange pastel */
+    --secondary-foreground: 30 90% 30%;
+    --muted: 40 40% 92%;
+    --muted-foreground: 210 15% 55%;
+    --accent: 35 100% 85%; /* peach cream */
+    --accent-foreground: 210 20% 15%;
+    --border: 40 40% 88%;
+    --input: 40 50% 90%;
+    --ring: 30 90% 75%;
+  }
+
+  /* Theme: Gradient Aurora */
+  .theme-gradient-aurora {
+    --background: 40 60% 95%; /* cream */
+    --foreground: 210 20% 25%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 20% 25%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 20% 25%;
+    --primary: 270 50% 75%; /* soft violet */
+    --primary-foreground: 210 20% 15%;
+    --secondary: 270 40% 90%; /* Lighter violet */
+    --secondary-foreground: 270 50% 30%;
+    --muted: 40 50% 91%;
+    --muted-foreground: 210 15% 55%;
+    --accent: 330 80% 80%; /* light pink */
+    --accent-foreground: 210 20% 15%;
+    --border: 40 50% 87%;
+    --input: 40 60% 89%;
+    --ring: 270 50% 75%;
+  }
+
+  /* Theme: Industrial Soft */
+  .theme-industrial-soft {
+    --background: 210 10% 97%; /* fog white */
+    --foreground: 210 20% 25%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 20% 25%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 20% 25%;
+    --primary: 25 70% 65%; /* light rust orange */
+    --primary-foreground: 210 20% 15%;
+    --secondary: 25 60% 85%; /* Lighter rust orange */
+    --secondary-foreground: 25 70% 30%;
+    --muted: 210 8% 93%;
+    --muted-foreground: 210 15% 55%;
+    --accent: 210 15% 50%; /* steel gray */
+    --accent-foreground: 0 0% 100%; /* White on steel gray */
+    --border: 210 8% 88%;
+    --input: 210 10% 90%;
+    --ring: 25 70% 65%;
   }
 
   * {

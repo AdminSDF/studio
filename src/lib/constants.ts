@@ -2,10 +2,10 @@
 import type { Booster, Achievement, AppTheme, QuestDefinition, FAQEntry, SupportTicketCategory } from '@/types';
 import { Award, BarChartBig, CheckCircle, Palette, Gem, Zap, Sun, Sparkles, Brain, TrendingUp, Clock, Users, HelpingHand, Briefcase, Lightbulb, Star, Rocket } from 'lucide-react';
 
+// Pre-defined constants to avoid "Cannot access before initialization" errors
 const APP_NAME_VALUE = "SDF Miner";
 const COIN_SYMBOL_VALUE = "SDF";
 const MIN_REDEEM_VALUE = 1000;
-
 const REFERRAL_MILESTONES_DATA = [
   { count: 1, reward: 20 },
   { count: 3, reward: 75 },
@@ -20,7 +20,7 @@ export const CONFIG = {
   INITIAL_TAP_POWER: 0.1,
   INITIAL_MAX_ENERGY: 100,
   ENERGY_REGEN_RATE_PER_SECOND: 0.2,
-  ENERGY_OVERFILL_CAP_MULTIPLIER: 1.1, // Can overfill up to 110% of maxEnergy
+  ENERGY_OVERFILL_CAP_MULTIPLIER: 1.1,
   DAILY_LOGIN_BONUS: 25, // SDF
   REFERRAL_BONUS_FOR_NEW_USER: 10, // SDF
   REFERRAL_MILESTONES: REFERRAL_MILESTONES_DATA,
@@ -38,7 +38,7 @@ export const CONFIG = {
       cost: 200, effect_type: 'tap_power', value: 0.5, maxLevel: 3
     },
     {
-      id: 'energy_regen_1', name: 'Energy Regen Boost I', description: 'Increase max energy significantly by 75.', // Note: Description mentions max energy, but effect_type is max_energy which is correct.
+      id: 'energy_regen_1', name: 'Energy Regen Boost I', description: 'Increase max energy significantly by 75.',
       cost: 150, effect_type: 'max_energy', value: 75, maxLevel: 3
     },
   ] as Booster[],
@@ -50,15 +50,15 @@ export const CONFIG = {
     { id: 'referrer_1', name: 'Friend Bringer', description: 'Successfully refer 1 friend.', criteria: { type: 'referrals_made', value: 1 }, reward: (REFERRAL_MILESTONES_DATA.find(m => m.count ===1)?.reward || 20), icon: Award },
   ] as Achievement[],
   MAX_TAPS_BEFORE_AD_CHECK: 20,
-  TAP_FRENZY_CHANCE: 0.005, // 0.5% chance per tap
+  TAP_FRENZY_CHANCE: 0.005,
   TAP_FRENZY_DURATION_SECONDS: 30,
-  TAP_FRENZY_MULTIPLIER: 3, // Tap power becomes 3x
-  ENERGY_SURGE_CHANCE: 0.003, // 0.3% chance per tap
-  ENERGY_SURGE_DURATION_SECONDS: 30, // Taps are free for this duration
+  TAP_FRENZY_MULTIPLIER: 3,
+  ENERGY_SURGE_CHANCE: 0.003,
+  ENERGY_SURGE_DURATION_SECONDS: 30,
 
-  OFFLINE_EARNINGS_MAX_HOURS: 2, // Max hours to accumulate offline earnings
-  OFFLINE_EARNINGS_EFFICIENCY_PERCENT: 0.1, // 10% of active earning potential
-  MIN_OFFLINE_SECONDS_FOR_CALCULATION: 60, // Min 1 minute offline to trigger calculation
+  OFFLINE_EARNINGS_MAX_HOURS: 2,
+  OFFLINE_EARNINGS_EFFICIENCY_PERCENT: 0.1,
+  MIN_OFFLINE_SECONDS_FOR_CALCULATION: 60,
 
   DEFAULT_MARQUEE_ITEMS: [
     `🚀 Welcome to ${APP_NAME_VALUE}! Start Tapping!`,
@@ -69,19 +69,22 @@ export const CONFIG = {
   ],
   APP_THEMES: [
     { id: 'default_aqua', name: 'Default Aqua', cost: 0, cssClass: '', previewColors: { primary: 'hsl(170 70% 45%)', accent: 'hsl(10 80% 60%)', background: 'hsl(200 20% 98%)' } },
-    { id: 'crimson_fire', name: 'Crimson Fire', cost: 1000, cssClass: 'theme-crimson-fire', previewColors: { primary: 'hsl(0 70% 50%)', accent: 'hsl(30 90% 55%)', background: 'hsl(0 0% 15%)' } },
-    { id: 'emerald_forest', name: 'Emerald Forest', cost: 750, cssClass: 'theme-emerald-forest', previewColors: { primary: 'hsl(140 60% 45%)', accent: 'hsl(100 50% 50%)', background: 'hsl(120 10% 95%)' } },
-    { id: 'neon_glow', name: 'Neon Glow', cost: 1200, cssClass: 'theme-neon-glow', previewColors: { primary: 'hsl(330 100% 60%)', accent: 'hsl(180 100% 50%)', background: 'hsl(220 15% 10%)' } },
-    { id: 'solaris_flare', name: 'Solaris Flare', cost: 1500, cssClass: 'theme-solaris-flare', previewColors: { primary: 'hsl(30 100% 60%)', accent: 'hsl(50 100% 55%)', background: 'hsl(30 5% 15%)' } },
-    { id: 'oceanic_calm', name: 'Oceanic Calm', cost: 900, cssClass: 'theme-oceanic-calm', previewColors: { primary: 'hsl(190 70% 50%)', accent: 'hsl(160 60% 65%)', background: 'hsl(210 100% 97%)' } },
-    { id: 'sunset_vibes', name: 'Sunset Vibes', cost: 950, cssClass: 'theme-sunset-vibes', previewColors: { primary: 'hsl(10 85% 60%)', accent: 'hsl(340 70% 65%)', background: 'hsl(25 80% 94%)' } },
+    { id: 'futuristic_neon', name: 'Futuristic Neon', cost: 500, cssClass: 'theme-futuristic-neon', previewColors: { primary: 'hsl(180 70% 60%)', accent: 'hsl(320 70% 70%)', background: 'hsl(210 20% 96%)' } },
+    { id: 'galaxy_glow', name: 'Galaxy Glow', cost: 600, cssClass: 'theme-galaxy-glow', previewColors: { primary: 'hsl(250 60% 75%)', accent: 'hsl(230 50% 65%)', background: 'hsl(0 0% 98%)' } },
+    { id: 'dark_matte_light', name: 'Dark Matte (Light)', cost: 700, cssClass: 'theme-dark-matte-light', previewColors: { primary: 'hsl(220 30% 70%)', accent: 'hsl(210 15% 80%)', background: 'hsl(210 10% 94%)' } },
+    { id: 'matrix_lite', name: 'Matrix Lite', cost: 800, cssClass: 'theme-matrix-lite', previewColors: { primary: 'hsl(150 60% 70%)', accent: 'hsl(70 40% 70%)', background: 'hsl(60 30% 96%)' } },
+    { id: 'gold_rush', name: 'Gold Rush', cost: 900, cssClass: 'theme-gold-rush', previewColors: { primary: 'hsl(50 70% 70%)', accent: 'hsl(40 50% 80%)', background: 'hsl(40 20% 97%)' } },
+    { id: 'minimal_classic', name: 'Minimal Classic', cost: 1000, cssClass: 'theme-minimal-classic', previewColors: { primary: 'hsl(180 50% 75%)', accent: 'hsl(210 10% 50%)', background: 'hsl(0 0% 100%)' } },
+    { id: 'tech_blue', name: 'Tech Blue', cost: 1100, cssClass: 'theme-tech-blue', previewColors: { primary: 'hsl(200 80% 75%)', accent: 'hsl(210 40% 60%)', background: 'hsl(210 20% 98%)' } },
+    { id: 'game_mode_light', name: 'Game Mode Light', cost: 1200, cssClass: 'theme-game-mode-light', previewColors: { primary: 'hsl(30 90% 75%)', accent: 'hsl(35 100% 85%)', background: 'hsl(40 50% 96%)' } },
+    { id: 'gradient_aurora', name: 'Gradient Aurora', cost: 1300, cssClass: 'theme-gradient-aurora', previewColors: { primary: 'hsl(270 50% 75%)', accent: 'hsl(330 80% 80%)', background: 'hsl(40 60% 95%)' } },
+    { id: 'industrial_soft', name: 'Industrial Soft', cost: 1400, cssClass: 'theme-industrial-soft', previewColors: { primary: 'hsl(25 70% 65%)', accent: 'hsl(210 15% 50%)', background: 'hsl(210 10% 97%)' } },
   ] as AppTheme[],
   LEADERBOARD_SIZE: 20,
   QUESTS: [
-    // Daily Quests
     { id: 'daily_tap_100', name: 'Morning Taps', description: 'Tap 100 times.', criteria: { type: 'tap_count_total_session', value: 100 }, reward: 10, icon: TrendingUp, type: 'daily' },
     { id: 'daily_balance_50', name: 'Small Savings', description: `Earn 50 ${COIN_SYMBOL_VALUE} today (net gain).`, criteria: { type: 'balance_increase_session', value: 50 }, reward: 15, icon: Gem, type: 'daily' },
-    { id: 'daily_watch_ad_1', name: 'Ad Viewer', description: 'Engage with an advertisement.', criteria: { type: 'interact_ad', value: 1 }, reward: 25, icon: Star, type: 'daily' }, // Placeholder, ad interaction tracking needed
+    { id: 'daily_watch_ad_1', name: 'Ad Viewer', description: 'Engage with an advertisement.', criteria: { type: 'interact_ad', value: 1 }, reward: 25, icon: Star, type: 'daily' },
     { id: 'daily_visit_boosters', name: 'Upgrade Explorer', description: 'Visit the Boosters page.', criteria: { type: 'visit_page', page: 'boosters' }, reward: 5, icon: Rocket, type: 'daily' },
   ] as QuestDefinition[],
   MAX_DAILY_QUESTS_ASSIGNED: 3,
@@ -101,8 +104,8 @@ export const CONFIG = {
     { question: 'What is P2P Transfer?', answer: `P2P (Peer-to-Peer) Transfer allows you to send ${COIN_SYMBOL_VALUE} coins directly to another ${APP_NAME_VALUE} user using their unique User ID.`, category: 'Redeem', order: 6, icon: Users },
     { question: 'Where can I find my User ID?', answer: 'Your User ID is shown on your Profile page. You can copy it or show the QR code to others.', category: 'Profile', order: 7, icon: Users },
   ] as FAQEntry[],
-  AI_TIP_COOLDOWN_MINUTES: 5, // Minimum 5 minutes between showing AI tips
-  AI_TIP_FETCH_PROBABILITY: 0.2, // 20% chance to fetch a tip when cooldown is over
+  AI_TIP_COOLDOWN_MINUTES: 5,
+  AI_TIP_FETCH_PROBABILITY: 0.2,
 };
 
 export const FIREBASE_CONFIG = {
@@ -115,10 +118,7 @@ export const FIREBASE_CONFIG = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-Y56WF24030"
 };
 
-// Helper to access referral milestone rewards
 export const getReferralMilestoneReward = (count: number): number | undefined => {
   const milestone = CONFIG.REFERRAL_MILESTONES.find(m => m.count === count);
   return milestone?.reward;
 };
-
-    
