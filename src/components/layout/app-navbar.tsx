@@ -3,18 +3,19 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Coins, Rocket, Wallet, History, User, Trophy, Award, Palette } from 'lucide-react'; // Added Trophy, Award, Palette
+import { Coins, Rocket, Wallet, History, User, Trophy, Award, Palette, HelpCircle } from 'lucide-react'; // Added HelpCircle
 import { cn } from '@/lib/utils';
 import { useAppState } from '../providers/app-state-provider';
 
 const navItems = [
   { href: '/mining', label: 'Mine', icon: Coins },
   { href: '/boosters', label: 'Boosts', icon: Rocket },
-  { href: '/leaderboard', label: 'Leaders', icon: Trophy }, // New
-  { href: '/achievements', label: 'Goals', icon: Award }, // New
-  { href: '/store', label: 'Store', icon: Palette }, // New
+  { href: '/leaderboard', label: 'Leaders', icon: Trophy },
+  { href: '/achievements', label: 'Goals', icon: Award },
+  { href: '/store', label: 'Store', icon: Palette },
   { href: '/redeem', label: 'Redeem', icon: Wallet },
   { href: '/transactions', label: 'Activity', icon: History },
+  { href: '/help', label: 'Help', icon: HelpCircle }, // New Help/FAQ item
   { href: '/profile', label: 'Profile', icon: User },
 ];
 
@@ -50,11 +51,11 @@ export function AppNavbar() {
           >
             <item.icon
               className={cn(
-                "h-5 w-5 transition-colors", // Adjusted icon size for more items
+                "h-5 w-5 transition-colors", 
                 isActive ? "text-primary" : "text-muted-foreground group-hover:text-primary"
               )}
             />
-            <span className={cn("text-[10px] leading-tight transition-colors", isActive ? "font-semibold text-primary" : "group-hover:text-primary")}> {/* Adjusted font size for more items */}
+            <span className={cn("text-[10px] leading-tight transition-colors", isActive ? "font-semibold text-primary" : "group-hover:text-primary")}>
               {item.label}
             </span>
           </Link>

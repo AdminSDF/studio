@@ -75,7 +75,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(true);
   const [loadingAchievements, setLoadingAchievements] = useState(false);
   const [loadingQuests, setLoadingQuests] = useState(false);
-  const [loadingFaqs, setLoadingFaqs] = useState(false);
+  const [loadingFaqs, setLoadingFaqs] = useState(true); // Start as true
   const [isOnline, setIsOnline] = useState(true);
   const [pageHistory, setPageHistory] = useState<string[]>([]);
   const [currentPersonalizedTip, setCurrentPersonalizedTip] = useState<string | null>(null);
@@ -92,9 +92,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
 
   const addPageVisit = useCallback((page: string) => {
-    setPageHistory(prev => [...prev, page].slice(-10)); // Keep last 10 visits
+    setPageHistory(prev => [...prev, page].slice(-10)); 
     if (page === 'boosters' || page === 'store' || page === 'profile') {
-      // updateQuestProgress('daily_visit_boosters', 1); // Example: Specific quest update on page visit
     }
   }, []);
 
@@ -200,7 +199,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       } else if (dataToUpdate.energySurgeEndTime === null) {
         firestoreReadyData.energySurgeEndTime = null;
       }
-      // lastTapDate is stored as string, no conversion needed here.
       await updateDoc(userDocRef, firestoreReadyData);
     } catch (error) {
       console.error("Error updating user data:", error);
@@ -221,7 +219,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       await setDoc(newTransactionRef, newTransaction);
 
       setTransactions(prev => [{ ...transactionData, id: newTransactionRef.id, userId: user.id, date: new Date() } as Transaction, ...prev].sort((a, b) => (((b.date as any) || 0) instanceof Timestamp ? (b.date as Timestamp).toMillis() : new Date(b.date as any || 0).getTime()) - (((a.date as any) || 0) instanceof Timestamp ? (a.date as Timestamp).toMillis() : new Date(a.date as any || 0).getTime())));
-      // toast({ title: "Success", description: `${String(transactionData.type).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} recorded.`, variant: "default" });
     } catch (error) {
       console.error("Error adding transaction:", error);
       toast({ title: "Error", description: "Failed to record transaction.", variant: "destructive" });
@@ -244,7 +241,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         const processedData = processFirestoreData(data, user);
         setUserDataState(processedData);
 
-        // Offline Earnings Calculation
         const lastActivity = processedData.lastEnergyUpdate ? processedData.lastEnergyUpdate.getTime() : (processedData.createdAt ? processedData.createdAt.getTime() : Date.now());
         const currentTime = Date.now();
         const timeDiffSeconds = Math.floor((currentTime - lastActivity) / 1000);
@@ -259,10 +255,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           if (totalOfflineEarned > 0) {
             setOfflineEarnedAmount(totalOfflineEarned);
             setShowOfflineEarningsModal(true);
-            // Balance update and transaction will happen when modal is closed/claimed
           } else {
-             // If no earnings, still update lastEnergyUpdate to prevent re-calculation immediately
-             // unless modal is shown. If modal shown, it handles update.
             await updateUserFirestoreData({ lastEnergyUpdate: new Date(currentTime) });
           }
         }
@@ -320,7 +313,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       toast({ title: "Error", description: "Could not load transaction history.", variant: "destructive" });
     }
   }, [user, toast]);
-
+  
   const fetchLeaderboardData = useCallback(async () => {
     setLoadingLeaderboard(true);
     try {
@@ -356,27 +349,28 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const faqsCollectionRef = collection(db, 'faqs');
       const q = query(faqsCollectionRef, orderBy('category'), orderBy('order'));
       const querySnapshot = await getDocs(q);
-      const fetchedFaqs = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as FAQEntry));
+      let fetchedFaqs = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as FAQEntry));
 
       if (fetchedFaqs.length === 0 && CONFIG.DEFAULT_FAQS.length > 0) {
-        // Populate with default FAQs if collection is empty
+        console.log("No FAQs found in Firestore, attempting to populate defaults...");
         const batch = writeBatch(db);
         CONFIG.DEFAULT_FAQS.forEach(faqData => {
-          const newFaqRef = doc(collection(db, 'faqs'));
+          const newFaqRef = doc(collection(db, 'faqs')); // Generate new ID
           batch.set(newFaqRef, faqData);
         });
         await batch.commit();
-        // Re-fetch after populating
-        const populatedSnapshot = await getDocs(q);
-        const populatedFaqs = populatedSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as FAQEntry));
-        setFaqs(populatedFaqs);
-      } else {
-        setFaqs(fetchedFaqs);
+        console.log("Default FAQs populated. Re-fetching...");
+        const populatedSnapshot = await getDocs(q); // Re-fetch
+        fetchedFaqs = populatedSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as FAQEntry));
       }
-
+      setFaqs(fetchedFaqs);
+      if (fetchedFaqs.length === 0) {
+        console.warn("FAQ list is empty even after attempting to populate defaults.");
+      }
     } catch (error) {
-      console.error("Error fetching FAQs:", error);
-      toast({ title: "Error", description: "Could not load FAQs.", variant: "destructive" });
+      console.error("Error fetching/populating FAQs:", error);
+      toast({ title: "FAQ Error", description: "Could not load FAQs. Please check console for details.", variant: "destructive" });
+      setFaqs([]); // Ensure faqs is an empty array on error
     } finally {
       setLoadingFaqs(false);
     }
@@ -395,7 +389,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       lastRefreshDate = (userQuestsSnap.data().lastQuestRefresh as Timestamp)?.toDate();
     }
 
-    // Check if quests need refreshing (daily reset)
     if (!lastRefreshDate || lastRefreshDate.toDateString() !== today.toDateString()) {
       const batch = writeBatch(db);
       const oldDailyQuestsCollectionRef = collection(db, `user_quests/${user.id}/daily_quests`);
@@ -425,7 +418,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       await batch.commit();
       setUserQuests(newQuestsForState);
     } else if (userQuestsSnap.exists()){
-      // Quests already set for today, just fetch them
       const activeQuestIds = userQuestsSnap.data().activeDailyQuestIds || [];
       const fetchedQuests: UserQuest[] = [];
       for (const questId of activeQuestIds) {
@@ -440,15 +432,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setLoadingQuests(false);
   }, [user]);
 
-  // Effect for initial data loading and setting up listeners
   useEffect(() => {
     if (user && !authLoading) {
-      fetchUserData(); // This will now also trigger initial offline earnings check
+      fetchUserData(); 
       fetchTransactions();
       fetchMarqueeItems();
       fetchLeaderboardData();
-      fetchFaqs(); // Fetch FAQs on load
-      refreshUserQuests(); // Fetch/Refresh quests on load
+      fetchFaqs(); 
+      refreshUserQuests(); 
 
       const userDocRef = doc(db, 'users', user.id);
       const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
@@ -492,11 +483,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           const data = docSnap.data();
           const lastRefresh = data.lastQuestRefresh ? (data.lastQuestRefresh as Timestamp).toDate() : null;
           const today = new Date();
-          // If last refresh was not today, refresh quests
           if (!lastRefresh || lastRefresh.toDateString() !== today.toDateString()) {
             await refreshUserQuests();
           } else {
-            // Fetch details for active quests
             const activeQuestIds = data.activeDailyQuestIds || [];
             const fetchedQuests: UserQuest[] = [];
             for (const questId of activeQuestIds) {
@@ -509,7 +498,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             setUserQuests(fetchedQuests);
           }
         } else {
-          // No quest document, refresh to create one
           await refreshUserQuests();
         }
       },(error: FirestoreError) => {
@@ -592,14 +580,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             details: achievement.name,
           });
           toast({ title: "Achievement Unlocked!", description: `You earned ${achievement.reward} ${CONFIG.COIN_SYMBOL} for ${achievement.name}!`, variant: "default" });
-          // Local state will update via snapshot listener
         } catch (error) {
           console.error("Error awarding achievement transaction:", error);
         }
       }
     }
     if (newAchievementsAwarded) {
-        // await fetchUserData(); // Re-fetch to get updated balance and completed achievements locally.
     }
     setLoadingAchievements(false);
   }, [userData, user, addTransaction, toast]);
@@ -618,7 +604,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               const userDoc = await transaction.get(userRef);
               if (!userDoc.exists()) throw "User doc missing";
               const currentData = userDoc.data() as UserData;
-              if (currentData.completedAchievements?.[achievementIdForMilestone]) return; // Already awarded
+              if (currentData.completedAchievements?.[achievementIdForMilestone]) return; 
 
               transaction.update(userRef, {
                 balance: increment(milestone.reward),
@@ -633,7 +619,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               details: `Reached ${milestone.count} referrals milestone`,
             });
             toast({ title: "Referral Milestone!", description: `You earned ${milestone.reward} ${CONFIG.COIN_SYMBOL} for referring ${milestone.count} friends!`, variant: "default" });
-             // Local state will update via snapshot.
           } catch (error) {
             console.error("Error awarding referral milestone:", error);
           }
@@ -648,7 +633,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     const questRef = doc(db, `user_quests/${user.id}/daily_quests`, questId);
     try {
       await updateDoc(questRef, { progress: increment(progressIncrement) });
-      // Local state will update via snapshot listener or checkAndCompleteQuests
     } catch (error) {
       console.error(`Error updating progress for quest ${questId}:`, error);
     }
@@ -656,8 +640,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const checkAndCompleteQuests = useCallback(async (
     eventType?: QuestDefinition['criteria']['type'],
-    eventDetail?: string | number, // e.g., boosterId, pageName, or value for balance_increase
-    eventIncrement?: number // e.g., number of taps, amount of balance increase
+    eventDetail?: string | number, 
+    eventIncrement?: number 
   ) => {
     if (!user || !userData || userQuests.length === 0) return;
 
@@ -672,17 +656,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
       if (eventType === type) {
         switch (type) {
-          case 'tap_count_total_session': // This would be taps since quest assigned or app opened.
+          case 'tap_count_total_session': 
             if (eventIncrement) progressMadeThisCheck = eventIncrement;
             break;
-          case 'balance_increase_session': // More complex, need initial balance at quest assignment. Simpler: check current balance if that's the goal.
-                                           // For now, let's assume it's 'reach_balance_value'
-            if (userData.balance >= value) criteriaMetNow = true; // Simplified for this example.
+          case 'balance_increase_session': 
+            if (userData.balance >= value) criteriaMetNow = true; 
             break;
           case 'visit_page':
-            if (eventDetail === page) progressMadeThisCheck = 1; // Mark as 1 visit
+            if (eventDetail === page) progressMadeThisCheck = 1; 
             break;
-          case 'interact_ad': // Needs specific ad interaction tracking
+          case 'interact_ad': 
             if (eventIncrement) progressMadeThisCheck = eventIncrement;
             break;
           case 'booster_purchase_specific':
@@ -698,23 +681,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         if (newProgress >= quest.definition.criteria.value) {
           criteriaMetNow = true;
         }
-        if (!criteriaMetNow) { // Only update progress if not yet met via this check
+        if (!criteriaMetNow) { 
            await updateQuestProgress(quest.id, progressMadeThisCheck);
            questsUpdated = true;
         }
       }
       
-      // Check if overall criteria met now (e.g. total taps for day, current balance)
-      // This covers cases where progress isn't incremental from an event, but based on current state.
       if (!criteriaMetNow) {
         switch (type) {
-            case 'tap_count_total_session': // This should actually reflect total taps today from userData
+            case 'tap_count_total_session': 
                 if (userData.tapCountToday >= value && (quest.progress || 0) < value) {
                     await updateDoc(doc(db, `user_quests/${user.id}/daily_quests`, quest.id), { progress: userData.tapCountToday});
                     if(userData.tapCountToday >= value) criteriaMetNow = true;
                 }
                 break;
-            // Other non-incremental checks can be added here.
         }
       }
 
@@ -727,13 +707,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       }
     }
     if(questsUpdated){
-        // Snapshot listener should update local state
     }
 
   }, [user, userData, userQuests, toast, updateQuestProgress]);
 
 
-  // Effect for ongoing checks (achievements, milestones, quests)
   useEffect(() => {
     if (userData && user) {
       checkAndAwardAchievements();
@@ -805,7 +783,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       });
 
       toast({ title: "Theme Unlocked!", description: `${theme.name} unlocked and applied.`, variant: "default" });
-      // Local state updates via snapshot listener
       return true;
     } catch (error: any) {
       console.error("Error purchasing theme:", error);
@@ -1038,7 +1015,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               }
               const userDocRef = doc(db, 'users', user.id);
               await updateDoc(userDocRef, { photoURL: downloadURL });
-              // Local state updates via snapshot
               toast({ title: 'Success', description: 'Profile picture updated!' });
               resolve(downloadURL);
             } catch (error: any) {
@@ -1125,7 +1101,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       });
 
       toast({ title: "Transfer Successful!", description: `${formatNumber(amount)} ${CONFIG.COIN_SYMBOL} sent to ${recipientName || recipientId}.`, variant: "default" });
-      // Local state updates via snapshot
       return true;
     } catch (error: any) {
       console.error("Error during P2P transfer:", error);
@@ -1166,7 +1141,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         details: `Reward for: ${quest.definition.name}`,
       });
       toast({ title: "Reward Claimed!", description: `You received ${quest.definition.reward} ${CONFIG.COIN_SYMBOL} for ${quest.definition.name}!`, variant: "default" });
-      // Local state updates via snapshot listener
     } catch (error: any) {
       console.error("Error claiming quest reward:", error);
       toast({ title: "Claim Error", description: error.message || "Failed to claim quest reward.", variant: "destructive" });
@@ -1209,10 +1183,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
     const now = Date.now();
     if (now - lastTipFetchTimeRef.current < CONFIG.AI_TIP_COOLDOWN_MINUTES * 60 * 1000) {
-      return; // Cooldown active
+      return; 
     }
     if (Math.random() > CONFIG.AI_TIP_FETCH_PROBABILITY) {
-      return; // Skip by probability
+      return; 
     }
 
     lastTipFetchTimeRef.current = now;
@@ -1226,7 +1200,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       activeBoosters: Object.entries(userData.boostLevels || {})
         .filter(([, level]) => level > 0)
         .map(([id, level]) => ({ id, level } as { id: string, level: number })),
-      recentPageVisits: pageHistory.slice(-5), // Last 5 page visits
+      recentPageVisits: pageHistory.slice(-5), 
       completedAchievementsCount: Object.keys(userData.completedAchievements || {}).length,
       activeTheme: CONFIG.APP_THEMES.find(t => t.id === userData.activeTheme)?.name || 'Default',
     };
@@ -1237,7 +1211,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         setCurrentPersonalizedTip(result.tip);
       } else if ('error' in result) {
         console.warn("Error fetching personalized tip:", result.error);
-        setCurrentPersonalizedTip(null); // Clear previous tip on error
+        setCurrentPersonalizedTip(null); 
       }
     } catch (e) {
       console.error("Failed to fetch personalized tip action:", e);
@@ -1251,7 +1225,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     await updateUserFirestoreData({
       frenzyEndTime: Timestamp.fromDate(frenzyEndTime),
       frenzyMultiplier: CONFIG.TAP_FRENZY_MULTIPLIER,
-      energySurgeEndTime: null, // End any active energy surge
+      energySurgeEndTime: null, 
     });
     toast({ title: "TAP FRENZY!", description: `Tap power x${CONFIG.TAP_FRENZY_MULTIPLIER} for ${CONFIG.TAP_FRENZY_DURATION_SECONDS} seconds!`, duration: 3000 });
   }, [user, userData, updateUserFirestoreData, toast]);
@@ -1261,7 +1235,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     const surgeEndTime = new Date(Date.now() + CONFIG.ENERGY_SURGE_DURATION_SECONDS * 1000);
     await updateUserFirestoreData({
       energySurgeEndTime: Timestamp.fromDate(surgeEndTime),
-      frenzyEndTime: null, // End any active frenzy
+      frenzyEndTime: null, 
       frenzyMultiplier: null,
     });
     toast({ title: "ENERGY SURGE!", description: `Taps cost 0 energy for ${CONFIG.ENERGY_SURGE_DURATION_SECONDS} seconds!`, duration: 3000 });
@@ -1294,4 +1268,3 @@ export function useAppState() {
   }
   return context;
 }
-
