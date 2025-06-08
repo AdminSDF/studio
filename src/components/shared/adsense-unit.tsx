@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect, useRef } from 'react'; // Added React import
+import React, { useEffect, useRef } from 'react';
 
 interface AdSenseUnitProps {
   adClient: string;
@@ -19,48 +19,53 @@ export const AdSenseUnit: React.FC<AdSenseUnitProps> = ({
   adFormat = "auto",
   fullWidthResponsive = true,
   className,
-  style = { display: 'block', textAlign: 'center' },
+  style = { display: 'block', textAlign: 'center', width: '100%' }, // Ensure width is part of default style
   layoutKey,
 }) => {
-  const insRef = useRef<HTMLModElement>(null); // Use HTMLModElement for <ins>
+  const insRef = useRef<HTMLModElement>(null);
+  const hasPushedRef = useRef(false); // Ref to track if push has been called for this instance
 
   useEffect(() => {
     const insElement = insRef.current;
     if (!insElement) return;
 
-    // Check if AdSense has already processed this slot
-    if (insElement.getAttribute('data-ad-status') === 'filled') {
-      return; // Ad already loaded or attempted, don't push again
-    }
-    
-    // Ensure the adsbygoogle array is available before pushing.
-    if (typeof window !== 'undefined' && (window as any).adsbygoogle) {
-      try {
-        ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
-      } catch (e) {
-        console.error("AdSense push error: ", e);
-      }
-    } else {
-      // Optional: Retry if adsbygoogle is not immediately available.
-      const timeoutId = setTimeout(() => {
-        if (typeof window !== 'undefined' && (window as any).adsbygoogle) {
+    // Only attempt to push if it hasn't been done for this instance
+    if (!hasPushedRef.current) {
+      // Delay slightly to allow DOM to settle, which might help with width calculation or other timing issues
+      const timerId = setTimeout(() => {
+        // Check if component is still mounted and AdSense script is available
+        if (insRef.current && typeof window !== 'undefined' && (window as any).adsbygoogle) {
           try {
-            ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+            // Check data-ad-status one last time before pushing, in case Auto Ads or another mechanism filled it
+            if (insRef.current.getAttribute('data-ad-status') !== 'filled') {
+              ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+              hasPushedRef.current = true; // Mark as pushed for this instance
+            }
           } catch (e) {
-            console.error("AdSense push error (delayed): ", e);
+            console.error("AdSense push error: ", e);
+            // Optionally, to prevent repeated errors if the push itself fails consistently:
+            // if (insRef.current) {
+            //   insRef.current.setAttribute('data-ad-status', 'error');
+            // }
           }
         }
-      }, 500); // Wait 500ms and try again
-      return () => clearTimeout(timeoutId);
+      }, 100); // 100ms delay
+
+      return () => clearTimeout(timerId); // Cleanup timeout if component unmounts
     }
-  }, [adClient, adSlot, adFormat, layoutKey]); // Re-run if key properties change
+  // adClient, adSlot, adFormat, layoutKey are dependencies that, if changed, should allow a new push attempt.
+  // However, for a typical ad unit, these props don't change after mount.
+  // If they *could* change and you'd want to re-initialize the ad, you'd reset hasPushedRef.current too.
+  // For now, assuming they are static for the lifetime of this mounted component.
+  }, [adClient, adSlot, adFormat, layoutKey]);
 
   return (
-    <div className={className} data-ai-hint="advertisement banner adsense">
+    // Ensure the outer div also attempts to take full width if a className doesn't override it.
+    <div className={className} style={{ width: '100%' }} data-ai-hint="advertisement banner adsense">
       <ins
-        ref={insRef} // Attach ref here
+        ref={insRef}
         className="adsbygoogle"
-        style={style}
+        style={style} // The style prop should ideally include width: '100%'
         data-ad-client={adClient}
         data-ad-slot={adSlot}
         data-ad-format={adFormat}
