@@ -323,13 +323,13 @@ body {
 }
 
 @layer utilities {
-  .animate-neon-glow-pink {
-    --neon-color-actual: theme('colors.pink.500'); 
+  .animate-neon-glow {
+    --neon-color-actual: hsl(var(--primary)); 
     border: 2px solid var(--neon-color-actual);
-    animation: neon-glow-animation-pink 1.5s infinite alternate;
+    animation: neon-glow-animation 1.5s infinite alternate;
   }
 
-  @keyframes neon-glow-animation-pink {
+  @keyframes neon-glow-animation {
     from {
       box-shadow: 0 0 5px var(--neon-color-actual),
                   0 0 10px var(--neon-color-actual),

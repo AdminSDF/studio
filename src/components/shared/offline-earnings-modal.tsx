@@ -31,7 +31,7 @@ export function OfflineEarningsModal({ isOpen, earnedAmount, onClaim }: OfflineE
         </DialogHeader>
         <div className="py-6 text-center">
           <p className="text-3xl font-bold flex items-center justify-center">
-            <Coins className="h-8 w-8 mr-2 text-yellow-500" />
+            <Coins className="h-8 w-8 mr-2 text-accent" />
             {formatNumber(earnedAmount)} <span className="text-xl ml-1.5 opacity-80">{CONFIG.COIN_SYMBOL}</span>
           </p>
         </div>

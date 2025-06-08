@@ -204,9 +204,9 @@ export default function MiningPage() {
             <h2 className="text-xl font-bold">{CONFIG.APP_NAME}</h2>
             <Wifi className="w-6 h-6 opacity-80" /> {/* Wifi/Contactless symbol */}
           </div>
-          <div className="w-10 h-8 bg-yellow-300/80 rounded-md mb-3 flex items-center justify-center">
+          <div className="w-10 h-8 bg-accent/30 rounded-md mb-3 flex items-center justify-center border-2 border-accent/50">
              {/* Chip Placeholder */}
-            <div className="w-8 h-6 bg-yellow-400/90 rounded-sm border-2 border-yellow-500/50"></div>
+            <div className="w-8 h-6 bg-accent/50 rounded-sm border-2 border-accent/70"></div>
           </div>
           <p className="text-xs tracking-wider opacity-80">VIRTUAL BALANCE</p>
           <div className="text-3xl font-bold tracking-wider my-1">
@@ -235,7 +235,7 @@ export default function MiningPage() {
           adFormat="auto"
           fullWidthResponsive={true}
           className="w-full" 
-          style={{ display: 'block', width: '100%', minHeight: '50px' }} 
+          style={{ display: 'block', width: '100%' }} 
         />
       </div>
 
@@ -273,7 +273,7 @@ export default function MiningPage() {
           id="tap-coin"
           variant="default"
           onClick={handleTap}
-          className="relative w-56 h-56 rounded-full bg-slate-900 animate-neon-glow-pink active:scale-95 transition-transform duration-150 flex items-center justify-center focus-visible:ring-4 focus-visible:ring-pink-500/50 group"
+          className="relative w-56 h-56 rounded-full bg-foreground animate-neon-glow active:scale-95 transition-transform duration-150 flex items-center justify-center focus-visible:ring-4 focus-visible:ring-primary/50 group"
           aria-label={`Tap to mine ${CONFIG.COIN_SYMBOL}`}
           disabled={!isOnline || userData.currentEnergy < 1}
         >

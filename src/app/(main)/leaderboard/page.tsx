@@ -12,10 +12,10 @@ import Image from 'next/image';
 import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-display';
 
 const getMedalColor = (rank: number) => {
-  if (rank === 1) return 'text-yellow-500';
-  if (rank === 2) return 'text-gray-400';
-  if (rank === 3) return 'text-orange-400';
-  return 'text-muted-foreground';
+  if (rank === 1) return 'text-accent'; // Gold
+  if (rank === 2) return 'text-muted-foreground'; // Silver
+  if (rank === 3) return 'text-primary'; // Bronze (using primary for distinct color)
+  return 'text-muted-foreground'; // Default for others
 };
 
 export default function LeaderboardPage() {
@@ -37,7 +37,7 @@ export default function LeaderboardPage() {
       <Card className="shadow-xl border-primary/30 rounded-xl bg-gradient-to-br from-card to-secondary/20">
         <CardHeader>
           <CardTitle className="flex items-center text-primary text-2xl">
-            <Trophy className="mr-3 h-8 w-8 text-yellow-400" />
+            <Trophy className="mr-3 h-8 w-8 text-accent" />
             Top Titans - Leaderboard
           </CardTitle>
           <CardDescription className="text-base">
@@ -49,7 +49,7 @@ export default function LeaderboardPage() {
       {leaderboard.length === 0 && !loadingLeaderboard ? (
          <Card className="rounded-xl">
           <CardContent className="p-6 text-center text-muted-foreground">
-            <Trophy className="mx-auto h-12 w-12 mb-4 text-gray-400" />
+            <Trophy className="mx-auto h-12 w-12 mb-4 text-muted-foreground/50" />
             <p className="text-lg font-semibold">The leaderboard is empty for now.</p>
             <p className="text-sm">Start mining to make your mark!</p>
           </CardContent>
