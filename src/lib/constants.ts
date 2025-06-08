@@ -1,6 +1,5 @@
 
 import type { Booster, Achievement, AppTheme, QuestDefinition, FAQEntry, SupportTicketCategory } from '@/types';
-import { Award, BarChartBig, CheckCircle, Palette, Gem, Zap, Sun, Sparkles, Brain, TrendingUp, Clock, Users, HelpingHand, Briefcase, Lightbulb, Star, Rocket } from 'lucide-react';
 
 // Pre-defined constants to avoid "Cannot access before initialization" errors
 const APP_NAME_VALUE = "SDF Miner";
@@ -43,11 +42,11 @@ export const CONFIG = {
     },
   ] as Booster[],
   ACHIEVEMENTS: [
-    { id: 'tapper_1', name: 'Novice Tapper', description: 'Tap 100 times today.', criteria: { type: 'tap_count_today', value: 100 }, reward: 5, icon: BarChartBig },
-    { id: 'tapper_2', name: 'Adept Tapper', description: 'Tap 500 times today.', criteria: { type: 'tap_count_today', value: 500 }, reward: 20, icon: BarChartBig },
-    { id: 'rich_1', name: 'Getting Started', description: `Reach a balance of 250 ${COIN_SYMBOL_VALUE}.`, criteria: { type: 'balance_reach', value: 250 }, reward: 15, icon: Gem },
-    { id: 'booster_buyer_1', name: 'First Upgrade', description: 'Purchase any booster.', criteria: { type: 'booster_purchase_specific', value: 1, boosterId: 'any' }, reward: 10, icon: CheckCircle },
-    { id: 'referrer_1', name: 'Friend Bringer', description: 'Successfully refer 1 friend.', criteria: { type: 'referrals_made', value: 1 }, reward: (REFERRAL_MILESTONES_DATA.find(m => m.count ===1)?.reward || 20), icon: Award },
+    { id: 'tapper_1', name: 'Novice Tapper', description: 'Tap 100 times today.', criteria: { type: 'tap_count_today', value: 100 }, reward: 5, iconName: "BarChartBig" },
+    { id: 'tapper_2', name: 'Adept Tapper', description: 'Tap 500 times today.', criteria: { type: 'tap_count_today', value: 500 }, reward: 20, iconName: "BarChartBig" },
+    { id: 'rich_1', name: 'Getting Started', description: `Reach a balance of 250 ${COIN_SYMBOL_VALUE}.`, criteria: { type: 'balance_reach', value: 250 }, reward: 15, iconName: "Gem" },
+    { id: 'booster_buyer_1', name: 'First Upgrade', description: 'Purchase any booster.', criteria: { type: 'booster_purchase_specific', value: 1, boosterId: 'any' }, reward: 10, iconName: "CheckCircle" },
+    { id: 'referrer_1', name: 'Friend Bringer', description: 'Successfully refer 1 friend.', criteria: { type: 'referrals_made', value: 1 }, reward: (REFERRAL_MILESTONES_DATA.find(m => m.count ===1)?.reward || 20), iconName: "Award" },
   ] as Achievement[],
   MAX_TAPS_BEFORE_AD_CHECK: 20,
   TAP_FRENZY_CHANCE: 0.005,
@@ -189,3 +188,33 @@ export const getReferralMilestoneReward = (count: number): number | undefined =>
   return milestone?.reward;
 };
 
+// Helper to ensure achievements in constants also use iconName string
+const ensureAchievementsUseIconName = (achievements: any[]): Achievement[] => {
+  return achievements.map(ach => {
+    const { icon, ...rest } = ach;
+    if (icon && typeof icon !== 'string') {
+      // This is a fallback, ideally icons should be strings from the start.
+      // Trying to guess a name if it's a Lucide component object.
+      // This is NOT robust for all component types.
+      const inferredName = Object.keys(rest).find(k => typeof (rest as any)[k] === 'function');
+      return { ...rest, iconName: inferredName || "HelpCircle" };
+    }
+    return ach; // Assuming it's already correct or iconName is present
+  });
+};
+
+// Apply the helper to achievements to be safe, though the direct definition above is preferred
+CONFIG.ACHIEVEMENTS = ensureAchievementsUseIconName(CONFIG.ACHIEVEMENTS.map(ach => {
+    // If 'icon' exists and it's not a string, it means it's likely a component.
+    // We need to ensure it's converted to iconName.
+    // The direct definitions above were already changed to iconName.
+    // This re-mapping ensures consistency if there was any prior mix-up.
+    if (ach.icon && typeof (ach as any).icon !== 'string') {
+        const { icon, ...rest } = ach as any; // Cast to any to access .icon if it exists
+        // A very simplistic way to try and get a name. This might not be perfect.
+        // It assumes the icon component has a displayName or a name property.
+        const name = icon.displayName || icon.name || "HelpCircle";
+        return { ...rest, iconName: name };
+    }
+    return ach;
+}));
