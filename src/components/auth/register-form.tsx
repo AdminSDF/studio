@@ -56,19 +56,22 @@ export function RegisterForm() {
             initialBalance += CONFIG.REFERRAL_BONUS_FOR_NEW_USER;
             referredByUID = referralCode;
             
-            // Increment referrer's referralsMadeCount
             await updateDoc(referrerDocRef, {
               referralsMadeCount: increment(1)
             });
-            // Consider giving bonus to referrer as well (server-side function recommended for security)
-            // For now, just tracking count. Bonus logic can be added later.
             toast({ title: 'Referral Applied!', description: `You received ${CONFIG.REFERRAL_BONUS_FOR_NEW_USER} ${CONFIG.COIN_SYMBOL} bonus!`, variant: 'default' });
           } else {
             toast({ title: 'Invalid Referral', description: 'Referral code is invalid or cannot be self-referral.', variant: 'destructive' });
           }
-        } catch (err) {
+        } catch (err: any) {
           console.warn("Error validating or updating referrer:", err);
-          toast({ title: 'Referral Error', description: 'Could not process referral code.', variant: 'destructive' });
+          let description = 'Could not process referral code.';
+          if (err.code === 'permission-denied') {
+            description = 'Referral update failed due to permissions. Please check Firestore security rules.';
+          } else if (err.message) {
+            description = `Could not process referral code: ${err.message}`;
+          }
+          toast({ title: 'Referral Error', description, variant: 'destructive' });
         }
       }
       
@@ -87,11 +90,11 @@ export function RegisterForm() {
         createdAt: Timestamp.fromDate(new Date(firebaseUser.metadata.creationTime || now)),
         name: name,
         email: email,
-        photoURL: null, // Initialize photoURL
+        photoURL: null,
         completedAchievements: {},
         referralsMadeCount: 0,
-        activeTheme: CONFIG.APP_THEMES[0].id, // Default theme
-        unlockedThemes: [CONFIG.APP_THEMES[0].id], // Default theme is unlocked
+        activeTheme: CONFIG.APP_THEMES[0].id,
+        unlockedThemes: [CONFIG.APP_THEMES[0].id],
       };
 
       await setDoc(doc(db, 'users', firebaseUser.uid), newUserDoc);
