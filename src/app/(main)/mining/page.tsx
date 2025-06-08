@@ -228,7 +228,7 @@ export default function MiningPage() {
       </div>
 
       {/* AdSense Ad Unit */}
-      <div className="my-4 w-full flex justify-center items-center">
+      <div className="w-full flex justify-center items-center"> {/* Removed my-4 */}
         <AdSenseUnit
           adClient="ca-pub-1425274923062587"
           adSlot="2603795181"
