@@ -19,7 +19,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
 
   const logoUrl = "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgfE9IHbZO-d0lFy6S3f_ks7gG4Wq47ohPp45dVEssDRApAIvwVv6r8CleAyjiHOAwY8aGhdELKU4xjx0nO9w6IYuwMOryi13qE5wqzsZnFDn8ZwrSd99BlrZuDiugDiwFZ5n0usxjeNeR_I7BUTc9t4r0beiwLfKfUPhAbXPhi8VVO3MWW56bydGdxH7M/s320/file_0000000026446230b5372bc60dd219f3%20%281%29.png";
   
-  const cardMinHeight = "min-h-[600px] sm:min-h-[650px]"; 
+  const cardMinHeight = "min-h-[560px] sm:min-h-[600px]"; // Reduced min height
 
   return (
     <div

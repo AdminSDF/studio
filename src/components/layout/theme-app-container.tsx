@@ -17,7 +17,6 @@ export function ThemeAppContainer({ children }: { children: ReactNode }) {
 
   return (
     <div className={cn(
-      // Removed max-w-[500px], mx-auto, border-l, border-r, border-border, shadow-2xl
       'overflow-x-hidden', // Keep to prevent horizontal scroll from odd content
       'flex flex-col flex-grow w-full', // Ensure it takes full width and flex properties
       activeTheme.cssClass, // Apply the theme CSS class itself (e.g., 'theme-crimson-fire')
