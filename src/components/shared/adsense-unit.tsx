@@ -23,10 +23,25 @@ export const AdSenseUnit: React.FC<AdSenseUnitProps> = ({
   layoutKey,
 }) => {
   useEffect(() => {
-    try {
-      ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
-    } catch (e) {
-      console.error("AdSense push error: ", e);
+    if (typeof window !== 'undefined' && (window as any).adsbygoogle) {
+      try {
+        ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+      } catch (e) {
+        console.error("AdSense push error: ", e);
+      }
+    } else {
+      // Optional: Retry if adsbygoogle is not immediately available.
+      // This is a simple retry, more robust solutions might involve event listeners for script load.
+      const timeoutId = setTimeout(() => {
+        if (typeof window !== 'undefined' && (window as any).adsbygoogle) {
+          try {
+            ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+          } catch (e) {
+            console.error("AdSense push error (delayed): ", e);
+          }
+        }
+      }, 500); // Wait 500ms and try again
+      return () => clearTimeout(timeoutId);
     }
   }, [adClient, adSlot, adFormat, layoutKey]); // Re-run if key properties change
 
@@ -38,7 +53,6 @@ export const AdSenseUnit: React.FC<AdSenseUnitProps> = ({
         data-ad-client={adClient}
         data-ad-slot={adSlot}
         data-ad-format={adFormat}
- data-nscript="beforeInteractive"
         data-full-width-responsive={fullWidthResponsive ? "true" : undefined}
         data-ad-layout-key={layoutKey}
       ></ins>
