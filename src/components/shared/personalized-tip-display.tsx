@@ -13,20 +13,21 @@ export function PersonalizedTipDisplay() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // Attempt to fetch a tip when the component mounts if one isn't already loaded.
-    // The AppStateProvider handles cooldowns and probability.
-    if (!currentPersonalizedTip) {
-      // Set loading true only if we are actively trying to fetch
-      // This avoids showing loading if a tip was already fetched or if cooldown is active
-      const fetchTip = async () => {
-        setIsLoading(true);
-        await getAndSetPersonalizedTip();
-        setIsLoading(false);
-      };
-      fetchTip();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run once on mount to potentially fetch initial tip
+    // Attempt to fetch/refresh a tip each time the component mounts.
+    // The AppStateProvider's getAndSetPersonalizedTip handles cooldowns and probability.
+    const fetchTip = async () => {
+      // Set loading true only if there isn't already a tip,
+      // or if we want to show loading for every potential refresh.
+      // For now, let's show loading briefly for any attempt.
+      setIsLoading(true);
+      await getAndSetPersonalizedTip();
+      setIsLoading(false);
+    };
+    fetchTip();
+    // getAndSetPersonalizedTip is a useCallback from AppStateProvider.
+    // Its dependencies include pageHistory, so its reference will change on navigation,
+    // triggering this effect to run on each page that mounts this component.
+  }, [getAndSetPersonalizedTip]);
 
   const handleRefreshTip = async () => {
     setIsLoading(true);
@@ -50,10 +51,10 @@ export function PersonalizedTipDisplay() {
     );
   }
 
-  if (!currentPersonalizedTip) {
-    // Optionally, display nothing or a very subtle placeholder if no tip is available
-    // and not actively loading.
-    return null; 
+  if (!currentPersonalizedTip && !isLoading) {
+    // If no tip is available and we are not actively loading, don't render the component.
+    // Or, you could return a placeholder saying "No new tips right now."
+    return null;
   }
 
   return (
@@ -68,8 +69,9 @@ export function PersonalizedTipDisplay() {
         </Button>
       </CardHeader>
       <CardContent className="px-4 pb-3 text-sm text-foreground">
-        {currentPersonalizedTip}
+        {isLoading && !currentPersonalizedTip ? "Thinking of a tip..." : currentPersonalizedTip}
       </CardContent>
     </Card>
   );
 }
+
