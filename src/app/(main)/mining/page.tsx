@@ -234,8 +234,8 @@ export default function MiningPage() {
           adSlot="2603795181"
           adFormat="auto"
           fullWidthResponsive={true}
-          className="max-w-full"
-          style={{ display: 'block', margin: 'auto', minHeight: '50px' }} // Added minHeight to prevent collapse
+          className="w-full" 
+          style={{ display: 'block', width: '100%', minHeight: '50px' }} 
         />
       </div>
 
@@ -320,3 +320,4 @@ export default function MiningPage() {
     </div>
   );
 }
+    
