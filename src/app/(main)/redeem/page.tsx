@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, ChangeEvent, useRef } from 'react'; 
+import { useState, useEffect, ChangeEvent, useRef, useCallback } from 'react'; 
 import { useAppState } from '@/components/providers/app-state-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,14 +10,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CONFIG } from '@/lib/constants';
 import { formatNumber } from '@/lib/utils';
-import type { PaymentMethod, PaymentDetails } from '@/types';
+import type { PaymentMethod, PaymentDetails, Html5QrcodeError, Html5QrcodeResult } from '@/types';
 import { Wallet, Banknote, AlertCircle, Info, Send, Users, QrCode as QrCodeIcon } from 'lucide-react'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { AdContainer } from '@/components/shared/ad-container';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Html5QrcodeScanner, type Html5QrcodeError, type Html5QrcodeResult } from 'html5-qrcode'; 
+import { Html5QrcodeScanner } from 'html5-qrcode'; 
 import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-display';
 
 const paymentMethods: { value: PaymentMethod; label: string }[] = [
@@ -28,7 +28,6 @@ const paymentMethods: { value: PaymentMethod; label: string }[] = [
   { value: 'phonepay', label: 'PhonePe' },
 ];
 
-// Element ID for the QR code reader
 const QR_READER_ELEMENT_ID_REDEEM = "qr-reader-redeem";
 
 export default function RedeemPage() {
@@ -50,6 +49,7 @@ export default function RedeemPage() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const html5QrCodeScannerRef = useRef<Html5QrcodeScanner | null>(null);
   const [qrScanError, setQrScanError] = useState<string | null>(null);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
 
 
   useEffect(() => {
@@ -149,52 +149,99 @@ export default function RedeemPage() {
     setIsSubmittingP2P(false);
   };
 
-  const onScanSuccess = (decodedText: string, result: Html5QrcodeResult) => {
+  const onScanSuccess = useCallback((decodedText: string, result: Html5QrcodeResult) => {
     setP2pRecipientId(decodedText);
     setIsScannerOpen(false); 
+    setHasCameraPermission(null); // Reset camera permission status
     toast({ title: "QR Scanned!", description: "Recipient ID populated." });
-    if (html5QrCodeScannerRef.current) {
-      html5QrCodeScannerRef.current.clear().catch(err => console.error("Failed to clear scanner on success", err));
-      html5QrCodeScannerRef.current = null;
-    }
-  };
+    // Scanner cleanup will be handled by the useEffect when isScannerOpen changes
+  }, [toast]);
 
-  const onScanFailure = (error: string | Html5QrcodeError) => {
-     // You can choose to show a toast or update the UI within the dialog
-     // console.warn(`Code scan error = ${error}`);
-     // setQrScanError("Failed to scan QR code. Point camera at QR code."); // Example error message
-  };
+  const onScanFailure = useCallback((error: string | Html5QrcodeError) => {
+    let errorMessage = "Failed to scan QR code. Please ensure the QR code is clear and centered.";
+    // Check if error is an object and has a name property (like DOMException)
+    if (typeof error === 'object' && 'name' in error && error.name === 'NotAllowedError') {
+      errorMessage = "Camera permission denied. Please enable camera access in your browser settings to scan QR codes.";
+      setHasCameraPermission(false);
+      toast({
+        variant: 'destructive',
+        title: 'Camera Permission Denied',
+        description: errorMessage,
+        duration: 7000, // Longer duration for permission errors
+      });
+    } else if (typeof error === 'string' && (error.toLowerCase().includes("permission denied") || error.toLowerCase().includes("notallowederror")) ) {
+      errorMessage = "Camera permission denied. Please enable camera access in your browser settings to scan QR codes.";
+      setHasCameraPermission(false);
+      toast({
+        variant: 'destructive',
+        title: 'Camera Permission Denied',
+        description: errorMessage,
+        duration: 7000,
+      });
+    } else {
+      // For other scan errors, you might not want to spam toasts, or just show a subtle error
+      // console.warn(`Code scan error: ${typeof error === 'string' ? error : error.message}`);
+    }
+    setQrScanError(errorMessage);
+  }, [toast]);
   
   useEffect(() => {
     if (isScannerOpen) {
-      // Check if element exists before initializing
+      setHasCameraPermission(null); // Reset permission status for a fresh attempt
+      setQrScanError(null);       // Clear previous errors
+
       const qrReaderElement = document.getElementById(QR_READER_ELEMENT_ID_REDEEM);
+      // Only initialize if the element exists and scanner isn't already active
       if (qrReaderElement && !html5QrCodeScannerRef.current) {
         const scanner = new Html5QrcodeScanner(
           QR_READER_ELEMENT_ID_REDEEM,
-          { fps: 10, qrbox: { width: 250, height: 250 }, supportedScanTypes: [] }, // supportedScanTypes: [] for camera only
+          { 
+            fps: 10, 
+            qrbox: { width: 250, height: 250 }, 
+            supportedScanTypes: [], // Force camera only
+            rememberLastUsedCamera: true,
+            aspectRatio: 1.0 
+          },
           /* verbose= */ false
         );
-        scanner.render(onScanSuccess, onScanFailure);
+        
+        scanner.render(onScanSuccess, onScanFailure)
+          .then(() => {
+            // This block executes if scanner.render() itself initializes without immediate error.
+            // It does not guarantee permission has been granted yet, as that's async.
+            // onScanFailure will handle permission denial during the scanning process.
+          })
+          .catch(renderError => {
+            console.error("Error during scanner.render() setup:", renderError);
+            let setupErrorMessage = "Could not start QR scanner.";
+            if (typeof renderError === 'object' && (renderError as any).name === 'NotAllowedError') {
+              setupErrorMessage = "Camera permission was denied. Please enable camera access in your browser settings.";
+              setHasCameraPermission(false);
+              toast({ variant: 'destructive', title: 'Camera Setup Failed', description: setupErrorMessage, duration: 7000 });
+            }
+            setQrScanError(setupErrorMessage);
+          });
         html5QrCodeScannerRef.current = scanner;
-        setQrScanError(null);
       }
-    } else {
+    } else { // When isScannerOpen is false (dialog closes or component unmounts)
       if (html5QrCodeScannerRef.current) {
-        html5QrCodeScannerRef.current.clear().catch(err => console.error("Failed to clear scanner on close", err));
+        html5QrCodeScannerRef.current.clear()
+          .catch(err => console.error("Failed to clear scanner on close/cleanup:", err));
         html5QrCodeScannerRef.current = null;
       }
+      // Do not reset hasCameraPermission here, it's used to show error after close if needed.
+      // It's reset to null when the dialog is re-opened.
     }
   
-    // Cleanup function for when the component unmounts or isScannerOpen changes
+    // Cleanup function for when the component unmounts
     return () => {
       if (html5QrCodeScannerRef.current) {
-        html5QrCodeScannerRef.current.clear().catch(err => console.error("Failed to clear scanner on unmount/dependency change", err));
+        html5QrCodeScannerRef.current.clear()
+          .catch(err => console.error("Failed to clear scanner on unmount:", err));
         html5QrCodeScannerRef.current = null;
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isScannerOpen]); // Only re-run when isScannerOpen changes
+  }, [isScannerOpen, onScanSuccess, onScanFailure, toast]);
   
   if (loadingUserData || !userData) {
     return (
@@ -323,10 +370,28 @@ export default function RedeemPage() {
                     <DialogHeader>
                       <DialogTitle>Scan User ID QR Code</DialogTitle>
                     </DialogHeader>
-                    <div id={QR_READER_ELEMENT_ID_REDEEM} style={{ width: '100%', minHeight: '250px' }} className="my-4 border rounded-md overflow-hidden">
-                      {/* QR Scanner will render here */}
-                    </div>
-                     {qrScanError && <p className="text-destructive text-sm text-center">{qrScanError}</p>}
+                    
+                    {hasCameraPermission === false ? (
+                      <div className="text-destructive text-center p-4 rounded-md border border-destructive bg-destructive/10 my-4">
+                        <AlertCircle className="mx-auto h-10 w-10 mb-2" />
+                        <p className="font-semibold">Camera Access Denied</p>
+                        <p className="text-sm">{qrScanError || "Please enable camera permissions in your browser settings and try again."}</p>
+                      </div>
+                    ) : (
+                      <div id={QR_READER_ELEMENT_ID_REDEEM} style={{ width: '100%', minHeight: '250px' }} className="my-4 border rounded-md overflow-hidden bg-muted/30">
+                        {(hasCameraPermission === null && !qrScanError && isScannerOpen) && (
+                          <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
+                            <QrCodeIcon className="h-12 w-12 mb-2 animate-pulse text-primary" />
+                            <p>Requesting camera access...</p>
+                            <p className="text-xs mt-1">Point your camera at a QR code.</p>
+                          </div>
+                        )}
+                        {/* Scanner will render here if permission is granted */}
+                      </div>
+                    )}
+                    {qrScanError && hasCameraPermission !== false && ( // Show general scan errors if permission wasn't explicitly denied
+                        <p className="text-destructive text-sm text-center mt-[-8px] mb-2">{qrScanError}</p>
+                    )}
                     <DialogFooter>
                       <DialogClose asChild>
                         <Button type="button" variant="outline">Cancel Scan</Button>

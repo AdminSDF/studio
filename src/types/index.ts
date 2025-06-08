@@ -19,7 +19,7 @@ export interface Achievement {
     boosterId?: string; // For booster_purchase_specific
   };
   reward: number; // Coin reward
-  icon?: any; // Lucide icon component
+  iconName?: string; // Changed from icon: any to iconName: string
 }
 
 export interface AppTheme {
@@ -198,4 +198,22 @@ export interface SupportTicket {
   createdAt: Date | Timestamp;
   updatedAt?: Date | Timestamp;
   adminResponse?: string;
+}
+
+// Types for html5-qrcode library, if not globally available
+// Based on common usage, actual types might be more complex.
+export interface Html5QrcodeError {
+  errorMessage: string;
+  type?: number; // Or some other error code/type from the library
+  name?: string; // e.g., NotAllowedError
+}
+
+export interface Html5QrcodeResult {
+  decodedText: string;
+  result: {
+    format?: {
+      formatName?: string; // e.g., "QR_CODE"
+    };
+    // other properties from the library's result object
+  };
 }
