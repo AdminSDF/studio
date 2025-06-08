@@ -15,6 +15,7 @@ import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/components/providers/auth-provider';
 import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-display'; // Import the new component
+import { AdSenseUnit } from '@/components/shared/adsense-unit'; // Import AdSenseUnit
 
 // Helper to show floating tap value
 function showFloatingTapValue(amount: number, coinElementId: string) {
@@ -138,8 +139,6 @@ export default function MiningPage() {
 
     const coinElement = document.getElementById('tap-coin');
     if (coinElement) {
-      // coinElement.classList.add('animate-pulseOnce'); // Keep or remove based on new neon pulse
-      // setTimeout(() => coinElement.classList.remove('animate-pulseOnce'), 200);
       showFloatingTapValue(coinsMined, 'tap-coin');
     }
 
@@ -228,6 +227,17 @@ export default function MiningPage() {
         </div>
       </div>
 
+      {/* AdSense Ad Unit */}
+      <div className="my-4 w-full flex justify-center items-center">
+        <AdSenseUnit
+          adClient="ca-pub-1425274923062587"
+          adSlot="2603795181"
+          adFormat="auto"
+          fullWidthResponsive={true}
+          className="max-w-full"
+          style={{ display: 'block', margin: 'auto', minHeight: '50px' }} // Added minHeight to prevent collapse
+        />
+      </div>
 
       <Card className="shadow-md rounded-xl border-border">
         <CardHeader>
