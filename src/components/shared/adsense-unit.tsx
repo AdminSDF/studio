@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react'; // Added React import
 
 interface AdSenseUnitProps {
   adClient: string;
@@ -22,7 +22,18 @@ export const AdSenseUnit: React.FC<AdSenseUnitProps> = ({
   style = { display: 'block', textAlign: 'center' },
   layoutKey,
 }) => {
+  const insRef = useRef<HTMLModElement>(null); // Use HTMLModElement for <ins>
+
   useEffect(() => {
+    const insElement = insRef.current;
+    if (!insElement) return;
+
+    // Check if AdSense has already processed this slot
+    if (insElement.getAttribute('data-ad-status') === 'filled') {
+      return; // Ad already loaded or attempted, don't push again
+    }
+    
+    // Ensure the adsbygoogle array is available before pushing.
     if (typeof window !== 'undefined' && (window as any).adsbygoogle) {
       try {
         ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
@@ -31,7 +42,6 @@ export const AdSenseUnit: React.FC<AdSenseUnitProps> = ({
       }
     } else {
       // Optional: Retry if adsbygoogle is not immediately available.
-      // This is a simple retry, more robust solutions might involve event listeners for script load.
       const timeoutId = setTimeout(() => {
         if (typeof window !== 'undefined' && (window as any).adsbygoogle) {
           try {
@@ -48,6 +58,7 @@ export const AdSenseUnit: React.FC<AdSenseUnitProps> = ({
   return (
     <div className={className} data-ai-hint="advertisement banner adsense">
       <ins
+        ref={insRef} // Attach ref here
         className="adsbygoogle"
         style={style}
         data-ad-client={adClient}
