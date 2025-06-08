@@ -20,7 +20,8 @@ export function ThemeAppContainer({ children }: { children: ReactNode }) {
       // These classes define the main app container style (max-width, layout, etc.)
       'max-w-[500px] mx-auto border-l border-r border-border shadow-2xl overflow-x-hidden',
       'flex flex-col flex-grow', // Ensures it takes available vertical space if body is flex
-      activeTheme.cssClass // Apply the theme CSS class itself (e.g., 'theme-crimson-fire')
+      activeTheme.cssClass, // Apply the theme CSS class itself (e.g., 'theme-crimson-fire')
+      'bg-background text-foreground' // Explicitly apply themed background and foreground here
     )}>
       {children}
     </div>
