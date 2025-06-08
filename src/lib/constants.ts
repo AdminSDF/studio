@@ -148,10 +148,10 @@ export const CONFIG = {
   ] as AppTheme[],
   LEADERBOARD_SIZE: 20,
   QUESTS: [
-    { id: 'daily_tap_100', name: 'Morning Taps', description: 'Tap 100 times.', criteria: { type: 'tap_count_total_session', value: 100 }, reward: 10, icon: TrendingUp, type: 'daily' },
-    { id: 'daily_balance_50', name: 'Small Savings', description: `Earn 50 ${COIN_SYMBOL_VALUE} today (net gain).`, criteria: { type: 'balance_increase_session', value: 50 }, reward: 15, icon: Gem, type: 'daily' },
-    { id: 'daily_watch_ad_1', name: 'Ad Viewer', description: 'Engage with an advertisement.', criteria: { type: 'interact_ad', value: 1 }, reward: 25, icon: Star, type: 'daily' },
-    { id: 'daily_visit_boosters', name: 'Upgrade Explorer', description: 'Visit the Boosters page.', criteria: { type: 'visit_page', page: 'boosters' }, reward: 5, icon: Rocket, type: 'daily' },
+    { id: 'daily_tap_100', name: 'Morning Taps', description: 'Tap 100 times.', criteria: { type: 'tap_count_total_session', value: 100 }, reward: 10, iconName: "TrendingUp", type: 'daily' },
+    { id: 'daily_balance_50', name: 'Small Savings', description: `Earn 50 ${COIN_SYMBOL_VALUE} today (net gain).`, criteria: { type: 'balance_increase_session', value: 50 }, reward: 15, iconName: "Gem", type: 'daily' },
+    { id: 'daily_watch_ad_1', name: 'Ad Viewer', description: 'Engage with an advertisement.', criteria: { type: 'interact_ad', value: 1 }, reward: 25, iconName: "Star", type: 'daily' },
+    { id: 'daily_visit_boosters', name: 'Upgrade Explorer', description: 'Visit the Boosters page.', criteria: { type: 'visit_page', page: 'boosters' }, reward: 5, iconName: "Rocket", type: 'daily' },
   ] as QuestDefinition[],
   MAX_DAILY_QUESTS_ASSIGNED: 3,
   SUPPORT_TICKET_CATEGORIES: [

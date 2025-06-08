@@ -159,7 +159,7 @@ export interface QuestDefinition {
     boosterId?: string; // For 'booster_purchase_specific'
   };
   reward: number;
-  icon: React.ElementType;
+  iconName: string; // Changed from React.ElementType to string
   type: 'daily' | 'weekly' | 'event'; // Type of quest
 }
 
