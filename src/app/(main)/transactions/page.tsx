@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { CONFIG } from '@/lib/constants';
 import { formatNumber } from '@/lib/utils';
 import type { Transaction } from '@/types';
-import { History, TrendingDown, TrendingUp, Gift, Award, CircleHelp, ArrowRightLeft, Palette, Clock, Zap, Star } from 'lucide-react'; // Added Star
+import { History, TrendingDown, TrendingUp, Gift, Award, CircleHelp, ArrowRightLeft, Palette, Clock, Zap, Star } from 'lucide-react'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { AdContainer } from '@/components/shared/ad-container';
@@ -15,17 +15,17 @@ import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-dis
 
 function getTransactionIcon(type: string) {
   switch (type) {
-    case 'redeem': return <TrendingDown className="text-red-500" />;
-    case 'booster_purchase': return <Zap className="text-orange-500" />; // Changed from TrendingDown to Zap
-    case 'daily_bonus': return <Gift className="text-green-500" />;
-    case 'referral_bonus': return <Award className="text-yellow-500" />;
-    case 'achievement_reward': return <Award className="text-teal-500" />;
-    case 'p2p_send': return <ArrowRightLeft className="text-orange-600" />;
-    case 'p2p_receive': return <ArrowRightLeft className="text-green-600" />;
-    case 'quest_reward': return <Star className="text-purple-500" />; // Assuming Star for quest
-    case 'theme_purchase': return <Palette className="text-pink-500" />;
-    case 'offline_earnings': return <Clock className="text-blue-500" />;
-    default: return <CircleHelp className="text-gray-500" />;
+    case 'redeem': return <TrendingDown className="text-destructive" />;
+    case 'booster_purchase': return <Zap className="text-accent" />;
+    case 'daily_bonus': return <Gift className="text-success" />;
+    case 'referral_bonus': return <Award className="text-accent" />;
+    case 'achievement_reward': return <Award className="text-primary" />;
+    case 'p2p_send': return <ArrowRightLeft className="text-destructive" />;
+    case 'p2p_receive': return <ArrowRightLeft className="text-success" />;
+    case 'quest_reward': return <Star className="text-accent" />;
+    case 'theme_purchase': return <Palette className="text-accent" />;
+    case 'offline_earnings': return <Clock className="text-primary" />;
+    default: return <CircleHelp className="text-muted-foreground" />;
   }
 }
 

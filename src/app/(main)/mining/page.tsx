@@ -14,8 +14,8 @@ import { AdContainer } from '@/components/shared/ad-container';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/components/providers/auth-provider';
-import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-display'; // Import the new component
-import { AdSenseUnit } from '@/components/shared/adsense-unit'; // Import AdSenseUnit
+import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-display'; 
+import { AdSenseUnit } from '@/components/shared/adsense-unit'; 
 
 // Helper to show floating tap value
 function showFloatingTapValue(amount: number, coinElementId: string) {
@@ -241,11 +241,11 @@ export default function MiningPage() {
 
       <Card className="shadow-md rounded-xl border-border">
         <CardHeader>
-          <CardTitle className="flex items-center text-lg font-semibold"><Zap className="mr-2 text-yellow-500 h-5 w-5" />Energy Level</CardTitle>
+          <CardTitle className="flex items-center text-lg font-semibold"><Zap className="mr-2 text-accent h-5 w-5" />Energy Level</CardTitle>
           <CardDescription className="text-sm">{formatNumber(userData.currentEnergy, 0)} / {formatNumber(userData.maxEnergy, 0)}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Progress value={energyPercent} className="w-full h-3 rounded-full [&>div]:bg-gradient-to-r [&>div]:from-yellow-400 [&>div]:to-orange-500" />
+          <Progress value={energyPercent} className="w-full h-3 rounded-full [&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:to-accent" />
           <p className="text-xs text-muted-foreground text-center mt-2.5">{energyRegenTimerText}</p>
         </CardContent>
       </Card>
@@ -295,14 +295,14 @@ export default function MiningPage() {
           <CardContent className="pt-0 pb-4"><p className="text-3xl font-bold text-foreground">{formatNumber(userData.tapCountToday, 0)}</p></CardContent>
         </Card>
         <Card className="text-center shadow-md rounded-xl border-border">
-          <CardHeader className="pb-2 pt-4"><CardTitle className="text-base flex items-center justify-center text-muted-foreground"><TrendingUp className="mr-2 text-green-500 h-5 w-5" />Tap Power</CardTitle></CardHeader>
+          <CardHeader className="pb-2 pt-4"><CardTitle className="text-base flex items-center justify-center text-muted-foreground"><TrendingUp className="mr-2 text-primary h-5 w-5" />Tap Power</CardTitle></CardHeader>
           <CardContent className="pt-0 pb-4"><p className="text-3xl font-bold text-foreground">{formatNumber(userData.tapPower)} <span className="text-sm text-muted-foreground">{CONFIG.COIN_SYMBOL}</span></p></CardContent>
         </Card>
       </div>
 
       <Card className="shadow-md rounded-xl border-border">
         <CardHeader>
-          <CardTitle className="text-lg flex items-center font-semibold"><Info className="mr-2 text-blue-500 h-5 w-5" />Redeem Status</CardTitle>
+          <CardTitle className="text-lg flex items-center font-semibold"><Info className="mr-2 text-primary h-5 w-5" />Redeem Status</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1">
           <p className="text-sm">Minimum redeem: <strong className="text-primary">{CONFIG.MIN_REDEEM} {CONFIG.COIN_SYMBOL}</strong></p>

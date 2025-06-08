@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { CONFIG } from '@/lib/constants';
 import { formatNumber } from '@/lib/utils';
-import { UserCircle, CalendarDays, TrendingUp, TrendingDown, Copy, Settings, LogOut, AlertTriangle, KeyRound, Users, Hourglass, Edit3, UploadCloud, QrCode as QrCodeIcon } from 'lucide-react'; // Added QrCodeIcon
+import { UserCircle, CalendarDays, TrendingUp, TrendingDown, Copy, Settings, LogOut, AlertTriangle, KeyRound, Users, Hourglass, Edit3, UploadCloud, QrCode as QrCodeIcon } from 'lucide-react'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
@@ -27,7 +27,7 @@ import { AdContainer } from '@/components/shared/ad-container';
 import { useState, useRef, ChangeEvent } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import { QRCodeCanvas } from 'qrcode.react'; // Import QRCodeCanvas
+import { QRCodeCanvas } from 'qrcode.react'; 
 import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-display';
 
 export default function ProfilePage() {
@@ -106,7 +106,7 @@ export default function ProfilePage() {
             <Skeleton className="h-5 w-64 rounded-md" />
           </div>
         </div>
-        {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)} {/* Increased one Skeleton card */}
+        {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)}
          <Skeleton className="h-16 w-full rounded-xl" />
       </div>
     );
@@ -195,8 +195,8 @@ export default function ProfilePage() {
             </div>
           </div>
           <div className="flex justify-between items-center p-2 hover:bg-muted/50 rounded-md transition-colors">
-            <span className="flex items-center text-muted-foreground"><Users className="inline mr-2 h-4 w-4 text-blue-500" />Friends Referred:</span> 
-            <span className="font-medium text-blue-500">{referralsMade}</span>
+            <span className="flex items-center text-muted-foreground"><Users className="inline mr-2 h-4 w-4 text-primary" />Friends Referred:</span> 
+            <span className="font-medium text-primary">{referralsMade}</span>
           </div>
           <div className="flex justify-between items-center p-2 hover:bg-muted/50 rounded-md transition-colors">
             <span className="flex items-center text-muted-foreground"><Copy className="inline mr-2 h-4 w-4" />Referral ID:</span>

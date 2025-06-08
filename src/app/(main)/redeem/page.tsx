@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, ChangeEvent, useRef } from 'react'; // Added useRef
+import { useState, useEffect, ChangeEvent, useRef } from 'react'; 
 import { useAppState } from '@/components/providers/app-state-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,13 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CONFIG } from '@/lib/constants';
 import { formatNumber } from '@/lib/utils';
 import type { PaymentMethod, PaymentDetails } from '@/types';
-import { Wallet, Banknote, AlertCircle, Info, Send, Users, QrCode as QrCodeIcon } from 'lucide-react'; // Added QrCodeIcon
+import { Wallet, Banknote, AlertCircle, Info, Send, Users, QrCode as QrCodeIcon } from 'lucide-react'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { AdContainer } from '@/components/shared/ad-container';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Html5QrcodeScanner, type Html5QrcodeError, type Html5QrcodeResult } from 'html5-qrcode'; // Import html5-qrcode
+import { Html5QrcodeScanner, type Html5QrcodeError, type Html5QrcodeResult } from 'html5-qrcode'; 
 import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-display';
 
 const paymentMethods: { value: PaymentMethod; label: string }[] = [
@@ -223,7 +223,7 @@ export default function RedeemPage() {
 
       <Card className="shadow-md">
         <CardHeader>
-          <CardTitle className="flex items-center text-lg"><Banknote className="mr-2 text-green-600" /> Withdraw to Bank/UPI</CardTitle>
+          <CardTitle className="flex items-center text-lg"><Banknote className="mr-2 text-primary" /> Withdraw to Bank/UPI</CardTitle>
           <CardDescription>Exchange your {CONFIG.COIN_SYMBOL} for real-world value.</CardDescription>
         </CardHeader>
         <form onSubmit={handleRedeemSubmit}>
@@ -296,7 +296,7 @@ export default function RedeemPage() {
 
       <Card className="shadow-md">
         <CardHeader>
-          <CardTitle className="flex items-center text-lg"><Users className="mr-2 text-blue-500" /> Send {CONFIG.COIN_SYMBOL} to Another User</CardTitle>
+          <CardTitle className="flex items-center text-lg"><Users className="mr-2 text-primary" /> Send {CONFIG.COIN_SYMBOL} to Another User</CardTitle>
           <CardDescription>Transfer your {CONFIG.COIN_SYMBOL} directly to a friend.</CardDescription>
         </CardHeader>
         <form onSubmit={handleP2PSubmit}>
@@ -363,7 +363,7 @@ export default function RedeemPage() {
 
       <Card className="shadow-md">
         <CardHeader>
-            <CardTitle className="text-lg flex items-center"><Info className="mr-2 text-blue-500"/>Conversion & Info</CardTitle>
+            <CardTitle className="text-lg flex items-center"><Info className="mr-2 text-primary"/>Conversion & Info</CardTitle>
         </CardHeader>
         <CardContent>
             <p>Withdrawal Conversion Rate: <strong className="text-primary">100 {CONFIG.COIN_SYMBOL} = ₹{formatNumber(100 * CONFIG.CONVERSION_RATE)} INR</strong></p>

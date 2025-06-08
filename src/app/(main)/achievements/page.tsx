@@ -53,7 +53,7 @@ export default function AchievementsPage() {
       <Card className="shadow-xl border-primary/30 rounded-xl bg-gradient-to-br from-card to-secondary/20">
         <CardHeader>
           <CardTitle className="flex items-center text-primary text-2xl">
-            <Award className="mr-3 h-8 w-8 text-yellow-400" />
+            <Award className="mr-3 h-8 w-8 text-accent" />
             Achievements & Milestones
           </CardTitle>
           <CardDescription className="text-base">

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { CONFIG, type Booster } from '@/lib/constants';
 import { formatNumber } from '@/lib/utils';
-import { Rocket, TrendingUp, Zap, CheckCircle, ShoppingCart, HelpCircle } from 'lucide-react'; // Changed BadgeDollarSign to Zap
+import { Rocket, TrendingUp, Zap, CheckCircle, ShoppingCart, HelpCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AdContainer } from '@/components/shared/ad-container';
 import { useState } from 'react';
@@ -17,7 +17,7 @@ const getBoosterIcon = (effectType: Booster['effect_type']) => {
     case 'tap_power':
       return <TrendingUp className="mr-2 h-5 w-5 text-primary" />;
     case 'max_energy':
-      return <Zap className="mr-2 h-5 w-5 text-yellow-500" />;
+      return <Zap className="mr-2 h-5 w-5 text-accent" />; // Changed from text-yellow-500 to text-accent
     default:
       return <HelpCircle className="mr-2 h-5 w-5 text-muted-foreground" />;
   }
