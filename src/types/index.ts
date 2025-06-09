@@ -45,6 +45,7 @@ export interface UserData {
   name?: string;
   email?: string;
   photoURL?: string | null;
+  photoStoragePath?: string | null; // Added to store the actual storage path
   completedAchievements?: Record<string, Timestamp>;
   referralsMadeCount?: number;
   activeTheme?: string;

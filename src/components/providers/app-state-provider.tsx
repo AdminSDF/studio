@@ -151,6 +151,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       name: data.name ?? currentAuthUser?.name ?? 'New User',
       email: data.email ?? currentAuthUser?.email ?? '',
       photoURL: data.photoURL ?? null,
+      photoStoragePath: data.photoStoragePath ?? null, // Read photoStoragePath
       lastTapDate: typeof data.lastTapDate === 'string' ? data.lastTapDate : (data.lastTapDate instanceof Timestamp ? data.lastTapDate.toDate().toDateString() : now.toDateString()),
       lastEnergyUpdate: parseTimestampOrDate(data.lastEnergyUpdate, now),
       lastLoginBonusClaimed: parseNullableTimestampOrDate(data.lastLoginBonusClaimed),
@@ -187,6 +188,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       } else if (dataToUpdate.energySurgeEndTime === null) {
         firestoreReadyData.energySurgeEndTime = null;
       }
+      // photoURL and photoStoragePath are handled by uploadProfilePicture if they are part of dataToUpdate from there
+      // For other direct updates, ensure they are handled if needed (e.g. setting to null)
+      if ('photoURL' in dataToUpdate) firestoreReadyData.photoURL = dataToUpdate.photoURL;
+      if ('photoStoragePath' in dataToUpdate) firestoreReadyData.photoStoragePath = dataToUpdate.photoStoragePath;
+
       await updateDoc(userDocRef, firestoreReadyData);
     } catch (error) {
       console.error("Error updating user data:", error);
@@ -258,6 +264,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           createdAt: new Date(user.joinDate || Date.now()),
           name: user.name || 'New User', email: user.email || '',
           photoURL: null,
+          photoStoragePath: null, // Initialize photoStoragePath
           completedAchievements: {}, referralsMadeCount: 0,
           activeTheme: CONFIG.APP_THEMES[0].id, unlockedThemes: [CONFIG.APP_THEMES[0].id],
           frenzyEndTime: null, frenzyMultiplier: null, energySurgeEndTime: null,
@@ -918,6 +925,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const resetUserProgress = useCallback(async () => {
     if (!user) return;
     try {
+      // First, try to delete the existing profile picture if its path is known
+      if (userData?.photoStoragePath) {
+        try {
+          const oldFileRef = storageRef(storage, userData.photoStoragePath);
+          await deleteObject(oldFileRef);
+        } catch (deleteError: any) {
+          // Log but don't block reset if deletion fails (e.g., file already deleted)
+          if (deleteError.code !== 'storage/object-not-found') {
+            console.warn("Could not delete old profile picture during reset:", deleteError);
+          }
+        }
+      }
+
       const userDocRef = doc(db, 'users', user.id);
       const now = new Date();
       const defaultRawData: UserData = {
@@ -925,12 +945,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         currentEnergy: CONFIG.INITIAL_MAX_ENERGY,
         maxEnergy: CONFIG.INITIAL_MAX_ENERGY, tapPower: CONFIG.INITIAL_TAP_POWER,
         lastEnergyUpdate: now, boostLevels: {}, lastLoginBonusClaimed: null,
-        createdAt: userData?.createdAt || now,
-        photoURL: null,
-        referredBy: userData?.referredBy || null,
+        createdAt: userData?.createdAt || now, // Keep original creation date if available
+        photoURL: null, // Reset photoURL
+        photoStoragePath: null, // Reset photoStoragePath
+        referredBy: userData?.referredBy || null, // Keep original referral if available
         name: userData?.name || user.name || 'User',
         email: userData?.email || user.email || '',
-        completedAchievements: {}, referralsMadeCount: 0,
+        completedAchievements: {}, referralsMadeCount: 0, // Reset achievements and referral count
         activeTheme: CONFIG.APP_THEMES[0].id, unlockedThemes: [CONFIG.APP_THEMES[0].id],
         frenzyEndTime: null, frenzyMultiplier: null, energySurgeEndTime: null,
       };
@@ -997,9 +1018,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           async () => {
             try {
               const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              if (userData?.photoURL) {
+              
+              // Delete old profile picture using photoStoragePath
+              if (userData?.photoStoragePath) {
                 try {
-                  const oldFileRef = storageRef(storage, userData.photoURL);
+                  const oldFileRef = storageRef(storage, userData.photoStoragePath);
                   await deleteObject(oldFileRef);
                 } catch (deleteError: any) {
                   if (deleteError.code !== 'storage/object-not-found') {
@@ -1007,8 +1030,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                   }
                 }
               }
+              
               const userDocRef = doc(db, 'users', user.id);
-              await updateDoc(userDocRef, { photoURL: downloadURL });
+              await updateDoc(userDocRef, { 
+                photoURL: downloadURL,
+                photoStoragePath: filePath // Save the new storage path
+              });
               toast({ title: 'Success', description: 'Profile picture updated!' });
               resolve(downloadURL);
             } catch (error: any) {
