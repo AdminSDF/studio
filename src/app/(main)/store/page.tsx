@@ -12,11 +12,15 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-display';
+import { AdContainer } from '@/components/shared/ad-container';
+import { useState } from 'react';
 
 export default function StorePage() {
   const { userData, loadingUserData, purchaseTheme, setActiveThemeState } = useAppState();
   const { toast } = useToast();
   const themes = CONFIG.APP_THEMES;
+  const [adTrigger, setAdTrigger] = useState(true); // Trigger ad on initial load
+
 
   if (loadingUserData || !userData) {
     return (
@@ -48,84 +52,89 @@ export default function StorePage() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-20">
-      <Card className="shadow-xl border-primary/30 rounded-xl bg-gradient-to-br from-card to-secondary/20">
-        <CardHeader>
-          <CardTitle className="flex items-center text-primary text-2xl">
-            <Palette className="mr-3 h-8 w-8 text-accent" />
-            Theme Store
-          </CardTitle>
-          <CardDescription className="text-base">
-            Customize your app&apos;s appearance with unique themes!
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-           <p className="text-lg">Your Balance: <strong className="text-primary font-semibold">{formatNumber(userData.balance)} {CONFIG.COIN_SYMBOL}</strong></p>
-        </CardContent>
-      </Card>
+    <>
+      <div className="p-4 md:p-6 space-y-6 pb-20">
+        <Card className="shadow-xl border-primary/30 rounded-xl bg-gradient-to-br from-card to-secondary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center text-primary text-2xl">
+              <Palette className="mr-3 h-8 w-8 text-accent" />
+              Theme Store
+            </CardTitle>
+            <CardDescription className="text-base">
+              Customize your app&apos;s appearance with unique themes!
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-lg">Your Balance: <strong className="text-primary font-semibold">{formatNumber(userData.balance)} {CONFIG.COIN_SYMBOL}</strong></p>
+          </CardContent>
+        </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {themes.map((theme) => {
-          const isUnlocked = userData.unlockedThemes?.includes(theme.id) ?? false;
-          const isActive = userData.activeTheme === theme.id;
-          const canAfford = userData.balance >= theme.cost;
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {themes.map((theme) => {
+            const isUnlocked = userData.unlockedThemes?.includes(theme.id) ?? false;
+            const isActive = userData.activeTheme === theme.id;
+            const canAfford = userData.balance >= theme.cost;
 
-          return (
-            <Card
-              key={theme.id}
-              className={cn(
-                "shadow-lg rounded-xl border-border transition-all duration-300 flex flex-col",
-                isActive ? "border-primary ring-2 ring-primary shadow-primary/30" : "hover:shadow-accent/20"
-              )}
-            >
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center text-lg font-semibold text-foreground">
-                  {theme.name}
-                </CardTitle>
-                <div className="flex space-x-2 mt-2">
-                  <div className="w-6 h-6 rounded-full border" style={{ backgroundColor: theme.previewColors.background }} title="Background"></div>
-                  <div className="w-6 h-6 rounded-full border" style={{ backgroundColor: theme.previewColors.primary }} title="Primary"></div>
-                  <div className="w-6 h-6 rounded-full border" style={{ backgroundColor: theme.previewColors.accent }} title="Accent"></div>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                {theme.cost === 0 ? (
-                  <p className="text-sm text-success font-semibold">Free</p>
-                ) : (
-                  <p className="text-sm font-semibold">
-                    Cost: <span className="text-accent">{formatNumber(theme.cost)} {CONFIG.COIN_SYMBOL}</span>
-                  </p>
+            return (
+              <Card
+                key={theme.id}
+                className={cn(
+                  "shadow-lg rounded-xl border-border transition-all duration-300 flex flex-col",
+                  isActive ? "border-primary ring-2 ring-primary shadow-primary/30" : "hover:shadow-accent/20"
                 )}
-              </CardContent>
-              <CardFooter>
-                {isUnlocked ? (
-                  isActive ? (
-                    <Button variant="outline" disabled className="w-full">
-                      <CheckCircle className="mr-2 h-5 w-5 text-success" /> Activated
-                    </Button>
+              >
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center text-lg font-semibold text-foreground">
+                    {theme.name}
+                  </CardTitle>
+                  <div className="flex space-x-2 mt-2">
+                    <div className="w-6 h-6 rounded-full border" style={{ backgroundColor: theme.previewColors.background }} title="Background"></div>
+                    <div className="w-6 h-6 rounded-full border" style={{ backgroundColor: theme.previewColors.primary }} title="Primary"></div>
+                    <div className="w-6 h-6 rounded-full border" style={{ backgroundColor: theme.previewColors.accent }} title="Accent"></div>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  {theme.cost === 0 ? (
+                    <p className="text-sm text-success font-semibold">Free</p>
                   ) : (
-                    <Button onClick={() => handleApplyTheme(theme.id)} className="w-full" variant="secondary">
-                      Apply Theme
+                    <p className="text-sm font-semibold">
+                      Cost: <span className="text-accent">{formatNumber(theme.cost)} {CONFIG.COIN_SYMBOL}</span>
+                    </p>
+                  )}
+                </CardContent>
+                <CardFooter>
+                  {isUnlocked ? (
+                    isActive ? (
+                      <Button variant="outline" disabled className="w-full">
+                        <CheckCircle className="mr-2 h-5 w-5 text-success" /> Activated
+                      </Button>
+                    ) : (
+                      <Button onClick={() => handleApplyTheme(theme.id)} className="w-full" variant="secondary">
+                        Apply Theme
+                      </Button>
+                    )
+                  ) : (
+                    <Button
+                      onClick={() => handlePurchaseTheme(theme.id)}
+                      disabled={!canAfford || theme.cost === 0}
+                      className="w-full bg-primary hover:bg-primary/90"
+                    >
+                      <Coins className="mr-2 h-5 w-5" /> Unlock for {formatNumber(theme.cost)}
                     </Button>
-                  )
-                ) : (
-                  <Button
-                    onClick={() => handlePurchaseTheme(theme.id)}
-                    disabled={!canAfford || theme.cost === 0}
-                    className="w-full bg-primary hover:bg-primary/90"
-                  >
-                    <Coins className="mr-2 h-5 w-5" /> Unlock for {formatNumber(theme.cost)}
-                  </Button>
-                )}
-              </CardFooter>
-            </Card>
-          );
-        })}
+                  )}
+                </CardFooter>
+              </Card>
+            );
+          })}
+        </div>
+        <PersonalizedTipDisplay />
+        <p className="text-xs text-center text-muted-foreground mt-6">
+          More themes coming soon!
+        </p>
       </div>
-      <PersonalizedTipDisplay />
-       <p className="text-xs text-center text-muted-foreground mt-6">
-        More themes coming soon!
-      </p>
-    </div>
+      <div className="w-full my-4 -mx-4 md:-mx-6">
+        <AdContainer pageContext="store" trigger={adTrigger} />
+      </div>
+    </>
   );
 }

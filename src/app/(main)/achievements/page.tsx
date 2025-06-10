@@ -11,6 +11,8 @@ import { formatNumber } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-display';
+import { AdContainer } from '@/components/shared/ad-container';
+import { useState } from 'react';
 
 const getAchievementProgress = (achievement: Achievement, userData: any): number => {
   if (!userData) return 0;
@@ -34,6 +36,8 @@ const getAchievementProgress = (achievement: Achievement, userData: any): number
 export default function AchievementsPage() {
   const { userData, loadingUserData } = useAppState();
   const achievements = CONFIG.ACHIEVEMENTS;
+  const [adTrigger, setAdTrigger] = useState(true); // Trigger ad on initial load
+
 
   if (loadingUserData || !userData) {
      return (
@@ -49,61 +53,66 @@ export default function AchievementsPage() {
   const completedAchievements = userData.completedAchievements || {};
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-20">
-      <Card className="shadow-xl border-primary/30 rounded-xl bg-gradient-to-br from-card to-secondary/20">
-        <CardHeader>
-          <CardTitle className="flex items-center text-primary text-2xl">
-            <Award className="mr-3 h-8 w-8 text-accent" />
-            Achievements & Milestones
-          </CardTitle>
-          <CardDescription className="text-base">
-            Complete goals to earn bonus {CONFIG.COIN_SYMBOL}!
-          </CardDescription>
-        </CardHeader>
-      </Card>
+    <>
+      <div className="p-4 md:p-6 space-y-6 pb-20">
+        <Card className="shadow-xl border-primary/30 rounded-xl bg-gradient-to-br from-card to-secondary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center text-primary text-2xl">
+              <Award className="mr-3 h-8 w-8 text-accent" />
+              Achievements & Milestones
+            </CardTitle>
+            <CardDescription className="text-base">
+              Complete goals to earn bonus {CONFIG.COIN_SYMBOL}!
+            </CardDescription>
+          </CardHeader>
+        </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {achievements.map((ach) => {
-          const isCompleted = !!completedAchievements[ach.id];
-          const progress = isCompleted ? 100 : getAchievementProgress(ach, userData);
-          const IconComponent = ach.icon || Star;
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {achievements.map((ach) => {
+            const isCompleted = !!completedAchievements[ach.id];
+            const progress = isCompleted ? 100 : getAchievementProgress(ach, userData);
+            const IconComponent = ach.icon || Star;
 
-          return (
-            <Card key={ach.id} className={cn(
-              "shadow-lg rounded-xl border-border transition-all duration-300",
-              isCompleted ? "bg-success/10 border-success/50" : "hover:shadow-primary/20"
-            )}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center text-lg font-semibold text-foreground">
-                    <IconComponent className={cn("mr-2.5 h-6 w-6", isCompleted ? "text-success" : "text-primary")} />
-                    {ach.name}
-                  </CardTitle>
-                  {isCompleted && <CheckCircle className="h-7 w-7 text-success" />}
-                </div>
-                <CardDescription className="text-sm mt-1">{ach.description}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-sm">
-                  Reward: <strong className="text-accent font-semibold">{formatNumber(ach.reward)} {CONFIG.COIN_SYMBOL}</strong>
-                </p>
-                {!isCompleted && (
-                  <div>
-                    <Progress value={progress} className="h-2.5 rounded-full [&>div]:bg-gradient-to-r [&>div]:from-accent [&>div]:to-primary" />
-                    <p className="text-xs text-muted-foreground text-right mt-1">{Math.floor(progress)}% complete</p>
+            return (
+              <Card key={ach.id} className={cn(
+                "shadow-lg rounded-xl border-border transition-all duration-300",
+                isCompleted ? "bg-success/10 border-success/50" : "hover:shadow-primary/20"
+              )}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center text-lg font-semibold text-foreground">
+                      <IconComponent className={cn("mr-2.5 h-6 w-6", isCompleted ? "text-success" : "text-primary")} />
+                      {ach.name}
+                    </CardTitle>
+                    {isCompleted && <CheckCircle className="h-7 w-7 text-success" />}
                   </div>
-                )}
-                {isCompleted && (
-                   <p className="text-sm text-success font-semibold">
-                     Completed on {new Date((completedAchievements[ach.id] as any).toDate()).toLocaleDateString()}
-                   </p>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
+                  <CardDescription className="text-sm mt-1">{ach.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <p className="text-sm">
+                    Reward: <strong className="text-accent font-semibold">{formatNumber(ach.reward)} {CONFIG.COIN_SYMBOL}</strong>
+                  </p>
+                  {!isCompleted && (
+                    <div>
+                      <Progress value={progress} className="h-2.5 rounded-full [&>div]:bg-gradient-to-r [&>div]:from-accent [&>div]:to-primary" />
+                      <p className="text-xs text-muted-foreground text-right mt-1">{Math.floor(progress)}% complete</p>
+                    </div>
+                  )}
+                  {isCompleted && (
+                    <p className="text-sm text-success font-semibold">
+                      Completed on {new Date((completedAchievements[ach.id] as any).toDate()).toLocaleDateString()}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+        <PersonalizedTipDisplay />
       </div>
-      <PersonalizedTipDisplay />
-    </div>
+      <div className="w-full my-4 -mx-4 md:-mx-6">
+        <AdContainer pageContext="achievements" trigger={adTrigger} />
+      </div>
+    </>
   );
 }
