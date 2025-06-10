@@ -4,11 +4,10 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAppState } from '@/components/providers/app-state-provider';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-// Progress component is no longer used directly for energy here
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CONFIG } from '@/lib/constants';
 import { formatNumber } from '@/lib/utils';
-import { Zap, Target, Info, AlertTriangle, Wallet, TrendingUp, CreditCard, Wifi } from 'lucide-react';
+import { Zap, Target, Info, AlertTriangle, Wallet, TrendingUp, CreditCard, Wifi, Coins } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AdContainer } from '@/components/shared/ad-container';
 import Image from 'next/image';
@@ -178,7 +177,7 @@ export default function MiningPage() {
   if (!userData) {
     return (
       <div className="p-4 md:p-6 space-y-6">
-        <Skeleton className="h-[180px] w-full max-w-sm mx-auto rounded-xl" /> {/* Wallet Card Skeleton */}
+        <Skeleton className="h-[120px] w-full max-w-sm mx-auto rounded-xl" /> {/* Wallet Card Skeleton */}
         <Skeleton className="h-64 w-64 mx-auto rounded-full" /> {/* Tap Button with Circular Progress Skeleton */}
         <Skeleton className="h-5 w-1/2 mx-auto mt-2 rounded-md" /> {/* Energy Timer Text Skeleton */}
         <div className="grid grid-cols-2 gap-4 mt-4">
@@ -192,7 +191,6 @@ export default function MiningPage() {
   const energyPercent = userData.maxEnergy > 0 ? (userData.currentEnergy / userData.maxEnergy) * 100 : 0;
   const balanceInrValue = userData.balance * CONFIG.CONVERSION_RATE;
   const remainingToRedeem = Math.max(0, CONFIG.MIN_REDEEM - userData.balance);
-  const userDisplayName = userData.name || authUser?.name || 'Tap Titan';
 
   // Circular progress calculation
   const circleRadius = 120; // Radius of the progress circle path
@@ -204,37 +202,23 @@ export default function MiningPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-20">
-      {/* Wallet Card - Debit/Credit Card Style */}
-      <div className="w-full max-w-sm mx-auto bg-gradient-to-br from-primary via-primary/80 to-accent text-primary-foreground p-5 rounded-xl shadow-2xl relative aspect-[1.586] flex flex-col justify-between">
-        <div>
-          <div className="flex justify-between items-start mb-2">
-            <h2 className="text-xl font-bold">{CONFIG.APP_NAME}</h2>
-            <Wifi className="w-6 h-6 opacity-80" /> {/* Wifi/Contactless symbol */}
+      {/* Simplified Wallet Card */}
+      <Card className="w-full max-w-sm mx-auto shadow-xl border-primary/30 rounded-xl bg-gradient-to-br from-card to-secondary/20">
+        <CardHeader className="pb-3 pt-4">
+          <CardTitle className="text-xl font-semibold text-primary flex items-center">
+            <Coins className="mr-2.5 h-6 w-6 text-accent" />
+            Your Balance
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-1">
+          <div className="text-4xl font-bold text-foreground">
+            {formatNumber(userData.balance)} <span className="text-2xl opacity-80">{CONFIG.COIN_SYMBOL}</span>
           </div>
-          <div className="w-10 h-8 bg-accent/30 rounded-md mb-3 flex items-center justify-center border-2 border-accent/50">
-             {/* Chip Placeholder */}
-            <div className="w-8 h-6 bg-accent/50 rounded-sm border-2 border-accent/70"></div>
-          </div>
-          <p className="text-xs tracking-wider opacity-80">VIRTUAL BALANCE</p>
-          <div className="text-3xl font-bold tracking-wider my-1">
-            {formatNumber(userData.balance)} <span className="text-xl opacity-90">{CONFIG.COIN_SYMBOL}</span>
-          </div>
-        </div>
-        <div className="mt-auto">
-           <div className="flex justify-between items-end">
-            <div>
-                <p className="text-xs opacity-80 uppercase">Card Holder</p>
-                <p className="font-semibold text-sm tracking-wide">{userDisplayName}</p>
-            </div>
-            <div>
-                <p className="text-xs opacity-80 text-right">Approx. Value</p>
-                <p className="font-semibold text-sm text-right">₹{formatNumber(balanceInrValue)}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* REMOVED AdSense Ad Unit from here to prevent unwanted space */}
+          <p className="text-sm text-muted-foreground">
+            ≈ ₹{formatNumber(balanceInrValue)}
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Tap Button with Circular Energy Progress */}
       <div className="flex flex-col items-center my-8 relative" id="coin-container">
@@ -340,6 +324,8 @@ export default function MiningPage() {
     </div>
   );
 }
+    
+
     
 
     
