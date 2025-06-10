@@ -8,10 +8,10 @@ import { AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import { AdSenseUnit } from './adsense-unit';
 import { AdsterraScriptUnit } from './adsterra-script-unit';
-import { CONFIG } from '@/lib/constants'; // Import CONFIG for AdSense Client ID
+import { CONFIG } from '@/lib/constants';
 
 interface AdContainerProps {
-  pageContext: string; // Still useful for context, though not used for AI now
+  pageContext: string;
   trigger: boolean;
 }
 
@@ -28,43 +28,50 @@ const PREDEFINED_ADS: AdContent[] = [
 
 export function AdContainer({ pageContext, trigger }: AdContainerProps) {
   const [ad, setAd] = useState<AdContent | null>(null);
-  const [isLoading, setIsLoading] = useState(false); // Kept for potential future async loading, but simple for now
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Memoize the ads list to prevent re-creation on every render, though it's constant here.
   const availableAds = useMemo(() => PREDEFINED_ADS, []);
 
   useEffect(() => {
     function selectAd() {
-      setIsLoading(true); // Simulate loading briefly
+      setIsLoading(true);
+      setError(null);
       setAd(null);
 
       if (availableAds.length > 0) {
         const randomIndex = Math.floor(Math.random() * availableAds.length);
-        const selectedAd = availableAds[randomIndex];
+        let selectedAd = availableAds[randomIndex];
         
-        // For AdSense, ensure client ID is correctly sourced if it can change dynamically or needs verification
         if (selectedAd.adType === 'adsense') {
-            setAd({ ...selectedAd, adClient: CONFIG.ADSENSE_CLIENT_ID });
-        } else {
-            setAd(selectedAd);
+            if (!CONFIG.ADSENSE_CLIENT_ID) {
+                console.error("AdSense Client ID is not configured in CONFIG.");
+                setError("AdSense Client ID missing. Cannot load AdSense ad.");
+                selectedAd = PREDEFINED_ADS.find(ad => ad.adType === 'url' && ad.adUrl === "https://syndication.adsterra.com/bn.php?ID=26645903&type=banner") || null; // Fallback to a generic banner
+            } else {
+                 selectedAd = { ...selectedAd, adClient: CONFIG.ADSENSE_CLIENT_ID };
+            }
         }
-
+        setAd(selectedAd);
       } else {
         console.warn("No predefined ads available to select.");
+        setError("No ads configured for display.");
       }
       
-      // Simulate loading completion
-      setTimeout(() => setIsLoading(false), 100); // Short delay
+      setTimeout(() => setIsLoading(false), 100);
     }
 
+    // Only trigger ad selection if the trigger is true.
+    // If trigger becomes false, it implies the ad should be hidden or reset.
     if (trigger) {
       selectAd();
     } else {
       setAd(null);
       setIsLoading(false);
+      setError(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trigger, availableAds]); // pageContext removed as it's not used for AI anymore
+  }, [trigger, availableAds]);
 
   if (isLoading) {
     return (
@@ -77,11 +84,21 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
     );
   }
 
+  if (error) {
+    return (
+      <Card className="w-full my-4 mx-auto text-center bg-destructive/10 p-2 border-dashed border-destructive">
+          <CardContent className="p-2 text-destructive flex flex-col items-center justify-center">
+          <AlertCircle className="h-5 w-5 mb-1" />
+          <p className="text-xs">{error}</p>
+          </CardContent>
+      </Card>
+    )
+  }
+
   if (!ad) {
     return null;
   }
 
-  // Simple error display if something went wrong with ad selection (though less likely now)
   if (ad.adType === 'url' && !ad.adUrl) {
       return (
         <Card className="w-full my-4 mx-auto text-center bg-destructive/10 p-2 border-dashed border-destructive">
@@ -93,6 +110,7 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
       )
   }
   if (ad.adType === 'adsense' && (!ad.adClient || !ad.adSlot)) {
+    // This specific check might be redundant if the setError for missing CONFIG.ADSENSE_CLIENT_ID fires first
     return (
         <Card className="w-full my-4 mx-auto text-center bg-destructive/10 p-2 border-dashed border-destructive">
             <CardContent className="p-2 text-destructive flex flex-col items-center justify-center">
@@ -103,10 +121,9 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
       )
   }
 
-
   return (
     <Card className="w-full my-4 mx-auto text-center bg-card p-0 overflow-hidden shadow-md">
-      <CardContent className="p-0 flex justify-center items-center">
+      <CardContent className="p-0 flex justify-center items-center min-h-[60px] sm:min-h-[90px] md:min-h-[100px]">
         {ad.adType === 'adsense' && ad.adClient && ad.adSlot ? (
           <AdSenseUnit
             adClient={ad.adClient}
@@ -120,19 +137,16 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
             frameBorder="0"
             scrolling="no"
             allowFullScreen={true}
-            className="w-full h-[60px] sm:h-[90px] md:h-[100px]" // Standard banner sizes
+            className="w-full h-[60px] sm:h-[90px] md:h-[100px]"
             title="Advertisement"
             data-ai-hint="advertisement banner"
           ></iframe>
         ) : ad.adType === 'adsterra_script' ? (
           <AdsterraScriptUnit />
         ) : (
-           <div className="p-4 text-sm text-muted-foreground">Invalid ad configuration received.</div>
+           <div className="p-4 text-sm text-muted-foreground">Error: Could not determine ad type.</div>
         )}
       </CardContent>
-      {/* Optional: Display reason for debugging/transparency
-      {ad.reason && <p className="text-xs text-muted-foreground p-1 bg-muted/20">{ad.reason}</p>}
-      */}
     </Card>
   );
 }
