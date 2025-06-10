@@ -16,8 +16,7 @@ interface AdContainerProps {
 }
 
 // List of predefined ads. AI mediation is disabled.
-// Removed AdSense ad type and Adsterra Direct Links from predefined ads.
-// Kept the generic Adsterra banner and the Adsterra script ad.
+// Only Adsterra banner and script ad are kept.
 const PREDEFINED_ADS: AdContent[] = [
   { adType: "url", adUrl: "https://syndication.adsterra.com/bn.php?ID=26645903&type=banner", reason: "Selected: Adsterra Generic Banner 468x60" },
   { adType: "adsterra_script", reason: "Selected: Adsterra Script Ad 728x90" }
@@ -47,25 +46,19 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
         setError("No ads configured for display.");
       }
       
-      setTimeout(() => setIsLoading(false), 100); // Simulate a short delay for ad selection
+      setTimeout(() => setIsLoading(false), 100); 
     }
 
-    if (trigger) {
-      selectAd();
-    } else {
-      // If trigger is false (e.g., page changes where ad should reset), clear the ad.
-      setAd(null);
-      setIsLoading(false);
-      setError(null);
-    }
+    // Always try to select an ad when the trigger changes (e.g. on page load/specific actions)
+    // The visibility of the ad (if any) is controlled by whether `ad` state is null or not.
+    selectAd();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trigger, availableAds]); // Re-run when trigger or availableAds change
+  }, [trigger, availableAds]); 
 
   if (isLoading) {
     return (
-      <Card className="w-full my-4 mx-auto text-center bg-muted/50 p-2 border-dashed">
+      <Card className="w-full text-center bg-muted/50 p-2 border-dashed">
         <CardContent className="p-2">
-          {/* Adjusted skeleton height to match new min-heights */}
           <Skeleton className="h-[90px] sm:h-[90px] md:h-[100px] w-full rounded-md" />
           <Skeleton className="h-4 w-1/2 mx-auto mt-2 rounded-md" />
         </CardContent>
@@ -75,7 +68,7 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
 
   if (error) {
     return (
-      <Card className="w-full my-4 mx-auto text-center bg-destructive/10 p-2 border-dashed border-destructive">
+      <Card className="w-full text-center bg-destructive/10 p-2 border-dashed border-destructive">
           <CardContent className="p-2 text-destructive flex flex-col items-center justify-center">
           <AlertCircle className="h-5 w-5 mb-1" />
           <p className="text-xs">{error}</p>
@@ -85,13 +78,12 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
   }
 
   if (!ad) {
-    return null; // Don't render anything if no ad is selected (or if trigger is false)
+    return null; 
   }
 
-  // Additional check for URL ad type
   if (ad.adType === 'url' && !ad.adUrl) {
       return (
-        <Card className="w-full my-4 mx-auto text-center bg-destructive/10 p-2 border-dashed border-destructive">
+        <Card className="w-full text-center bg-destructive/10 p-2 border-dashed border-destructive">
             <CardContent className="p-2 text-destructive flex flex-col items-center justify-center">
             <AlertCircle className="h-5 w-5 mb-1" />
             <p className="text-xs">Ad URL missing for URL ad type.</p>
@@ -101,8 +93,7 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
   }
 
   return (
-    <Card className="w-full my-4 mx-auto text-center bg-card p-0 overflow-hidden shadow-md">
-      {/* Increased min-height for mobile to 90px. Kept sm and md heights. */}
+    <Card className="w-full text-center bg-card p-0 overflow-hidden shadow-md">
       <CardContent className="p-0 flex justify-center items-center min-h-[90px] sm:min-h-[90px] md:min-h-[100px]">
         {ad.adType === 'url' && ad.adUrl ? (
           <iframe
@@ -110,13 +101,11 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
             frameBorder="0"
             scrolling="no"
             allowFullScreen={true}
-            // Adjusted iframe height to fill the new CardContent min-heights.
             className="w-full h-[90px] sm:h-[90px] md:h-[100px]"
             title="Advertisement"
             data-ai-hint="advertisement banner"
           ></iframe>
         ) : ad.adType === 'adsterra_script' ? (
-          // AdsterraScriptUnit internally defines its height as 90px
           <AdsterraScriptUnit />
         ) : (
            <div className="p-4 text-sm text-muted-foreground">Error: Could not determine ad type or ad configuration missing.</div>

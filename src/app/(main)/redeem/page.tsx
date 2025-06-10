@@ -45,7 +45,7 @@ export default function RedeemPage() {
   const [p2pFormError, setP2pFormError] = useState<string | null>(null);
   const [isSubmittingP2P, setIsSubmittingP2P] = useState(false);
 
-  const [adTrigger, setAdTrigger] = useState(false);
+  const [adTrigger, setAdTrigger] = useState(true); // Trigger ad on initial load
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const html5QrCodeScannerRef = useRef<Html5QrcodeScanner | null>(null);
   const [qrScanError, setQrScanError] = useState<string | null>(null);
@@ -152,14 +152,12 @@ export default function RedeemPage() {
   const onScanSuccess = useCallback((decodedText: string, result: Html5QrcodeResult) => {
     setP2pRecipientId(decodedText);
     setIsScannerOpen(false); 
-    setHasCameraPermission(null); // Reset camera permission status
+    setHasCameraPermission(null); 
     toast({ title: "QR Scanned!", description: "Recipient ID populated." });
-    // Scanner cleanup will be handled by the useEffect when isScannerOpen changes
   }, [toast]);
 
   const onScanFailure = useCallback((error: string | Html5QrcodeError) => {
     let errorMessage = "Failed to scan QR code. Please ensure the QR code is clear and centered.";
-    // Check if error is an object and has a name property (like DOMException)
     if (typeof error === 'object' && 'name' in error && error.name === 'NotAllowedError') {
       errorMessage = "Camera permission denied. Please enable camera access in your browser settings to scan QR codes.";
       setHasCameraPermission(false);
@@ -167,7 +165,7 @@ export default function RedeemPage() {
         variant: 'destructive',
         title: 'Camera Permission Denied',
         description: errorMessage,
-        duration: 7000, // Longer duration for permission errors
+        duration: 7000, 
       });
     } else if (typeof error === 'string' && (error.toLowerCase().includes("permission denied") || error.toLowerCase().includes("notallowederror")) ) {
       errorMessage = "Camera permission denied. Please enable camera access in your browser settings to scan QR codes.";
@@ -178,39 +176,30 @@ export default function RedeemPage() {
         description: errorMessage,
         duration: 7000,
       });
-    } else {
-      // For other scan errors, you might not want to spam toasts, or just show a subtle error
-      // console.warn(`Code scan error: ${typeof error === 'string' ? error : error.message}`);
     }
     setQrScanError(errorMessage);
   }, [toast]);
   
   useEffect(() => {
     if (isScannerOpen) {
-      setHasCameraPermission(null); // Reset permission status for a fresh attempt
-      setQrScanError(null);       // Clear previous errors
+      setHasCameraPermission(null); 
+      setQrScanError(null);       
 
       const qrReaderElement = document.getElementById(QR_READER_ELEMENT_ID_REDEEM);
-      // Only initialize if the element exists and scanner isn't already active
       if (qrReaderElement && !html5QrCodeScannerRef.current) {
         const scanner = new Html5QrcodeScanner(
           QR_READER_ELEMENT_ID_REDEEM,
           { 
             fps: 10, 
             qrbox: { width: 250, height: 250 }, 
-            supportedScanTypes: [], // Force camera only
+            supportedScanTypes: [], 
             rememberLastUsedCamera: true,
             aspectRatio: 1.0 
           },
-          /* verbose= */ false
+          false
         );
         
         scanner.render(onScanSuccess, onScanFailure)
-          .then(() => {
-            // This block executes if scanner.render() itself initializes without immediate error.
-            // It does not guarantee permission has been granted yet, as that's async.
-            // onScanFailure will handle permission denial during the scanning process.
-          })
           .catch(renderError => {
             console.error("Error during scanner.render() setup:", renderError);
             let setupErrorMessage = "Could not start QR scanner.";
@@ -223,17 +212,14 @@ export default function RedeemPage() {
           });
         html5QrCodeScannerRef.current = scanner;
       }
-    } else { // When isScannerOpen is false (dialog closes or component unmounts)
+    } else { 
       if (html5QrCodeScannerRef.current) {
         html5QrCodeScannerRef.current.clear()
           .catch(err => console.error("Failed to clear scanner on close/cleanup:", err));
         html5QrCodeScannerRef.current = null;
       }
-      // Do not reset hasCameraPermission here, it's used to show error after close if needed.
-      // It's reset to null when the dialog is re-opened.
     }
   
-    // Cleanup function for when the component unmounts
     return () => {
       if (html5QrCodeScannerRef.current) {
         html5QrCodeScannerRef.current.clear()
@@ -257,187 +243,190 @@ export default function RedeemPage() {
   const balanceInrValue = userData.balance * CONFIG.CONVERSION_RATE;
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-20">
-      <Card className="shadow-lg border-primary">
-        <CardHeader>
-          <CardTitle className="flex items-center text-primary"><Wallet className="mr-2" /> Available Balance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold text-primary">{formatNumber(userData.balance)} <span className="text-xl">{CONFIG.COIN_SYMBOL}</span></div>
-          <p className="text-sm text-muted-foreground">≈ ₹{formatNumber(balanceInrValue)} INR</p>
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-md">
-        <CardHeader>
-          <CardTitle className="flex items-center text-lg"><Banknote className="mr-2 text-primary" /> Withdraw to Bank/UPI</CardTitle>
-          <CardDescription>Exchange your {CONFIG.COIN_SYMBOL} for real-world value.</CardDescription>
-        </CardHeader>
-        <form onSubmit={handleRedeemSubmit}>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="redeem-amount">Amount ({CONFIG.COIN_SYMBOL})</Label>
-              <Input
-                id="redeem-amount"
-                type="number"
-                value={redeemAmount}
-                onChange={(e) => setRedeemAmount(e.target.value)}
-                placeholder={`Min ${CONFIG.MIN_REDEEM} ${CONFIG.COIN_SYMBOL}`}
-                min={CONFIG.MIN_REDEEM}
-                max={userData.balance}
-                step="any"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="payment-method">Payment Method</Label>
-              <Select value={selectedMethod} onValueChange={(value) => setSelectedMethod(value as PaymentMethod)}>
-                <SelectTrigger id="payment-method">
-                  <SelectValue placeholder="Select Payment Method" />
-                </SelectTrigger>
-                <SelectContent>
-                  {paymentMethods.map(pm => (
-                    <SelectItem key={pm.value} value={pm.value}>{pm.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedMethod === 'upi' && (
-              <div className="space-y-2 p-3 border rounded-md bg-muted/20 animate-fadeIn">
-                <Label className="font-semibold text-primary">UPI Details</Label>
-                <div><Label htmlFor="upi-id">UPI ID</Label><Input name="upiId" id="upi-id" placeholder="yourname@upi" onChange={handleDetailChange} value={paymentDetails.upiId || ''} /></div>
-                <div><Label htmlFor="upi-name">Full Name</Label><Input name="upiName" id="upi-name" placeholder="Your full name" onChange={handleDetailChange} value={paymentDetails.upiName || ''} /></div>
-              </div>
-            )}
-            {selectedMethod === 'bank' && (
-              <div className="space-y-2 p-3 border rounded-md bg-muted/20 animate-fadeIn">
-                <Label className="font-semibold text-primary">Bank Details</Label>
-                <div><Label htmlFor="account-number">Account Number</Label><Input name="accNumber" id="account-number" placeholder="1234567890" onChange={handleDetailChange} value={paymentDetails.accNumber || ''} /></div>
-                <div><Label htmlFor="confirm-account">Confirm Account Number</Label><Input name="confirmAcc" id="confirm-account" placeholder="1234567890" onChange={handleDetailChange} value={paymentDetails.confirmAcc || ''} /></div>
-                <div><Label htmlFor="ifsc-code">IFSC Code</Label><Input name="ifsc" id="ifsc-code" placeholder="ABCD0123456" onChange={handleDetailChange} value={paymentDetails.ifsc || ''} /></div>
-                <div><Label htmlFor="account-name">Account Holder Name</Label><Input name="accName" id="account-name" placeholder="Your full name" onChange={handleDetailChange} value={paymentDetails.accName || ''} /></div>
-                <div><Label htmlFor="bank-name">Bank Name</Label><Input name="bankName" id="bank-name" placeholder="e.g., State Bank of India" onChange={handleDetailChange} value={paymentDetails.bankName || ''} /></div>
-              </div>
-            )}
-            {(selectedMethod === 'paytm' || selectedMethod === 'googlepay' || selectedMethod === 'phonepay') && (
-              <div className="space-y-2 p-3 border rounded-md bg-muted/20 animate-fadeIn">
-                <Label className="font-semibold text-primary">{paymentMethods.find(p=>p.value === selectedMethod)?.label} Details</Label>
-                <div><Label htmlFor={`${selectedMethod}-number`}>{paymentMethods.find(p=>p.value === selectedMethod)?.label} Number</Label><Input name="number" id={`${selectedMethod}-number`} placeholder="9876543210" onChange={handleDetailChange} value={paymentDetails.number || ''} /></div>
-                <div><Label htmlFor={`${selectedMethod}-name`}>Account Name</Label><Input name="name" id={`${selectedMethod}-name`} placeholder="Your full name" onChange={handleDetailChange} value={paymentDetails.name || ''} /></div>
-              </div>
-            )}
-             {redeemFormError && (
-              <p className="text-sm text-destructive flex items-center"><AlertCircle className="h-4 w-4 mr-1" /> {redeemFormError}</p>
-            )}
+    <>
+      <div className="p-4 md:p-6 space-y-6 pb-20">
+        <Card className="shadow-lg border-primary">
+          <CardHeader>
+            <CardTitle className="flex items-center text-primary"><Wallet className="mr-2" /> Available Balance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-primary">{formatNumber(userData.balance)} <span className="text-xl">{CONFIG.COIN_SYMBOL}</span></div>
+            <p className="text-sm text-muted-foreground">≈ ₹{formatNumber(balanceInrValue)} INR</p>
           </CardContent>
-          <CardFooter>
-            <Button type="submit" className="w-full" disabled={isSubmittingRedeem || !!redeemFormError || !selectedMethod || !redeemAmount}>
-              {isSubmittingRedeem ? 'Submitting...' : 'Submit Redeem Request'}
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
+        </Card>
 
-      <Separator />
-
-      <Card className="shadow-md">
-        <CardHeader>
-          <CardTitle className="flex items-center text-lg"><Users className="mr-2 text-primary" /> Send {CONFIG.COIN_SYMBOL} to Another User</CardTitle>
-          <CardDescription>Transfer your {CONFIG.COIN_SYMBOL} directly to a friend.</CardDescription>
-        </CardHeader>
-        <form onSubmit={handleP2PSubmit}>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="p2p-recipient-id">Recipient's User ID</Label>
-              <div className="flex space-x-2 items-end">
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle className="flex items-center text-lg"><Banknote className="mr-2 text-primary" /> Withdraw to Bank/UPI</CardTitle>
+            <CardDescription>Exchange your {CONFIG.COIN_SYMBOL} for real-world value.</CardDescription>
+          </CardHeader>
+          <form onSubmit={handleRedeemSubmit}>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="redeem-amount">Amount ({CONFIG.COIN_SYMBOL})</Label>
                 <Input
-                  id="p2p-recipient-id"
-                  type="text"
-                  value={p2pRecipientId}
-                  onChange={(e) => setP2pRecipientId(e.target.value)}
-                  placeholder="Enter or scan User ID"
+                  id="redeem-amount"
+                  type="number"
+                  value={redeemAmount}
+                  onChange={(e) => setRedeemAmount(e.target.value)}
+                  placeholder={`Min ${CONFIG.MIN_REDEEM} ${CONFIG.COIN_SYMBOL}`}
+                  min={CONFIG.MIN_REDEEM}
+                  max={userData.balance}
+                  step="any"
                   required
-                  className="flex-grow"
                 />
-                <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" type="button" size="icon" aria-label="Scan QR Code">
-                      <QrCodeIcon className="h-5 w-5" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Scan User ID QR Code</DialogTitle>
-                    </DialogHeader>
-                    
-                    {hasCameraPermission === false ? (
-                      <div className="text-destructive text-center p-4 rounded-md border border-destructive bg-destructive/10 my-4">
-                        <AlertCircle className="mx-auto h-10 w-10 mb-2" />
-                        <p className="font-semibold">Camera Access Denied</p>
-                        <p className="text-sm">{qrScanError || "Please enable camera permissions in your browser settings and try again."}</p>
-                      </div>
-                    ) : (
-                      <div id={QR_READER_ELEMENT_ID_REDEEM} style={{ width: '100%', minHeight: '250px' }} className="my-4 border rounded-md overflow-hidden bg-muted/30">
-                        {(hasCameraPermission === null && !qrScanError && isScannerOpen) && (
-                          <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
-                            <QrCodeIcon className="h-12 w-12 mb-2 animate-pulse text-primary" />
-                            <p>Requesting camera access...</p>
-                            <p className="text-xs mt-1">Point your camera at a QR code.</p>
-                          </div>
-                        )}
-                        {/* Scanner will render here if permission is granted */}
-                      </div>
-                    )}
-                    {qrScanError && hasCameraPermission !== false && ( // Show general scan errors if permission wasn't explicitly denied
-                        <p className="text-destructive text-sm text-center mt-[-8px] mb-2">{qrScanError}</p>
-                    )}
-                    <DialogFooter>
-                      <DialogClose asChild>
-                        <Button type="button" variant="outline">Cancel Scan</Button>
-                      </DialogClose>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
               </div>
-            </div>
-            <div>
-              <Label htmlFor="p2p-amount">Amount to Send ({CONFIG.COIN_SYMBOL})</Label>
-              <Input
-                id="p2p-amount"
-                type="number"
-                value={p2pAmount}
-                onChange={(e) => setP2pAmount(e.target.value)}
-                placeholder="Enter amount"
-                min="0.01" 
-                step="any"
-                required
-              />
-            </div>
-            {p2pFormError && (
-              <p className="text-sm text-destructive flex items-center"><AlertCircle className="h-4 w-4 mr-1" /> {p2pFormError}</p>
-            )}
-          </CardContent>
-          <CardFooter>
-            <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmittingP2P || !!p2pFormError || !p2pRecipientId || !p2pAmount}>
-              {isSubmittingP2P ? 'Sending...' : <><Send className="mr-2 h-4 w-4" />Send {CONFIG.COIN_SYMBOL}</>}
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
+              <div>
+                <Label htmlFor="payment-method">Payment Method</Label>
+                <Select value={selectedMethod} onValueChange={(value) => setSelectedMethod(value as PaymentMethod)}>
+                  <SelectTrigger id="payment-method">
+                    <SelectValue placeholder="Select Payment Method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {paymentMethods.map(pm => (
+                      <SelectItem key={pm.value} value={pm.value}>{pm.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-      <Card className="shadow-md">
-        <CardHeader>
-            <CardTitle className="text-lg flex items-center"><Info className="mr-2 text-primary"/>Conversion & Info</CardTitle>
-        </CardHeader>
-        <CardContent>
-            <p>Withdrawal Conversion Rate: <strong className="text-primary">100 {CONFIG.COIN_SYMBOL} = ₹{formatNumber(100 * CONFIG.CONVERSION_RATE)} INR</strong></p>
-            <p className="text-sm text-muted-foreground mt-1">Redeem requests are typically processed within 24-48 hours.</p>
-            <p className="text-sm text-muted-foreground mt-1">P2P transfers are instant but irreversible. Always double-check the recipient ID.</p>
-        </CardContent>
-      </Card>
-      <PersonalizedTipDisplay />
-      <AdContainer pageContext="redeem" trigger={adTrigger} />
-    </div>
+              {selectedMethod === 'upi' && (
+                <div className="space-y-2 p-3 border rounded-md bg-muted/20 animate-fadeIn">
+                  <Label className="font-semibold text-primary">UPI Details</Label>
+                  <div><Label htmlFor="upi-id">UPI ID</Label><Input name="upiId" id="upi-id" placeholder="yourname@upi" onChange={handleDetailChange} value={paymentDetails.upiId || ''} /></div>
+                  <div><Label htmlFor="upi-name">Full Name</Label><Input name="upiName" id="upi-name" placeholder="Your full name" onChange={handleDetailChange} value={paymentDetails.upiName || ''} /></div>
+                </div>
+              )}
+              {selectedMethod === 'bank' && (
+                <div className="space-y-2 p-3 border rounded-md bg-muted/20 animate-fadeIn">
+                  <Label className="font-semibold text-primary">Bank Details</Label>
+                  <div><Label htmlFor="account-number">Account Number</Label><Input name="accNumber" id="account-number" placeholder="1234567890" onChange={handleDetailChange} value={paymentDetails.accNumber || ''} /></div>
+                  <div><Label htmlFor="confirm-account">Confirm Account Number</Label><Input name="confirmAcc" id="confirm-account" placeholder="1234567890" onChange={handleDetailChange} value={paymentDetails.confirmAcc || ''} /></div>
+                  <div><Label htmlFor="ifsc-code">IFSC Code</Label><Input name="ifsc" id="ifsc-code" placeholder="ABCD0123456" onChange={handleDetailChange} value={paymentDetails.ifsc || ''} /></div>
+                  <div><Label htmlFor="account-name">Account Holder Name</Label><Input name="accName" id="account-name" placeholder="Your full name" onChange={handleDetailChange} value={paymentDetails.accName || ''} /></div>
+                  <div><Label htmlFor="bank-name">Bank Name</Label><Input name="bankName" id="bank-name" placeholder="e.g., State Bank of India" onChange={handleDetailChange} value={paymentDetails.bankName || ''} /></div>
+                </div>
+              )}
+              {(selectedMethod === 'paytm' || selectedMethod === 'googlepay' || selectedMethod === 'phonepay') && (
+                <div className="space-y-2 p-3 border rounded-md bg-muted/20 animate-fadeIn">
+                  <Label className="font-semibold text-primary">{paymentMethods.find(p=>p.value === selectedMethod)?.label} Details</Label>
+                  <div><Label htmlFor={`${selectedMethod}-number`}>{paymentMethods.find(p=>p.value === selectedMethod)?.label} Number</Label><Input name="number" id={`${selectedMethod}-number`} placeholder="9876543210" onChange={handleDetailChange} value={paymentDetails.number || ''} /></div>
+                  <div><Label htmlFor={`${selectedMethod}-name`}>Account Name</Label><Input name="name" id={`${selectedMethod}-name`} placeholder="Your full name" onChange={handleDetailChange} value={paymentDetails.name || ''} /></div>
+                </div>
+              )}
+              {redeemFormError && (
+                <p className="text-sm text-destructive flex items-center"><AlertCircle className="h-4 w-4 mr-1" /> {redeemFormError}</p>
+              )}
+            </CardContent>
+            <CardFooter>
+              <Button type="submit" className="w-full" disabled={isSubmittingRedeem || !!redeemFormError || !selectedMethod || !redeemAmount}>
+                {isSubmittingRedeem ? 'Submitting...' : 'Submit Redeem Request'}
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
+
+        <Separator />
+
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle className="flex items-center text-lg"><Users className="mr-2 text-primary" /> Send {CONFIG.COIN_SYMBOL} to Another User</CardTitle>
+            <CardDescription>Transfer your {CONFIG.COIN_SYMBOL} directly to a friend.</CardDescription>
+          </CardHeader>
+          <form onSubmit={handleP2PSubmit}>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="p2p-recipient-id">Recipient's User ID</Label>
+                <div className="flex space-x-2 items-end">
+                  <Input
+                    id="p2p-recipient-id"
+                    type="text"
+                    value={p2pRecipientId}
+                    onChange={(e) => setP2pRecipientId(e.target.value)}
+                    placeholder="Enter or scan User ID"
+                    required
+                    className="flex-grow"
+                  />
+                  <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" type="button" size="icon" aria-label="Scan QR Code">
+                        <QrCodeIcon className="h-5 w-5" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Scan User ID QR Code</DialogTitle>
+                      </DialogHeader>
+                      
+                      {hasCameraPermission === false ? (
+                        <div className="text-destructive text-center p-4 rounded-md border border-destructive bg-destructive/10 my-4">
+                          <AlertCircle className="mx-auto h-10 w-10 mb-2" />
+                          <p className="font-semibold">Camera Access Denied</p>
+                          <p className="text-sm">{qrScanError || "Please enable camera permissions in your browser settings and try again."}</p>
+                        </div>
+                      ) : (
+                        <div id={QR_READER_ELEMENT_ID_REDEEM} style={{ width: '100%', minHeight: '250px' }} className="my-4 border rounded-md overflow-hidden bg-muted/30">
+                          {(hasCameraPermission === null && !qrScanError && isScannerOpen) && (
+                            <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
+                              <QrCodeIcon className="h-12 w-12 mb-2 animate-pulse text-primary" />
+                              <p>Requesting camera access...</p>
+                              <p className="text-xs mt-1">Point your camera at a QR code.</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {qrScanError && hasCameraPermission !== false && ( 
+                          <p className="text-destructive text-sm text-center mt-[-8px] mb-2">{qrScanError}</p>
+                      )}
+                      <DialogFooter>
+                        <DialogClose asChild>
+                          <Button type="button" variant="outline">Cancel Scan</Button>
+                        </DialogClose>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="p2p-amount">Amount to Send ({CONFIG.COIN_SYMBOL})</Label>
+                <Input
+                  id="p2p-amount"
+                  type="number"
+                  value={p2pAmount}
+                  onChange={(e) => setP2pAmount(e.target.value)}
+                  placeholder="Enter amount"
+                  min="0.01" 
+                  step="any"
+                  required
+                />
+              </div>
+              {p2pFormError && (
+                <p className="text-sm text-destructive flex items-center"><AlertCircle className="h-4 w-4 mr-1" /> {p2pFormError}</p>
+              )}
+            </CardContent>
+            <CardFooter>
+              <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmittingP2P || !!p2pFormError || !p2pRecipientId || !p2pAmount}>
+                {isSubmittingP2P ? 'Sending...' : <><Send className="mr-2 h-4 w-4" />Send {CONFIG.COIN_SYMBOL}</>}
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
+
+        <Card className="shadow-md">
+          <CardHeader>
+              <CardTitle className="text-lg flex items-center"><Info className="mr-2 text-primary"/>Conversion & Info</CardTitle>
+          </CardHeader>
+          <CardContent>
+              <p>Withdrawal Conversion Rate: <strong className="text-primary">100 {CONFIG.COIN_SYMBOL} = ₹{formatNumber(100 * CONFIG.CONVERSION_RATE)} INR</strong></p>
+              <p className="text-sm text-muted-foreground mt-1">Redeem requests are typically processed within 24-48 hours.</p>
+              <p className="text-sm text-muted-foreground mt-1">P2P transfers are instant but irreversible. Always double-check the recipient ID.</p>
+          </CardContent>
+        </Card>
+        <PersonalizedTipDisplay />
+      </div>
+      <div className="w-full my-4 -mx-4 md:-mx-6">
+        <AdContainer pageContext="redeem" trigger={adTrigger} />
+      </div>
+    </>
   );
 }

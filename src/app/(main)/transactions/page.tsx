@@ -151,7 +151,7 @@ function TransactionItem({ txn }: { txn: Transaction }) {
 
 export default function TransactionsPage() {
   const { transactions, loadingUserData } = useAppState();
-  const [_adTrigger, _setAdTrigger] = useState(false); 
+  const [adTrigger, _setAdTrigger] = useState(true);  // Trigger ad on initial load
 
   if (loadingUserData && transactions.length === 0) {
     return (
@@ -163,31 +163,35 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-20">
-      <Card className="shadow-xl border-primary/30 rounded-xl bg-gradient-to-br from-card to-secondary/20">
-        <CardHeader>
-          <CardTitle className="flex items-center text-primary text-2xl"><History className="mr-2.5 h-7 w-7" /> Transaction History</CardTitle>
-          <CardDescription className="text-base">View your recent account activity.</CardDescription>
-        </CardHeader>
-      </Card>
-
-      {transactions.length === 0 ? (
-        <Card className="rounded-xl">
-          <CardContent className="p-6 text-center text-muted-foreground">
-            <CircleHelp className="mx-auto h-12 w-12 mb-4 text-gray-400" />
-            <p className="text-lg font-semibold">No transactions yet.</p>
-            <p className="text-sm">Start mining and redeem your {CONFIG.COIN_SYMBOL} to see your history here.</p>
-          </CardContent>
+    <>
+      <div className="p-4 md:p-6 space-y-6 pb-20">
+        <Card className="shadow-xl border-primary/30 rounded-xl bg-gradient-to-br from-card to-secondary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center text-primary text-2xl"><History className="mr-2.5 h-7 w-7" /> Transaction History</CardTitle>
+            <CardDescription className="text-base">View your recent account activity.</CardDescription>
+          </CardHeader>
         </Card>
-      ) : (
-        <div className="space-y-3">
-          {transactions.map(txn => (
-            <TransactionItem key={txn.id} txn={txn} />
-          ))}
-        </div>
-      )}
-      <PersonalizedTipDisplay />
-      <AdContainer pageContext="transactions" trigger={_adTrigger} />
-    </div>
+
+        {transactions.length === 0 ? (
+          <Card className="rounded-xl">
+            <CardContent className="p-6 text-center text-muted-foreground">
+              <CircleHelp className="mx-auto h-12 w-12 mb-4 text-gray-400" />
+              <p className="text-lg font-semibold">No transactions yet.</p>
+              <p className="text-sm">Start mining and redeem your {CONFIG.COIN_SYMBOL} to see your history here.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {transactions.map(txn => (
+              <TransactionItem key={txn.id} txn={txn} />
+            ))}
+          </div>
+        )}
+        <PersonalizedTipDisplay />
+      </div>
+      <div className="w-full my-4 -mx-4 md:-mx-6">
+        <AdContainer pageContext="transactions" trigger={adTrigger} />
+      </div>
+    </>
   );
 }
