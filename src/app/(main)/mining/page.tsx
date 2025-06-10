@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAppState } from '@/components/providers/app-state-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+// Progress component is no longer used directly for energy here
 import { CONFIG } from '@/lib/constants';
 import { formatNumber } from '@/lib/utils';
 import { Zap, Target, Info, AlertTriangle, Wallet, TrendingUp, CreditCard, Wifi } from 'lucide-react';
@@ -14,8 +14,7 @@ import { AdContainer } from '@/components/shared/ad-container';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/components/providers/auth-provider';
-import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-display'; 
-import { AdSenseUnit } from '@/components/shared/adsense-unit'; 
+import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-display';
 
 // Helper to show floating tap value
 function showFloatingTapValue(amount: number, coinElementId: string) {
@@ -180,9 +179,9 @@ export default function MiningPage() {
     return (
       <div className="p-4 md:p-6 space-y-6">
         <Skeleton className="h-[180px] w-full max-w-sm mx-auto rounded-xl" /> {/* Wallet Card Skeleton */}
-        <Skeleton className="h-20 w-full rounded-xl" /> {/* Energy Card Skeleton */}
-        <Skeleton className="h-56 w-56 mx-auto rounded-full" /> {/* Tap Button Skeleton */}
-        <div className="grid grid-cols-2 gap-4">
+        <Skeleton className="h-64 w-64 mx-auto rounded-full" /> {/* Tap Button with Circular Progress Skeleton */}
+        <Skeleton className="h-5 w-1/2 mx-auto mt-2 rounded-md" /> {/* Energy Timer Text Skeleton */}
+        <div className="grid grid-cols-2 gap-4 mt-4">
           <Skeleton className="h-24 w-full rounded-xl" />
           <Skeleton className="h-24 w-full rounded-xl" />
         </div>
@@ -194,6 +193,14 @@ export default function MiningPage() {
   const balanceInrValue = userData.balance * CONFIG.CONVERSION_RATE;
   const remainingToRedeem = Math.max(0, CONFIG.MIN_REDEEM - userData.balance);
   const userDisplayName = userData.name || authUser?.name || 'Tap Titan';
+
+  // Circular progress calculation
+  const circleRadius = 120; // Radius of the progress circle path
+  const circleStrokeWidth = 12; // Stroke width of the progress circle
+  const circleDiameter = (circleRadius + circleStrokeWidth) * 2;
+  const circumference = 2 * Math.PI * circleRadius;
+  const strokeDashoffset = circumference * (1 - energyPercent / 100);
+
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-20">
@@ -227,39 +234,18 @@ export default function MiningPage() {
         </div>
       </div>
 
-      {/* AdSense Ad Unit */}
-      <div className="w-full flex justify-center items-center"> {/* Removed my-4 */}
-        <AdSenseUnit
-          adClient="ca-pub-1425274923062587"
-          adSlot="2603795181"
-          adFormat="auto"
-          fullWidthResponsive={true}
-          className="w-full" 
-          style={{ display: 'block', width: '100%' }} 
-        />
-      </div>
+      {/* REMOVED AdSense Ad Unit from here to prevent unwanted space */}
 
-      <Card className="shadow-md rounded-xl border-border">
-        <CardHeader>
-          <CardTitle className="flex items-center text-lg font-semibold"><Zap className="mr-2 text-accent h-5 w-5" />Energy Level</CardTitle>
-          <CardDescription className="text-sm">{formatNumber(userData.currentEnergy, 0)} / {formatNumber(userData.maxEnergy, 0)}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Progress value={energyPercent} className="w-full h-3 rounded-full [&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:to-accent" />
-          <p className="text-xs text-muted-foreground text-center mt-2.5">{energyRegenTimerText}</p>
-        </CardContent>
-      </Card>
-
-      <div className="flex justify-center my-8 relative" id="coin-container">
+      {/* Tap Button with Circular Energy Progress */}
+      <div className="flex flex-col items-center my-8 relative" id="coin-container">
         {/* Tap Here Hint */}
         {showTapHint && isOnline && userData && userData.currentEnergy >= 1 && (
           <div
-            className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[calc(100%_+_12px)]
+            className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[calc(100%_+_30px)] 
                        px-3 py-1.5 bg-accent text-accent-foreground text-xs font-semibold rounded-md shadow-lg
                        animate-bounce z-20 pointer-events-none"
           >
             Tap Here!
-            {/* Arrow pointing down */}
             <div
               className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0
                          border-l-[6px] border-l-transparent
@@ -269,25 +255,59 @@ export default function MiningPage() {
           </div>
         )}
 
-        <Button
-          id="tap-coin"
-          variant="default"
-          onClick={handleTap}
-          className="relative w-56 h-56 rounded-full bg-foreground animate-neon-glow active:scale-95 transition-transform duration-150 flex items-center justify-center focus-visible:ring-4 focus-visible:ring-primary/50 group"
-          aria-label={`Tap to mine ${CONFIG.COIN_SYMBOL}`}
-          disabled={!isOnline || userData.currentEnergy < 1}
-        >
-          <Image
-            src={sdfCoinLogoUrl}
-            alt={`${CONFIG.COIN_SYMBOL} Coin`}
-            width={210}
-            height={210}
-            className="rounded-full pointer-events-none absolute opacity-90 group-hover:opacity-100 transition-opacity object-contain"
-            priority
-            data-ai-hint="coin logo"
+        {/* Circular Progress SVG */}
+        <div className="relative w-[256px] h-[256px] flex items-center justify-center mb-3"> {/* Container for SVG and Button, slightly larger than button */}
+          <svg width={circleDiameter} height={circleDiameter} viewBox={`0 0 ${circleDiameter} ${circleDiameter}`} className="absolute inset-0 transform -rotate-90">
+            {/* Background Circle (Track) */}
+            <circle
+              cx={circleDiameter / 2}
+              cy={circleDiameter / 2}
+              r={circleRadius}
+              strokeWidth={circleStrokeWidth}
+              className="stroke-muted/50 fill-transparent"
             />
-        </Button>
+            {/* Foreground Circle (Progress) */}
+            <circle
+              cx={circleDiameter / 2}
+              cy={circleDiameter / 2}
+              r={circleRadius}
+              strokeWidth={circleStrokeWidth}
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              className="stroke-primary fill-transparent transition-all duration-300 ease-linear"
+              strokeLinecap="round"
+            />
+          </svg>
+          {/* Tap Button - Centered within the SVG container */}
+          <Button
+            id="tap-coin"
+            variant="default"
+            onClick={handleTap}
+            className="relative w-56 h-56 rounded-full bg-foreground animate-neon-glow active:scale-95 transition-transform duration-150 flex items-center justify-center focus-visible:ring-4 focus-visible:ring-primary/50 group"
+            aria-label={`Tap to mine ${CONFIG.COIN_SYMBOL}`}
+            disabled={!isOnline || userData.currentEnergy < 1}
+          >
+            <Image
+              src={sdfCoinLogoUrl}
+              alt={`${CONFIG.COIN_SYMBOL} Coin`}
+              width={210}
+              height={210}
+              className="rounded-full pointer-events-none absolute opacity-90 group-hover:opacity-100 transition-opacity object-contain"
+              priority
+              data-ai-hint="coin logo"
+            />
+          </Button>
+        </div>
+        {/* Energy Information Text */}
+        <div className="text-center mt-2">
+            <p className="text-lg font-semibold text-foreground">
+                <Zap className="inline-block mr-1.5 h-5 w-5 text-accent align-text-bottom" />
+                {formatNumber(userData.currentEnergy, 0)} / {formatNumber(userData.maxEnergy, 0)}
+            </p>
+            <p className="text-xs text-muted-foreground">{energyRegenTimerText}</p>
+        </div>
       </div>
+
 
       <div className="grid grid-cols-2 gap-4">
         <Card className="text-center shadow-md rounded-xl border-border">
@@ -320,4 +340,6 @@ export default function MiningPage() {
     </div>
   );
 }
+    
+
     
