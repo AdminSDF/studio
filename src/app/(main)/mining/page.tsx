@@ -202,7 +202,6 @@ export default function MiningPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-20">
-      {/* Simplified Wallet Card */}
       <Card className="w-full max-w-sm mx-auto shadow-xl border-primary/30 rounded-xl bg-gradient-to-br from-card to-secondary/20">
         <CardHeader className="pb-3 pt-4">
           <CardTitle className="text-xl font-semibold text-primary flex items-center">
@@ -324,6 +323,8 @@ export default function MiningPage() {
     </div>
   );
 }
+    
+
     
 
     
