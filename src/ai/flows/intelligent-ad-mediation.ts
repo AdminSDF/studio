@@ -8,7 +8,7 @@
 
 import {ai} from '@/ai/genkit';
 import { MediateAdInputSchema, MediateAdOutputSchema, type MediateAdInput, type MediateAdOutput } from '@/types';
-import { CONFIG } from '@/lib/constants'; // Import CONFIG
+import { CONFIG } from '@/lib/constants';
 
 export async function mediateAd(input: MediateAdInput): Promise<MediateAdOutput> {
   return mediateAdFlow(input);
@@ -29,12 +29,21 @@ Consider the following factors:
 
 Based on these inputs, select the best ad to display to the user.
 
-You have three types of ads you can choose:
-1.  **URL Ad**: Display an ad from a direct URL. For this, set \`adType: "url"\` and provide a valid, complete, and absolute URL string in the \`adUrl\` field (e.g., 'https://example.com/ad_target'). The ad should be suitable for display within an iframe and ideally be a banner-style ad (e.g., 468x60). Avoid direct links to full websites unless they are specifically designed to be embedded. If using a general ad network banner URL, ensure it's a direct link to the banner creative, not a website landing page.
-2.  **Google AdSense Ad**: Display a Google AdSense unit. For this, set \`adType: "adsense"\`, \`adClient: "${CONFIG.ADSENSE_CLIENT_ID}"\`, and \`adSlot: "9271312880"\`. Do NOT provide an \`adUrl\` if you choose AdSense. This is a standard AdSense banner. (Note: The adSlot "9271312880" is a placeholder and should be replaced with a valid ad slot ID from your AdSense account for optimal performance.)
+You have the following types of ads you can choose:
+
+1.  **URL Ad**: Display an ad from a direct URL. For this, set \`adType: "url"\` and provide a valid, complete, and absolute URL string in the \`adUrl\` field.
+    *   This can be a general banner-style ad URL suitable for an iframe (e.g., a 468x60 banner).
+    *   **Alternatively, you can choose one of the following specific Adsterra Direct Links if they seem particularly appropriate based on the user context. If you choose one of these, ensure \`adUrl\` is set to the exact URL provided below:**
+        *   Adsterra DirectLink 1: \`https://www.profitableratecpm.com/c5ymb3kzy?key=f559b97247c5d0962536dc4beb353d1f\`
+        *   Adsterra DirectLink 2: \`https://www.profitableratecpm.com/pcxmp6uum?key=64dfbc0df5d616d4987111860b234b52\`
+        *   Adsterra DirectLink 3: \`https://www.profitableratecpm.com/xwqxaaa0?key=c61b1463cdcf7571c8b43ae732d1fc6e\`
+        *   Adsterra DirectLink 4: \`https://www.profitableratecpm.com/awkdrd8u7?key=cb1caf90ccdef2f4c51aff029a85a4f8\`
+
+2.  **Google AdSense Ad**: Display a Google AdSense unit. For this, set \`adType: "adsense"\`, \`adClient: "${CONFIG.ADSENSE_CLIENT_ID}"\`, and \`adSlot: "9271312880"\`. Do NOT provide an \`adUrl\` if you choose AdSense. This is a standard AdSense banner.
+
 3.  **Adsterra Script Ad**: Display an Adsterra ad using its JavaScript integration. For this, set \`adType: "adsterra_script"\`. No other ad-specific fields like \`adUrl\`, \`adClient\`, or \`adSlot\` are needed. This particular Adsterra unit will render a 728x90 banner.
 
-If, after considering the user's activity, you cannot identify a specific or targeted ad (URL, AdSense, or Adsterra Script), OR if the user's activity is low/neutral, you MUST default to providing the following high-performing Adsterra URL banner:
+If, after considering the user's activity, you cannot identify a specific or targeted ad (from the Adsterra Direct Links, AdSense, or Adsterra Script), OR if the user's activity is low/neutral, you MUST default to providing the following high-performing Adsterra URL banner:
 Set \`adType: "url"\` and \`adUrl: "https://syndication.adsterra.com/bn.php?ID=26645903&type=banner"\`. This is a 468x60 banner.
 
 Explain your reasoning for choosing the ad in the 'reason' field. If you defaulted to the 468x60 Adsterra URL banner, explain that a generic high-performing ad was selected due to [briefly state why, e.g., neutral user activity, lack of a more specific match].
@@ -87,5 +96,3 @@ const mediateAdFlow = ai.defineFlow(
     }
   }
 );
-
-    
