@@ -26,13 +26,7 @@ export default function RootLayout({
       <head>
         <title>{CONFIG.APP_NAME} - Tap, Earn, Conquer!</title>
         <meta name="description" content={`Tap to earn cryptocurrency with ${CONFIG.APP_NAME}! Conquer the leaderboards and unlock achievements.`} />
-        {/* AdSense script updated with user's client ID */}
-        <Script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1425274923062587"
-          crossOrigin="anonymous"
-          strategy="afterInteractive" // Loads after the page becomes interactive
-        />
+        {/* AdSense script removed */}
       </head>
       <body className={cn(
         'font-sans antialiased',

@@ -10,7 +10,7 @@ const REFERRAL_MILESTONES_DATA = [
   { count: 3, reward: 75 },
   { count: 5, reward: 150 },
 ];
-const ADSENSE_CLIENT_ID_VALUE = "ca-pub-1425274923062587"; // Added AdSense Client ID
+// const ADSENSE_CLIENT_ID_VALUE = "ca-pub-1425274923062587"; // AdSense Client ID removed
 
 export const CONFIG = {
   APP_NAME: APP_NAME_VALUE,
@@ -24,7 +24,7 @@ export const CONFIG = {
   DAILY_LOGIN_BONUS: 25, // SDF
   REFERRAL_BONUS_FOR_NEW_USER: 10, // SDF
   REFERRAL_MILESTONES: REFERRAL_MILESTONES_DATA,
-  ADSENSE_CLIENT_ID: ADSENSE_CLIENT_ID_VALUE, // Added AdSense Client ID to CONFIG
+  // ADSENSE_CLIENT_ID: ADSENSE_CLIENT_ID_VALUE, // AdSense Client ID removed from CONFIG
   BOOSTERS: [
     {
       id: 'tap_power_1', name: 'Tap Power Boost I', description: `Increase tap power by 0.1 ${COIN_SYMBOL_VALUE}.`,

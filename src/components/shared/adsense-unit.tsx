@@ -1,6 +1,9 @@
 
 'use client';
 
+// This component is no longer used as AdSense has been removed from the ad rotation.
+// It's kept here for potential future re-integration but is not actively part of the ad system.
+
 import React, { useEffect, useRef } from 'react';
 
 interface AdSenseUnitProps {
@@ -38,12 +41,11 @@ export const AdSenseUnit: React.FC<AdSenseUnitProps> = ({
         pushedOnceRef.current = true;
       } catch (e) {
         console.error("AdSense push error: ", e);
-        pushedOnceRef.current = true;
+        pushedOnceRef.current = true; // Consider it pushed even if error to avoid retries
       }
     }
-  }, [adClient, adSlot, adFormat, layoutKey]); // Include all props that define the ad unit
+  }, [adClient, adSlot, adFormat, layoutKey]);
 
-  // Using adClient and adSlot in the key to force re-mount if these critical props change
   const componentKey = `${adClient}-${adSlot}`;
 
   return (

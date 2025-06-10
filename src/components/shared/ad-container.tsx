@@ -6,7 +6,7 @@ import type { AdContent } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
-import { AdSenseUnit } from './adsense-unit';
+// import { AdSenseUnit } from './adsense-unit'; // AdSenseUnit is no longer used
 import { AdsterraScriptUnit } from './adsterra-script-unit';
 import { CONFIG } from '@/lib/constants';
 
@@ -15,13 +15,14 @@ interface AdContainerProps {
   trigger: boolean;
 }
 
+// Updated: Removed AdSense ad type from predefined ads
 const PREDEFINED_ADS: AdContent[] = [
   { adType: "url", adUrl: "https://www.profitableratecpm.com/c5ymb3kzy?key=f559b97247c5d0962536dc4beb353d1f", reason: "Selected: Adsterra DirectLink 1" },
   { adType: "url", adUrl: "https://www.profitableratecpm.com/pcxmp6uum?key=64dfbc0df5d616d4987111860b234b52", reason: "Selected: Adsterra DirectLink 2" },
   { adType: "url", adUrl: "https://www.profitableratecpm.com/xwqxaaa0?key=c61b1463cdcf7571c8b43ae732d1fc6e", reason: "Selected: Adsterra DirectLink 3" },
   { adType: "url", adUrl: "https://www.profitableratecpm.com/awkdrd8u7?key=cb1caf90ccdef2f4c51aff029a85a4f8", reason: "Selected: Adsterra DirectLink 4" },
   { adType: "url", adUrl: "https://syndication.adsterra.com/bn.php?ID=26645903&type=banner", reason: "Selected: Adsterra Generic Banner 468x60" },
-  { adType: "adsense", adClient: CONFIG.ADSENSE_CLIENT_ID, adSlot: "9271312880", reason: "Selected: Google AdSense Banner" },
+  // { adType: "adsense", adClient: CONFIG.ADSENSE_CLIENT_ID, adSlot: "9271312880", reason: "Selected: Google AdSense Banner" }, // Removed AdSense
   { adType: "adsterra_script", reason: "Selected: Adsterra Script Ad 728x90" }
 ];
 
@@ -43,15 +44,16 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
         const randomIndex = Math.floor(Math.random() * availableAds.length);
         let selectedAd = availableAds[randomIndex];
         
-        if (selectedAd.adType === 'adsense') {
-            if (!CONFIG.ADSENSE_CLIENT_ID) {
-                console.error("AdSense Client ID is not configured in CONFIG.");
-                setError("AdSense Client ID missing. Cannot load AdSense ad.");
-                selectedAd = PREDEFINED_ADS.find(ad => ad.adType === 'url' && ad.adUrl === "https://syndication.adsterra.com/bn.php?ID=26645903&type=banner") || null; // Fallback to a generic banner
-            } else {
-                 selectedAd = { ...selectedAd, adClient: CONFIG.ADSENSE_CLIENT_ID };
-            }
-        }
+        // Removed AdSense specific client ID check as AdSense is removed
+        // if (selectedAd.adType === 'adsense') {
+        //     if (!CONFIG.ADSENSE_CLIENT_ID) {
+        //         console.error("AdSense Client ID is not configured in CONFIG.");
+        //         setError("AdSense Client ID missing. Cannot load AdSense ad.");
+        //         selectedAd = PREDEFINED_ADS.find(ad => ad.adType === 'url' && ad.adUrl === "https://syndication.adsterra.com/bn.php?ID=26645903&type=banner") || null; 
+        //     } else {
+        //          selectedAd = { ...selectedAd, adClient: CONFIG.ADSENSE_CLIENT_ID };
+        //     }
+        // }
         setAd(selectedAd);
       } else {
         console.warn("No predefined ads available to select.");
@@ -61,8 +63,6 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
       setTimeout(() => setIsLoading(false), 100);
     }
 
-    // Only trigger ad selection if the trigger is true.
-    // If trigger becomes false, it implies the ad should be hidden or reset.
     if (trigger) {
       selectAd();
     } else {
@@ -109,29 +109,23 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
         </Card>
       )
   }
-  if (ad.adType === 'adsense' && (!ad.adClient || !ad.adSlot)) {
-    // This specific check might be redundant if the setError for missing CONFIG.ADSENSE_CLIENT_ID fires first
-    return (
-        <Card className="w-full my-4 mx-auto text-center bg-destructive/10 p-2 border-dashed border-destructive">
-            <CardContent className="p-2 text-destructive flex flex-col items-center justify-center">
-            <AlertCircle className="h-5 w-5 mb-1" />
-            <p className="text-xs">AdSense client or slot ID missing.</p>
-            </CardContent>
-        </Card>
-      )
-  }
+  // Removed AdSense specific check
+  // if (ad.adType === 'adsense' && (!ad.adClient || !ad.adSlot)) {
+  //   return (
+  //       <Card className="w-full my-4 mx-auto text-center bg-destructive/10 p-2 border-dashed border-destructive">
+  //           <CardContent className="p-2 text-destructive flex flex-col items-center justify-center">
+  //           <AlertCircle className="h-5 w-5 mb-1" />
+  //           <p className="text-xs">AdSense client or slot ID missing.</p>
+  //           </CardContent>
+  //       </Card>
+  //     )
+  // }
 
   return (
     <Card className="w-full my-4 mx-auto text-center bg-card p-0 overflow-hidden shadow-md">
       <CardContent className="p-0 flex justify-center items-center min-h-[60px] sm:min-h-[90px] md:min-h-[100px]">
-        {ad.adType === 'adsense' && ad.adClient && ad.adSlot ? (
-          <AdSenseUnit
-            adClient={ad.adClient}
-            adSlot={ad.adSlot}
-            style={{ display: 'block', margin: 'auto' }}
-            className="max-w-full"
-          />
-        ) : ad.adType === 'url' && ad.adUrl ? (
+        {/* Removed AdSenseUnit rendering logic */}
+        {ad.adType === 'url' && ad.adUrl ? (
           <iframe
             src={ad.adUrl}
             frameBorder="0"
@@ -144,7 +138,7 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
         ) : ad.adType === 'adsterra_script' ? (
           <AdsterraScriptUnit />
         ) : (
-           <div className="p-4 text-sm text-muted-foreground">Error: Could not determine ad type.</div>
+           <div className="p-4 text-sm text-muted-foreground">Error: Could not determine ad type or ad configuration missing.</div>
         )}
       </CardContent>
     </Card>
