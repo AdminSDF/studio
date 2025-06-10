@@ -8,6 +8,7 @@
 
 import {ai} from '@/ai/genkit';
 import { MediateAdInputSchema, MediateAdOutputSchema, type MediateAdInput, type MediateAdOutput } from '@/types';
+import { CONFIG } from '@/lib/constants'; // Import CONFIG
 
 export async function mediateAd(input: MediateAdInput): Promise<MediateAdOutput> {
   return mediateAdFlow(input);
@@ -30,7 +31,7 @@ Based on these inputs, select the best ad to display to the user.
 
 You have three types of ads you can choose:
 1.  **URL Ad**: Display an ad from a direct URL. For this, set \`adType: "url"\` and provide a valid, complete, and absolute URL string in the \`adUrl\` field (e.g., 'https://example.com/ad_target'). The ad should be suitable for display within an iframe and ideally be a banner-style ad (e.g., 468x60). Avoid direct links to full websites unless they are specifically designed to be embedded. If using a general ad network banner URL, ensure it's a direct link to the banner creative, not a website landing page.
-2.  **Google AdSense Ad**: Display a Google AdSense unit. For this, set \`adType: "adsense"\`, \`adClient: "ca-pub-9690805652184611"\`, and \`adSlot: "9271312880"\`. Do NOT provide an \`adUrl\` if you choose AdSense. This is a standard AdSense banner.
+2.  **Google AdSense Ad**: Display a Google AdSense unit. For this, set \`adType: "adsense"\`, \`adClient: "${CONFIG.ADSENSE_CLIENT_ID}"\`, and \`adSlot: "9271312880"\`. Do NOT provide an \`adUrl\` if you choose AdSense. This is a standard AdSense banner. (Note: The adSlot "9271312880" is a placeholder and should be replaced with a valid ad slot ID from your AdSense account for optimal performance.)
 3.  **Adsterra Script Ad**: Display an Adsterra ad using its JavaScript integration. For this, set \`adType: "adsterra_script"\`. No other ad-specific fields like \`adUrl\`, \`adClient\`, or \`adSlot\` are needed. This particular Adsterra unit will render a 728x90 banner.
 
 If, after considering the user's activity, you cannot identify a specific or targeted ad (URL, AdSense, or Adsterra Script), OR if the user's activity is low/neutral, you MUST default to providing the following high-performing Adsterra URL banner:
@@ -41,7 +42,7 @@ Explain your reasoning for choosing the ad in the 'reason' field. If you default
 Return the ad type, necessary fields (adUrl for 'url' type; adClient and adSlot for 'adsense' type; no specific fields for 'adsterra_script' beyond adType itself), and the reasoning.
 Remember:
 - If \`adType: "url"\`, the 'adUrl' field MUST contain only a valid and complete URL. It must not be conversational text, error messages, or partial URLs.
-- If \`adType: "adsense"\`, 'adClient' and 'adSlot' MUST be provided and 'adUrl' should be omitted or null.
+- If \`adType: "adsense"\`, 'adClient' (which should be '${CONFIG.ADSENSE_CLIENT_ID}') and 'adSlot' MUST be provided and 'adUrl' should be omitted or null.
 - If \`adType: "adsterra_script"\`, no other ad-specific fields are needed from you.
 `,
   config: {
@@ -71,6 +72,10 @@ const mediateAdFlow = ai.defineFlow(
           reason: 'AI returned empty data, defaulting to high-performing URL banner.',
         };
       }
+      // Ensure AdSense client ID from config is used if AdSense is chosen
+      if (output.adType === 'adsense') {
+        output.adClient = CONFIG.ADSENSE_CLIENT_ID;
+      }
       return output;
     } catch (error) {
       console.error("Error during AI prompt execution or schema validation, falling back to default ad:", error);
@@ -82,3 +87,5 @@ const mediateAdFlow = ai.defineFlow(
     }
   }
 );
+
+    
