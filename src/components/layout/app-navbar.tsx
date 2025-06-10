@@ -32,7 +32,10 @@ export function AppNavbar() {
 
 
   return (
-    <nav className="bg-card text-foreground p-1 border-t border-border flex justify-around flex-shrink-0 sticky bottom-0 z-50 shadow-top-md">
+    <nav className={cn(
+      "bg-card text-foreground p-1 border-t border-border flex justify-around flex-shrink-0 sticky bottom-0 z-50",
+      "shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05),0_-2px_4px_-2px_rgba(0,0,0,0.04)]" // Custom top shadow for better visual separation
+      )}>
       {navItems.map((item) => {
         const isActive = pathname.startsWith(item.href);
         return (
@@ -51,7 +54,7 @@ export function AppNavbar() {
           >
             <item.icon
               className={cn(
-                "h-5 w-5 transition-colors", 
+                "h-5 w-5 transition-colors",
                 isActive ? "text-primary" : "text-muted-foreground group-hover:text-primary"
               )}
             />
