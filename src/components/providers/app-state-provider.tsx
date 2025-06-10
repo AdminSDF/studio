@@ -634,8 +634,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     const questRef = doc(db, `user_quests/${user.id}/daily_quests`, questId);
     try {
       await updateDoc(questRef, { progress: increment(progressIncrement) });
-    } catch (error) {
-      console.error(`Error updating progress for quest ${questId}:`, error);
+    } catch (error: any) {
+      if (error.code === 'not-found') {
+        console.warn(`Quest document ${questId} not found for update (progress). It might have been refreshed. User: ${user.id}`);
+      } else {
+        console.error(`Error updating progress for quest ${questId}:`, error);
+      }
     }
   }, [user, userQuests]);
 
@@ -692,8 +696,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         switch (type) {
             case 'tap_count_total_session': 
                 if (userData.tapCountToday >= value && (quest.progress || 0) < value) {
+                  try {
                     await updateDoc(doc(db, `user_quests/${user.id}/daily_quests`, quest.id), { progress: userData.tapCountToday});
                     if(userData.tapCountToday >= value) criteriaMetNow = true;
+                  } catch (error: any) {
+                     if (error.code === 'not-found') {
+                        console.warn(`Quest document ${quest.id} not found for update (tap_count_total_session check). User: ${user.id}`);
+                     } else {
+                        console.error(`Error updating progress for quest ${quest.id} (tap_count_total_session check):`, error);
+                     }
+                  }
                 }
                 break;
         }
@@ -702,9 +714,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
       if (criteriaMetNow && !quest.completed) {
         const questRef = doc(db, `user_quests/${user.id}/daily_quests`, quest.id);
-        await updateDoc(questRef, { completed: true, progress: quest.definition.criteria.value });
-        toast({ title: "Quest Complete!", description: `You've completed: ${quest.definition.name}`, variant: "default" });
-        questsUpdated = true;
+        try {
+          await updateDoc(questRef, { completed: true, progress: quest.definition.criteria.value });
+          toast({ title: "Quest Complete!", description: `You've completed: ${quest.definition.name}`, variant: "default" });
+          questsUpdated = true;
+        } catch (error: any) {
+           if (error.code === 'not-found') {
+             console.warn(`Quest document ${quest.id} not found for marking complete. User: ${user.id}`);
+           } else {
+             console.error(`Error marking quest ${quest.id} complete:`, error);
+           }
+        }
       }
     }
     if(questsUpdated){
