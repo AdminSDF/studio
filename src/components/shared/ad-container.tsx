@@ -5,16 +5,19 @@ import { useEffect, useState, useMemo } from 'react';
 import type { AdContent } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle } from 'lucide-react';
-import { AdsterraScriptUnit } from './adsterra-script-unit';
+import { AdsterraScriptUnit } from './adsterra-script-unit'; // 728x90
+import { AdsterraScriptUnit468x60 } from './adsterra-script-unit-468x60'; // New 468x60
 
 interface AdContainerProps {
   pageContext: string;
   trigger: boolean;
 }
 
+// Updated PREDEFINED_ADS with the new script ad type
 const PREDEFINED_ADS: AdContent[] = [
   { adType: "url", adUrl: "https://syndication.adsterra.com/bn.php?ID=26645903&type=banner", reason: "Selected: Adsterra Generic Banner 468x60" },
-  { adType: "adsterra_script", reason: "Selected: Adsterra Script Ad 728x90" }
+  { adType: "adsterra_script", reason: "Selected: Adsterra Script Ad 728x90" },
+  { adType: "adsterra_script_468x60", reason: "Selected: Adsterra Script Ad 468x60" }, // New ad type
 ];
 
 export function AdContainer({ pageContext, trigger }: AdContainerProps) {
@@ -28,7 +31,7 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
     function selectAd() {
       setIsLoadingInternal(true);
       setError(null);
-      setAd(null); // Clear previous ad
+      setAd(null);
 
       if (availableAds.length > 0) {
         const randomIndex = Math.floor(Math.random() * availableAds.length);
@@ -46,15 +49,16 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trigger, availableAds, pageContext]); 
 
-  // Root div for the ad slot. No visible container styling from this component.
-  // min-h ensures space is reserved. flex justify-center items-center will center the ad content if it's smaller.
-  // overflow-hidden to clip any ad content that might try to break out of its designated unit size.
+  // Root div for the ad slot. No visible container styling.
+  // min-h ensures space. flex justify-center items-center for centering.
+  // overflow-hidden to clip.
   const adSlotBaseClasses = "w-full flex justify-center items-center overflow-hidden min-h-[60px] sm:min-h-[90px]";
 
   if (isLoadingInternal) {
     return (
       <div className={adSlotBaseClasses}>
         <div className="flex flex-col justify-center items-center text-center p-1">
+          {/* Skeleton now defaults to 60px height, can be pushed taller by 728x90 ad */}
           <Skeleton className="h-[60px] w-[300px] sm:h-[90px] sm:w-[728px] md:w-[728px] bg-muted/50 rounded-md mb-1" />
           <p className="text-xs text-muted-foreground">Loading ad...</p>
         </div>
@@ -75,8 +79,6 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
   }
 
   if (!ad) {
-    // This case should ideally not be hit if loading/error states are handled,
-    // but as a fallback, render an empty slot.
     return <div className={adSlotBaseClasses}></div>; 
   }
 
@@ -100,17 +102,15 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
           frameBorder="0"
           scrolling="no"
           allowFullScreen={true}
-          // For 468x60 banner.
-          // It will be centered by the parent div's flex properties if max-w is less than available.
-          className="max-w-[468px] w-full h-[60px] block" // `block` helps with centering via margin auto if parent not flex
-          style={{ display: 'block' }} // Using style for display block to ensure it works
-          title="Advertisement"
+          className="max-w-[468px] w-full h-[60px] block"
+          style={{ display: 'block', margin: '0 auto' }} 
+          title="Advertisement Banner"
           data-ai-hint="advertisement banner"
         ></iframe>
       ) : ad.adType === 'adsterra_script' ? (
-        // AdsterraScriptUnit manages its own size (728x90)
-        // The parent (adSlotBaseClasses) has min-h-90px on sm+ screens
-        <AdsterraScriptUnit />
+        <AdsterraScriptUnit /> // This is the 728x90 one
+      ) : ad.adType === 'adsterra_script_468x60' ? (
+        <AdsterraScriptUnit468x60 /> // New 468x60 script ad
       ) : (
          <div className="p-2 text-sm text-muted-foreground text-center">
             Error: Could not determine ad type or ad configuration missing.

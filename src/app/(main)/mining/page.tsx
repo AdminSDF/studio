@@ -38,7 +38,8 @@ export default function MiningPage() {
   const { toast } = useToast();
   const [energyRegenTimerText, setEnergyRegenTimerText] = useState("Calculating...");
   const [tapCountForAd, setTapCountForAd] = useState(0);
-  const [triggerAd, setTriggerAd] = useState(true); // Trigger ad on initial load
+  const [bottomAdTrigger, setBottomAdTrigger] = useState(true); // Trigger for bottom ad
+  const [middleAdTrigger, setMiddleAdTrigger] = useState(true); // Trigger for new middle ad
   const sdfCoinLogoUrl = "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgfE9IHbZO-d0lFy6S3f_ks7gG4Wq47ohPp45dVEssDRApAIvwVv6r8CleAyjiHOAwY8aGhdELKU4xjx0nO9w6IYuwMOryi13qE5wqzsZnFDn8ZwrSd99BlrZuDiugDiwFZ5n0usxjeNeR_I7BUTc9t4r0beiwLfKfUPhAbXPhi8VVO3MWW56bydGdxH7M/s320/file_0000000026446230b5372bc60dd219f3%20%281%29.png";
 
   const [showTapHint, setShowTapHint] = useState(false);
@@ -142,7 +143,10 @@ export default function MiningPage() {
     const newTapCountForAd = tapCountForAd + 1;
     setTapCountForAd(newTapCountForAd);
     if (newTapCountForAd % CONFIG.MAX_TAPS_BEFORE_AD_CHECK === 0) {
-      setTriggerAd(prev => !prev);
+      setBottomAdTrigger(prev => !prev); // Trigger bottom ad
+      if (newTapCountForAd % (CONFIG.MAX_TAPS_BEFORE_AD_CHECK * 2) === 0) { // Trigger middle ad less frequently
+          setMiddleAdTrigger(prev => !prev);
+      }
     }
 
     const today = new Date().toDateString();
@@ -182,6 +186,8 @@ export default function MiningPage() {
           <Skeleton className="h-24 w-full rounded-xl" />
           <Skeleton className="h-24 w-full rounded-xl" />
         </div>
+        <Skeleton className="h-20 w-full rounded-xl" /> {/* Placeholder for middle ad */}
+        <Skeleton className="h-20 w-full rounded-xl" /> {/* Placeholder for bottom ad */}
       </div>
     );
   }
@@ -294,6 +300,12 @@ export default function MiningPage() {
           </Card>
         </div>
 
+        {/* New Ad Container above Redeem Status */}
+      </div> {/* Close main content padding div to insert full-width ad */}
+      <div className="w-full my-4 -mx-4 md:-mx-6">
+        <AdContainer pageContext="mining_middle" trigger={middleAdTrigger} />
+      </div>
+      <div className="p-4 md:p-6 space-y-6 pb-20 pt-0"> {/* Re-open padding div, remove top padding */}
         <Card className="shadow-md rounded-xl border-border">
           <CardHeader>
             <CardTitle className="text-lg flex items-center font-semibold"><Info className="mr-2 text-primary h-5 w-5" />Redeem Status</CardTitle>
@@ -309,18 +321,10 @@ export default function MiningPage() {
         </Card>
         <PersonalizedTipDisplay />
       </div>
+      {/* Existing Ad Container at the bottom */}
       <div className="w-full my-4 -mx-4 md:-mx-6">
-        <AdContainer pageContext="mining" trigger={triggerAd} />
+        <AdContainer pageContext="mining_bottom" trigger={bottomAdTrigger} />
       </div>
     </>
   );
 }
-    
-
-    
-
-    
-
-    
-
-    

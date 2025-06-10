@@ -90,7 +90,7 @@ export interface MarqueeItem {
   text: string;
 }
 
-// Zod Schemas and Types for Ad Mediation
+// Zod Schemas and Types for Ad Mediation (DEPRECATED - AI Ad Mediation Disabled)
 export const MediateAdInputSchema = z.object({
   tappingFrequency: z
     .number()
@@ -133,12 +133,12 @@ export const PersonalizedTipOutputSchema = z.object({
 export type PersonalizedTipOutput = z.infer<typeof PersonalizedTipOutputSchema>;
 
 
-// Keep AdContent separate as it's used internally by AdContainer
+// AdContent for internal AdContainer use (Non-AI selection)
 export interface AdContent {
-  adType: 'url' | 'adsense' | 'adsterra_script';
+  adType: 'url' | 'adsterra_script' | 'adsterra_script_468x60'; // Removed 'adsense'
   adUrl?: string;
-  adClient?: string;
-  adSlot?: string;
+  // adClient?: string; // Removed AdSense specific field
+  // adSlot?: string;   // Removed AdSense specific field
   reason: string;
 }
 
@@ -218,3 +218,4 @@ export interface Html5QrcodeResult {
     // other properties from the library's result object
   };
 }
+
