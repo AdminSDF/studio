@@ -303,7 +303,8 @@ body {
     @apply bg-background text-foreground; 
     min-height: 100vh; 
     display: flex; 
-    flex-direction: column; 
+    flex-direction: column;
+    overflow-x: hidden; /* Prevent horizontal scrolling */
   }
 }
 
@@ -451,4 +452,6 @@ body {
   display: flex;
   flex-direction: column;
 }
+    
+
     
