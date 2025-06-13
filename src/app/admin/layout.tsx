@@ -2,7 +2,7 @@
 'use client';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ShieldCheck, LayoutDashboard, Users, ListChecks, LogOut, Settings2, Annoyed, Gift, MessageSquareQuestion } from 'lucide-react'; // Added Annoyed, Gift, MessageSquareQuestion
+import { ShieldCheck, LayoutDashboard, Users, ListChecks, LogOut, Settings2, Annoyed, Gift, MessageCircleQuestion } from 'lucide-react'; // Corrected icon
 import { useAuth } from '@/components/providers/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -132,7 +132,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <AdminNavLink href="/admin/users" icon={Users} onClick={() => setSidebarOpen(false)}>Users</AdminNavLink>
             <AdminNavLink href="/admin/transactions" icon={ListChecks} onClick={() => setSidebarOpen(false)}>All Transactions</AdminNavLink>
             <AdminNavLink href="/admin/redeem-requests" icon={Gift} onClick={() => setSidebarOpen(false)}>Redeem Requests</AdminNavLink>
-            <AdminNavLink href="/admin/support-tickets" icon={MessageSquareQuestion} onClick={() => setSidebarOpen(false)}>Support Tickets</AdminNavLink>
+            <AdminNavLink href="/admin/support-tickets" icon={MessageCircleQuestion} onClick={() => setSidebarOpen(false)}>Support Tickets</AdminNavLink>
             <AdminNavLink href="/admin/marquee" icon={Annoyed} onClick={() => setSidebarOpen(false)}>Marquee Msgs</AdminNavLink>
             {/* Add more admin links here */}
           </nav>
