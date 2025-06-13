@@ -5,62 +5,35 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Users Collection
-    // Users can create their own document upon signup.
-    // Users can read, update, and delete their own document.
+    // Users can read and write their own document.
+    // Authenticated users can create their own user document.
+    // Authenticated users can list/query the users collection (needed for leaderboard).
     match /users/{userId} {
-      allow create: if request.auth != null && request.auth.uid == userId;
       allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId;
+    }
+    // Allow authenticated users to query the collection for leaderboard.
+    // This is a broad read access. For production, you might restrict fields
+    // or use Cloud Functions for more granular control over what data is exposed.
+    match /users/{document=**} {
+      allow list: if request.auth != null;
     }
 
     // Transactions Collection
-    // Users can create their own transactions.
+    // Users can create transactions for themselves.
     // Users can read their own transactions.
     match /transactions/{transactionId} {
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      // Typically, clients don't update/delete transactions directly.
-      // Add update/delete rules if your app logic requires it and it's secure.
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      // Update/delete typically handled by server/admin, not client directly for completed transactions.
     }
 
-    // Leaderboard (Reading from Users Collection)
-    // To allow the leaderboard query (orderBy 'balance'), authenticated users need
-    // permission to list/query the 'users' collection.
-    // A simple rule would be:
-    // allow list: if request.auth != null;
-    // However, this might be too permissive if you have sensitive data in user docs.
-    // For a production app, consider using a Cloud Function to generate a separate
-    // 'leaderboard' collection or denormalize data.
-    // For now, the `match /users/{userId}` rule above handles individual document reads
-    // by the owner, which is not what the leaderboard query does.
-    // The leaderboard query `query(collection(db, 'users'), orderBy('balance', 'desc'), limit(CONFIG.LEADERBOARD_SIZE));`
-    // needs collection-level read access.
-    // A simple way to enable this, if you are okay with authenticated users reading all user profiles (for leaderboard purposes):
-    // (This should be refined in production for better security if user profiles contain sensitive data)
-    // match /users/{document=**} { // This is a broader read rule
-    //   allow read: if request.auth != null;
-    // }
-    // For now, the individual document read rule is what's present. The leaderboard query
-    // might fail if collection read access is not granted.
-    // It's common to need a rule like:
-    // match /users/{userId} {
-    //    allow read: if request.auth != null; // Allow any authenticated user to read any user profile for leaderboard
-    //    allow write: if request.auth != null && request.auth.uid == userId; // But only write their own
-    // }
-    // Combining with the create rule from above:
-    // match /users/{userId} {
-    //   allow create: if request.auth != null && request.auth.uid == userId;
-    //   allow read: if request.auth != null; // Needed for leaderboard query
-    //   allow update, delete: if request.auth != null && request.auth.uid == userId;
-    // }
-    // For now, let's keep the more restrictive read (owner only) and you can adjust if leaderboard fails.
-    // If leaderboard query requires it, change the /users/{userId} read rule to:
-    // allow read: if request.auth != null;
-
     // FAQs Collection
-    // Any authenticated user can read FAQs.
+    // Authenticated users can read FAQs.
+    // Creating/updating FAQs would typically be an admin function.
     match /faqs/{faqId} {
       allow read: if request.auth != null;
-      // Admin might have write access (not defined here)
+      // allow write: if <condition_for_admin_users>; // Example for admin
     }
 
     // User Quests Collection
@@ -74,19 +47,14 @@ service cloud.firestore {
 
     // Support Tickets Collection
     // Users can create their own support tickets.
-    // Admin users (not defined here) would have broader access to read/update all tickets.
+    // Users can read/update their own tickets (e.g., to add comments or see status).
+    // Admins would have broader access (not defined here, add as needed).
     match /support_tickets/{ticketId} {
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow read, update: if request.auth != null && resource.data.userId == request.auth.uid; // User can read/update their own ticket status
-      // Admin rules would go here.
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow read, update: if request.auth != null && request.auth.uid == resource.data.userId;
+      // allow read, update, delete: if <condition_for_admin_users>; // Example for admin
     }
 
-    // Admin specific rules would be added here for collections like 'app_config', 'all_transactions_view' etc.
-    // For example:
-    // match /admin_stats/{statId} {
-    //   allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
-    // }
+    // Add rules for other collections if you have them (e.g., admin-specific data).
   }
 }
-
-    
