@@ -1,4 +1,5 @@
 
+
 import type { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
 
@@ -19,14 +20,14 @@ export interface Achievement {
     boosterId?: string; // For booster_purchase_specific
   };
   reward: number; // Coin reward
-  iconName?: string; // Changed from icon: any to iconName: string
+  iconName?: string; 
 }
 
 export interface AppTheme {
   id: string;
   name: string;
   cost: number;
-  cssClass: string; // CSS class to apply to the body/html
+  cssClass: string; 
   previewColors: { primary: string; accent: string; background: string };
 }
 
@@ -45,7 +46,7 @@ export interface UserData {
   name?: string;
   email?: string;
   photoURL?: string | null;
-  photoStoragePath?: string | null; // Added to store the actual storage path
+  photoStoragePath?: string | null; 
   completedAchievements?: Record<string, Timestamp>;
   referralsMadeCount?: number;
   activeTheme?: string;
@@ -65,29 +66,32 @@ export interface PaymentDetails {
   ifsc?: string;
   accName?: string;
   bankName?: string;
-  number?: string;
-  name?: string;
+  number?: string; // For paytm, googlepay, phonepay
+  name?: string; // Name associated with wallet/UPI
 }
 
 export interface Transaction {
   id: string;
-  userId: string; // The user whose transaction history this belongs to
-  userName?: string; // Name of the user (optional, for display)
-  userEmail?: string; // Email of the user (optional, for display)
-  amount: number; // Always positive. For sends/debits, it's an outgoing amount. For receives/credits, it's incoming.
+  userId: string; 
+  userName?: string; 
+  userEmail?: string; 
+  amount: number; 
   type: 'redeem' | 'booster_purchase' | 'daily_bonus' | 'referral_bonus' | 'achievement_reward' | 'p2p_send' | 'p2p_receive' | 'quest_reward' | 'theme_purchase' | 'offline_earnings' | string;
-  inrAmount?: number; // For redeem transactions
-  paymentMethod?: PaymentMethod | string; // For redeem transactions
-  paymentDetails?: PaymentDetails; // For redeem transactions
+  inrAmount?: number; 
+  paymentMethod?: PaymentMethod | string; 
+  paymentDetails?: PaymentDetails; 
   status: 'pending' | 'completed' | 'failed';
   date: Date | Timestamp;
-  details?: string; // E.g., booster name, achievement name
-  relatedUserId?: string; // For P2P, this would be the other party's ID
-  relatedUserName?: string; // For P2P, this would be the other party's name
+  updatedAt?: Date | Timestamp; // For tracking when redeem status changed
+  details?: string; 
+  relatedUserId?: string; 
+  relatedUserName?: string; 
 }
 
 export interface MarqueeItem {
+  id?: string; // Optional Firestore document ID
   text: string;
+  createdAt?: Timestamp; // Optional for ordering if stored in Firestore
 }
 
 // Zod Schemas and Types for Ad Mediation (DEPRECATED - AI Ad Mediation Disabled)
@@ -137,8 +141,8 @@ export type PersonalizedTipOutput = z.infer<typeof PersonalizedTipOutputSchema>;
 export interface AdContent {
   adType: 'url' | 'adsterra_script' | 'adsterra_script_468x60' | 'adsense';
   adUrl?: string;
-  adClient?: string; // For AdSense
-  adSlot?: string;   // For AdSense
+  adClient?: string; 
+  adSlot?: string;   
   reason: string;
 }
 
@@ -156,31 +160,31 @@ export interface QuestDefinition {
   criteria: {
     type: 'tap_count_total_session' | 'balance_increase_session' | 'visit_page' | 'booster_purchase_specific' | 'interact_ad';
     value: number;
-    page?: string; // For 'visit_page'
-    boosterId?: string; // For 'booster_purchase_specific'
+    page?: string; 
+    boosterId?: string; 
   };
   reward: number;
-  iconName: string; // Changed from React.ElementType to string
-  type: 'daily' | 'weekly' | 'event'; // Type of quest
+  iconName: string; 
+  type: 'daily' | 'weekly' | 'event'; 
 }
 
 export interface UserQuest {
-  id: string; // This will be the questId from QuestDefinition
+  id: string; 
   definition: QuestDefinition;
   progress: number;
   completed: boolean;
   claimed: boolean;
-  assignedAt: Date | Timestamp; // When the quest instance was created/assigned for the user
-  lastProgressAt?: Date | Timestamp; // Optional: when progress was last updated
+  assignedAt: Date | Timestamp; 
+  lastProgressAt?: Date | Timestamp; 
 }
 
 export interface FAQEntry {
-  id?: string; // Optional Firestore document ID
+  id?: string; 
   question: string;
   answer: string;
   category: string;
   order: number;
-  iconName?: string; // Changed from icon: React.ElementType to store icon name as string
+  iconName?: string; 
 }
 
 export interface SupportTicketCategory {
@@ -201,21 +205,27 @@ export interface SupportTicket {
   adminResponse?: string;
 }
 
-// Types for html5-qrcode library, if not globally available
-// Based on common usage, actual types might be more complex.
 export interface Html5QrcodeError {
   errorMessage: string;
-  type?: number; // Or some other error code/type from the library
-  name?: string; // e.g., NotAllowedError
+  type?: number; 
+  name?: string; 
 }
 
 export interface Html5QrcodeResult {
   decodedText: string;
   result: {
     format?: {
-      formatName?: string; // e.g., "QR_CODE"
+      formatName?: string; 
     };
-    // other properties from the library's result object
   };
 }
 
+export type Booster = {
+  id: string;
+  name: string;
+  description: string;
+  cost: number;
+  effect_type: 'tap_power' | 'max_energy';
+  value: number;
+  maxLevel: number;
+};

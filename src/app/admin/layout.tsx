@@ -2,7 +2,7 @@
 'use client';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ShieldCheck, LayoutDashboard, Users, ListChecks, LogOut, Settings2 } from 'lucide-react';
+import { ShieldCheck, LayoutDashboard, Users, ListChecks, LogOut, Settings2, Annoyed, Gift, MessageSquareQuestion } from 'lucide-react'; // Added Annoyed, Gift, MessageSquareQuestion
 import { useAuth } from '@/components/providers/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -86,8 +86,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   }
 
   if (!isAdmin) {
-    // This state should ideally not be reached if redirection works,
-    // but it's a fallback.
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
         <ShieldCheck className="w-16 h-16 text-destructive mb-4" />
@@ -102,7 +100,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-muted/40">
-      {/* Header */}
       <header className="bg-card border-b border-border shadow-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -126,21 +123,22 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </header>
 
       <div className="flex-1 flex container mx-auto py-6 gap-6">
-        {/* Sidebar */}
         <aside className={cn(
           "fixed inset-y-0 left-0 z-40 w-64 bg-card p-4 rounded-r-lg shadow-lg border-r border-border transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:rounded-lg md:shadow md:border",
-          sidebarOpen ? "translate-x-0 pt-16" : "-translate-x-full pt-4 md:pt-4" // Adjust pt for mobile open state due to sticky header
+          sidebarOpen ? "translate-x-0 pt-16" : "-translate-x-full pt-4 md:pt-4"
         )}>
           <nav className="space-y-2">
             <AdminNavLink href="/admin/dashboard" icon={LayoutDashboard} onClick={() => setSidebarOpen(false)}>Dashboard</AdminNavLink>
             <AdminNavLink href="/admin/users" icon={Users} onClick={() => setSidebarOpen(false)}>Users</AdminNavLink>
-            <AdminNavLink href="/admin/transactions" icon={ListChecks} onClick={() => setSidebarOpen(false)}>Transactions</AdminNavLink>
+            <AdminNavLink href="/admin/transactions" icon={ListChecks} onClick={() => setSidebarOpen(false)}>All Transactions</AdminNavLink>
+            <AdminNavLink href="/admin/redeem-requests" icon={Gift} onClick={() => setSidebarOpen(false)}>Redeem Requests</AdminNavLink>
+            <AdminNavLink href="/admin/support-tickets" icon={MessageSquareQuestion} onClick={() => setSidebarOpen(false)}>Support Tickets</AdminNavLink>
+            <AdminNavLink href="/admin/marquee" icon={Annoyed} onClick={() => setSidebarOpen(false)}>Marquee Msgs</AdminNavLink>
             {/* Add more admin links here */}
           </nav>
         </aside>
 
-        {/* Main Content */}
-        <main className="flex-1 bg-card p-6 rounded-lg shadow border border-border ml-0 md:ml-0"> {/* Adjusted ml for static sidebar on md+ */}
+        <main className="flex-1 bg-card p-6 rounded-lg shadow border border-border ml-0 md:ml-0">
           {children}
         </main>
       </div>
@@ -160,16 +158,12 @@ interface AdminNavLinkProps {
 }
 
 function AdminNavLink({ href, icon: Icon, children, onClick }: AdminNavLinkProps) {
-  // const pathname = usePathname(); // To highlight active link if needed
-  // const isActive = pathname === href;
-
   return (
     <Link
       href={href}
       onClick={onClick}
       className={cn(
         "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors",
-        // isActive && "bg-primary/10 text-primary"
       )}
     >
       <Icon className="h-5 w-5" />
