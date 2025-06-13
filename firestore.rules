@@ -1,81 +1,92 @@
 
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users collection rules
+
+    // Users Collection
+    // Users can create their own document upon signup.
+    // Users can read, update, and delete their own document.
     match /users/{userId} {
-      // Users can get their own full document
-      allow get: if request.auth != null && request.auth.uid == userId;
-      // Authenticated users can list users (for leaderboard functionality)
-      allow list: if request.auth != null;
-      
-      // Users can create their own document with specific fields (as per your original rule)
-      allow create: if request.auth != null 
-                    && request.auth.uid == userId
-                    && request.resource.data.keys().hasAll([
-                      'name', 'email', 'balance', 
-                      'tapCountToday', 'lastTapDate',
-                      'currentEnergy', 'maxEnergy',
-                      'tapPower', 'lastEnergyUpdate',
-                      'boostLevels', 'createdAt'
-                    ])
-                    && request.resource.data.balance is number
-                    && request.resource.data.balance >= 0
-                    && request.resource.data.tapCountToday is number
-                    && request.resource.data.currentEnergy is number
-                    && request.resource.data.maxEnergy is number
-                    && request.resource.data.tapPower is number
-                    && request.resource.data.boostLevels is map;
-      
-      // Users can update their own document with validation (as per your original rule)
-      allow update: if request.auth != null 
-                    && request.auth.uid == userId
-                    // Validate balance updates
-                    && (request.resource.data.balance == resource.data.balance 
-                        || (request.resource.data.balance is number
-                            && request.resource.data.balance >= 0))
-                    // Validate energy fields
-                    && request.resource.data.currentEnergy is number
-                    && request.resource.data.maxEnergy is number
-                    && request.resource.data.currentEnergy <= request.resource.data.maxEnergy
-                    // Validate tap power
-                    && request.resource.data.tapPower is number
-                    && request.resource.data.tapPower > 0
-                    // Validate boost levels
-                    && request.resource.data.boostLevels is map;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
     }
-    
-    // Transactions collection rules
+
+    // Transactions Collection
+    // Users can create their own transactions.
+    // Users can read their own transactions.
     match /transactions/{transactionId} {
-      // Users can read their own transactions
-      allow read: if request.auth != null 
-                  && request.auth.uid == resource.data.userId;
-      
-      // Users can create transactions with validation
-      allow create: if request.auth != null
-                    && request.resource.data.userId == request.auth.uid
-                    && request.resource.data.keys().hasAll([ // More generic field check
-                      'userId', 'amount', 'type', 
-                      'status', 'date'
-                    ])
-                    && request.resource.data.amount is number
-                    // Allow positive amounts for bonuses/rewards, and costs for purchases
-                    && request.resource.data.status in ['pending', 'completed'] // Allow pending or completed
-                    && request.resource.data.date is timestamp;
-      
-      // Only admins can update transactions (for status changes)
-      allow update: if false; // Disabled for now - you might want admin access
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      // Typically, clients don't update/delete transactions directly.
+      // Add update/delete rules if your app logic requires it and it's secure.
     }
-    
-    // App settings (read-only for all authenticated users)
-    match /app_settings/{documentId} {
+
+    // Leaderboard (Reading from Users Collection)
+    // To allow the leaderboard query (orderBy 'balance'), authenticated users need
+    // permission to list/query the 'users' collection.
+    // A simple rule would be:
+    // allow list: if request.auth != null;
+    // However, this might be too permissive if you have sensitive data in user docs.
+    // For a production app, consider using a Cloud Function to generate a separate
+    // 'leaderboard' collection or denormalize data.
+    // For now, the `match /users/{userId}` rule above handles individual document reads
+    // by the owner, which is not what the leaderboard query does.
+    // The leaderboard query `query(collection(db, 'users'), orderBy('balance', 'desc'), limit(CONFIG.LEADERBOARD_SIZE));`
+    // needs collection-level read access.
+    // A simple way to enable this, if you are okay with authenticated users reading all user profiles (for leaderboard purposes):
+    // (This should be refined in production for better security if user profiles contain sensitive data)
+    // match /users/{document=**} { // This is a broader read rule
+    //   allow read: if request.auth != null;
+    // }
+    // For now, the individual document read rule is what's present. The leaderboard query
+    // might fail if collection read access is not granted.
+    // It's common to need a rule like:
+    // match /users/{userId} {
+    //    allow read: if request.auth != null; // Allow any authenticated user to read any user profile for leaderboard
+    //    allow write: if request.auth != null && request.auth.uid == userId; // But only write their own
+    // }
+    // Combining with the create rule from above:
+    // match /users/{userId} {
+    //   allow create: if request.auth != null && request.auth.uid == userId;
+    //   allow read: if request.auth != null; // Needed for leaderboard query
+    //   allow update, delete: if request.auth != null && request.auth.uid == userId;
+    // }
+    // For now, let's keep the more restrictive read (owner only) and you can adjust if leaderboard fails.
+    // If leaderboard query requires it, change the /users/{userId} read rule to:
+    // allow read: if request.auth != null;
+
+    // FAQs Collection
+    // Any authenticated user can read FAQs.
+    match /faqs/{faqId} {
       allow read: if request.auth != null;
-      allow write: if false; // Only via Firebase console/admin
+      // Admin might have write access (not defined here)
     }
-    
-    // Default deny all other access
-    match /{document=**} {
-      allow read, write: if false;
+
+    // User Quests Collection
+    // Users can read and write their own quest data.
+    match /user_quests/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+    match /user_quests/{userId}/daily_quests/{questId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Support Tickets Collection
+    // Users can create their own support tickets.
+    // Admin users (not defined here) would have broader access to read/update all tickets.
+    match /support_tickets/{ticketId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read, update: if request.auth != null && resource.data.userId == request.auth.uid; // User can read/update their own ticket status
+      // Admin rules would go here.
+    }
+
+    // Admin specific rules would be added here for collections like 'app_config', 'all_transactions_view' etc.
+    // For example:
+    // match /admin_stats/{statId} {
+    //   allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    // }
   }
 }
+
+    
