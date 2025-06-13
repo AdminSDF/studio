@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -12,7 +13,7 @@ export default function HomePage() {
   useEffect(() => {
     if (!loading) {
       if (user) {
-        router.replace('/mining'); // Default page for logged-in users
+        router.replace('/admin-choice'); // Central decision page for logged-in users
       } else {
         router.replace('/login');
       }
