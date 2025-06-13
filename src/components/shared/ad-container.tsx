@@ -15,23 +15,27 @@ interface AdContainerProps {
   trigger: boolean;
 }
 
-const NEW_ADSENSE_AD_SLOT_ID = "2603795181"; // New Ad Slot ID
+const NEW_ADSENSE_AD_SLOT_ID = "2603795181"; // Ad Slot ID from user's HTML
 
-const PREDEFINED_ADS: AdContent[] = [
+// Initialize the ads list
+let initialAds: AdContent[] = [
   { adType: "adsterra_script", reason: "Selected: Adsterra Script Ad 728x90" },
   { adType: "adsterra_script_468x60", reason: "Selected: Adsterra Script Ad 468x60" },
-  { adType: "url", adUrl: "https://www.profitableratecpm.com/awkdrd8u7?key=cb1caf90ccdef2f4c51aff029a85a4f8", reason: "Selected: Adsterra Direct Link profitableratecpm" }
+  // Adsterra Direct Link removed from rotation as it may not display well in an iframe
+  // { adType: "url", adUrl: "https://www.profitableratecpm.com/awkdrd8u7?key=cb1caf90ccdef2f4c51aff029a85a4f8", reason: "Selected: Adsterra Direct Link profitableratecpm" }
 ];
 
 // Add AdSense ad option if client ID is configured
 if (CONFIG.ADSENSE_CLIENT_ID) {
-  PREDEFINED_ADS.push({
+  initialAds.push({
     adType: "adsense",
     adClient: CONFIG.ADSENSE_CLIENT_ID,
-    adSlot: NEW_ADSENSE_AD_SLOT_ID, // Use the new Ad Slot ID
+    adSlot: NEW_ADSENSE_AD_SLOT_ID,
     reason: "Selected: Google AdSense Ad (Responsive)"
   });
 }
+
+const PREDEFINED_ADS: AdContent[] = initialAds;
 
 
 export function AdContainer({ pageContext, trigger }: AdContainerProps) {
@@ -81,7 +85,6 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
     return (
       <div className={adSlotBaseClasses}>
         <div className="flex flex-col justify-center items-center text-center p-1">
-          {/* Adjusted skeleton height to better reflect potential 60px ad */}
           <Skeleton className="h-[60px] w-[300px] sm:h-[60px] md:h-[90px] sm:w-[468px] md:w-[728px] bg-muted/50 rounded-md mb-1" />
           <p className="text-xs text-muted-foreground">Loading ad...</p>
         </div>
