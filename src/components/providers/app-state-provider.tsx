@@ -307,11 +307,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       console.error("Error fetching transactions:", error);
       let description = "Could not load transaction history.";
        if (error.code === 'failed-precondition') {
-        description = "Transactions: Index missing on 'transactions' for 'userId' (asc) and 'date' (desc). Create in Firebase console.";
+        description = "Transactions Error: Firestore index missing. Go to Firebase Console -> Firestore Database -> Indexes, and create a composite index for the 'transactions' collection on fields 'userId' (ascending) AND 'date' (descending).";
       } else if (error.code === 'permission-denied') {
         description = "Transactions: Permission denied. Check Firestore security rules for 'transactions' collection.";
       }
-      toast({ title: "Transactions Error", description, variant: "destructive", duration: 5000 });
+      toast({ title: "Transactions Error", description, variant: "destructive", duration: 7000 });
     }
   }, [user, toast]);
   
@@ -334,11 +334,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       console.error("Detailed error fetching leaderboard data:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
       let description = "Could not load leaderboard. Please try again later.";
       if (error.code === 'failed-precondition') {
-        description = "Leaderboard: Index missing on 'users' for 'balance' (desc). Create in Firebase console.";
+        description = "Leaderboard Error: Firestore index missing. Go to Firebase Console -> Firestore Database -> Indexes, and create a composite index for the 'users' collection on the field 'balance' (descending).";
       } else if (error.code === 'permission-denied') {
         description = "Leaderboard: Permission denied. Check Firestore security rules for 'users' collection.";
       }
-      toast({ title: "Leaderboard Error", description, variant: "destructive", duration: 5000 });
+      toast({ title: "Leaderboard Error", description, variant: "destructive", duration: 7000 });
     } finally {
       setLoadingLeaderboard(false);
     }
@@ -473,9 +473,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         console.error("Error in TRANSACTIONS snapshot listener (Firestore Permission Denied?):", error.code, error.message);
         let description = `Could not listen for transaction updates. (${error.code})`;
         if (error.code === 'failed-precondition') {
-          description = "Transactions require an index: userId (asc), date (desc). Create it in Firebase console.";
+          description = "Transactions Error: Firestore index missing. Go to Firebase Console -> Firestore Database -> Indexes, and create a composite index for the 'transactions' collection on fields 'userId' (ascending) AND 'date' (descending).";
         }
-        toast({ title: "Database Error: Transactions", description, variant: "destructive", duration: 5000 });
+        toast({ title: "Database Error: Transactions", description, variant: "destructive", duration: 7000 });
       });
 
       const userQuestsRef = doc(db, 'user_quests', user.id);
