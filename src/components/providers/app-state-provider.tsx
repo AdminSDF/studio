@@ -336,9 +336,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (error.code === 'failed-precondition') {
         description = "Leaderboard Error: Firestore index missing. Go to Firebase Console -> Firestore Database -> Indexes, and create a composite index for the 'users' collection on the field 'balance' (descending).";
       } else if (error.code === 'permission-denied') {
-        description = "Leaderboard: Permission denied. Check Firestore security rules for 'users' collection.";
+        description = "Leaderboard: Permission denied. Check Firestore security rules for the 'users' collection. Authenticated users need read access to this collection for leaderboard functionality.";
       }
-      toast({ title: "Leaderboard Error", description, variant: "destructive", duration: 7000 });
+      toast({ title: "Leaderboard Error", description, variant: "destructive", duration: 9000 });
     } finally {
       setLoadingLeaderboard(false);
     }
