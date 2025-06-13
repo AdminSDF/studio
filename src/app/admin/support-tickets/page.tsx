@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageSquareQuestion, AlertTriangle, RefreshCw, Eye, Edit } from 'lucide-react';
+import { MessageCircleQuestion, AlertTriangle, RefreshCw, Eye, Edit } from 'lucide-react'; // Corrected Icon
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, orderBy, Timestamp, type DocumentData, doc, updateDoc } from 'firebase/firestore';
 import type { SupportTicket } from '@/types';
@@ -126,7 +126,7 @@ export default function AdminSupportTicketsPage() {
       </div>
       <Card className="shadow-md rounded-xl border-border">
         <CardHeader>
-          <CardTitle className="flex items-center"><MessageSquareQuestion className="mr-2 h-5 w-5 text-primary"/>User Support Tickets</CardTitle>
+          <CardTitle className="flex items-center"><MessageCircleQuestion className="mr-2 h-5 w-5 text-primary"/>User Support Tickets</CardTitle>
           <CardDescription>View and manage user-submitted support tickets.</CardDescription>
         </CardHeader>
         <CardContent>
