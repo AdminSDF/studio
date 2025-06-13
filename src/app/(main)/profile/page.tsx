@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { CONFIG } from '@/lib/constants';
 import { formatNumber } from '@/lib/utils';
-import { UserCircle, CalendarDays, TrendingUp, TrendingDown, Copy, Settings, LogOut, AlertTriangle, KeyRound, Users, Hourglass, Edit3, UploadCloud, QrCode as QrCodeIcon } from 'lucide-react'; 
+import { UserCircle, CalendarDays, TrendingUp, TrendingDown, Copy, Settings, LogOut, AlertTriangle, KeyRound, Users, Hourglass, Edit3, UploadCloud, QrCode as QrCodeIcon, Shield, LayoutDashboard } from 'lucide-react'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
@@ -26,9 +26,12 @@ import {
 import { AdContainer } from '@/components/shared/ad-container';
 import { useState, useRef, ChangeEvent } from 'react';
 import Image from 'next/image';
+import Link from 'next/link'; // Added Link import
 import { cn } from '@/lib/utils';
 import { QRCodeCanvas } from 'qrcode.react'; 
 import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-display';
+
+const ADMIN_EMAIL = 'jameafaizanrasool@gmail.com';
 
 export default function ProfilePage() {
   const { user: authUser, firebaseUser } = useAuth();
@@ -121,6 +124,7 @@ export default function ProfilePage() {
   const referralsMade = userData.referralsMadeCount || 0;
   const userDisplayName = userData.name || authUser.name || 'User';
   const avatarSrc = userData.photoURL || defaultAvatarUrl;
+  const isAdminUser = authUser.email === ADMIN_EMAIL;
 
   return (
     <>
@@ -207,6 +211,29 @@ export default function ProfilePage() {
             </div>
           </CardContent>
         </Card>
+
+        {isAdminUser && (
+          <Card className="shadow-lg rounded-xl border-border mt-6 bg-accent/10 border-accent/50">
+            <CardHeader>
+              <CardTitle className="text-xl flex items-center font-semibold text-accent">
+                <Shield className="mr-2.5 h-6 w-6" /> Admin Tools
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Link href="/admin/dashboard" passHref legacyBehavior>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start text-accent-foreground hover:bg-accent/20 hover:border-accent hover:text-accent rounded-lg p-3 border-accent/70 bg-accent/10 hover:text-primary"
+                >
+                  <LayoutDashboard className="mr-3 h-5 w-5" />Go to Admin Panel
+                </Button>
+              </Link>
+               <p className="text-xs text-muted-foreground mt-2">
+                Note: Access to the Admin Panel requires appropriate server-side permissions (admin claim).
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="shadow-lg rounded-xl border-border">
           <CardHeader>
