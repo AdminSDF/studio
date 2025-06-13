@@ -26,14 +26,21 @@ export default function RootLayout({
       <head>
         <title>{CONFIG.APP_NAME} - Tap, Earn, Conquer!</title>
         <meta name="description" content={`Tap to earn cryptocurrency with ${CONFIG.APP_NAME}! Conquer the leaderboards and unlock achievements.`} />
-        {/* AdSense script removed */}
+        {CONFIG.ADSENSE_CLIENT_ID && (
+          <Script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${CONFIG.ADSENSE_CLIENT_ID}`}
+            crossOrigin="anonymous"
+            strategy="afterInteractive" // Load after the page is interactive
+          />
+        )}
       </head>
       <body className={cn(
         'font-sans antialiased',
         // Base body styles. Specific theme background/foreground colors will be
         // applied via CSS variables set by the activeTheme.cssClass on ThemeAppContainer's parent (html/body)
         // or on ThemeAppContainer itself if its theme class defines them directly.
-         'flex flex-col min-h-screen' 
+         'flex flex-col min-h-screen overflow-x-hidden' 
       )}>
         <AuthProvider>
           <AppStateProvider>

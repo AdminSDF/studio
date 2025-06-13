@@ -7,17 +7,32 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle } from 'lucide-react';
 import { AdsterraScriptUnit } from './adsterra-script-unit'; // 728x90
 import { AdsterraScriptUnit468x60 } from './adsterra-script-unit-468x60'; // 468x60
+import { AdSenseUnit } from './adsense-unit';
+import { CONFIG } from '@/lib/constants';
 
 interface AdContainerProps {
   pageContext: string;
   trigger: boolean;
 }
 
+const PLACEHOLDER_AD_SLOT = "YOUR_AD_SLOT_ID_HERE"; // Placeholder for AdSense slot
+
 const PREDEFINED_ADS: AdContent[] = [
   { adType: "adsterra_script", reason: "Selected: Adsterra Script Ad 728x90" },
   { adType: "adsterra_script_468x60", reason: "Selected: Adsterra Script Ad 468x60" },
   { adType: "url", adUrl: "https://www.profitableratecpm.com/awkdrd8u7?key=cb1caf90ccdef2f4c51aff029a85a4f8", reason: "Selected: Adsterra Direct Link profitableratecpm" }
 ];
+
+// Add AdSense ad option if client ID is configured
+if (CONFIG.ADSENSE_CLIENT_ID) {
+  PREDEFINED_ADS.push({
+    adType: "adsense",
+    adClient: CONFIG.ADSENSE_CLIENT_ID,
+    adSlot: PLACEHOLDER_AD_SLOT, // Use placeholder, user needs to replace this
+    reason: "Selected: Google AdSense Ad (Requires Valid Slot ID)"
+  });
+}
+
 
 export function AdContainer({ pageContext, trigger }: AdContainerProps) {
   const [ad, setAd] = useState<AdContent | null>(null);
@@ -35,6 +50,20 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
       if (availableAds.length > 0) {
         const randomIndex = Math.floor(Math.random() * availableAds.length);
         let selectedAd = availableAds[randomIndex];
+        
+        // If AdSense is selected but client ID is missing from config (should not happen if check above works)
+        if (selectedAd.adType === 'adsense' && !selectedAd.adClient) {
+            console.warn("AdSense ad selected but no client ID configured in CONFIG. Skipping AdSense.");
+            // Fallback to another ad or show error
+            const otherAds = availableAds.filter(a => a.adType !== 'adsense');
+            if (otherAds.length > 0) {
+                selectedAd = otherAds[Math.floor(Math.random() * otherAds.length)];
+            } else {
+                setError("No suitable ads available.");
+                setIsLoadingInternal(false);
+                return;
+            }
+        }
         setAd(selectedAd);
       } else {
         console.warn("No predefined ads available to select for page context:", pageContext);
@@ -74,7 +103,7 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
   }
 
   if (!ad) {
-    return <div className={adSlotBaseClasses}></div>;
+    return <div className={adSlotBaseClasses}></div>; // Empty container if no ad is selected
   }
   
   return (
@@ -92,6 +121,15 @@ export function AdContainer({ pageContext, trigger }: AdContainerProps) {
         <AdsterraScriptUnit />
       ) : ad.adType === 'adsterra_script_468x60' ? (
         <AdsterraScriptUnit468x60 />
+      ) : ad.adType === 'adsense' && ad.adClient && ad.adSlot ? (
+        ad.adSlot === PLACEHOLDER_AD_SLOT ? (
+            <div className="p-3 text-sm text-muted-foreground text-center bg-muted/30 rounded-md border border-dashed border-border">
+                <AlertCircle className="inline-block h-4 w-4 mr-1.5 text-warning" />
+                AdSense ad ready. Please replace <strong>'{PLACEHOLDER_AD_SLOT}'</strong> in AdContainer.tsx with a valid Ad Unit Slot ID from your AdSense account.
+            </div>
+        ) : (
+            <AdSenseUnit adClient={ad.adClient} adSlot={ad.adSlot} />
+        )
       ) : (
          <div className="p-2 text-sm text-muted-foreground text-center">
             Error: Could not determine ad type. Selected adType: {ad.adType}

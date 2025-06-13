@@ -135,10 +135,10 @@ export type PersonalizedTipOutput = z.infer<typeof PersonalizedTipOutputSchema>;
 
 // AdContent for internal AdContainer use (Non-AI selection)
 export interface AdContent {
-  adType: 'url' | 'adsterra_script' | 'adsterra_script_468x60'; // Removed 'adsense'
+  adType: 'url' | 'adsterra_script' | 'adsterra_script_468x60' | 'adsense';
   adUrl?: string;
-  // adClient?: string; // Removed AdSense specific field
-  // adSlot?: string;   // Removed AdSense specific field
+  adClient?: string; // For AdSense
+  adSlot?: string;   // For AdSense
   reason: string;
 }
 
