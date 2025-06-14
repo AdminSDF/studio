@@ -6,33 +6,32 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, AlertTriangle, RefreshCw, Eye } from 'lucide-react';
+import { Users, AlertTriangle, RefreshCw, ListChecks } from 'lucide-react'; // Changed Eye to ListChecks
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, orderBy, Timestamp, type DocumentData } from 'firebase/firestore';
 import { formatNumber } from '@/lib/utils';
 import type { UserData } from '@/types';
+import Link from 'next/link'; // Added Link import
 
 interface UserForAdminDisplay extends Omit<Partial<UserData>, 'createdAt' | 'lastLoginBonusClaimed' | 'lastEnergyUpdate' | 'frenzyEndTime' | 'energySurgeEndTime'> {
   id: string; // UID
-  createdAt?: Date | null; // Ensure this is Date or null for display
+  createdAt?: Date | null; 
 }
 
-const ITEMS_PER_PAGE = 15; // For future pagination
+const ITEMS_PER_PAGE = 15; 
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserForAdminDisplay[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // const [currentPage, setCurrentPage] = useState(1); // For future pagination
-  // const [totalPages, setTotalPages] = useState(1); // For future pagination
+  // const [currentPage, setCurrentPage] = useState(1); 
+  // const [totalPages, setTotalPages] = useState(1); 
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const usersCollectionRef = collection(db, 'users');
-      // Consider adding pagination here in the future if user list is very large
-      // For now, fetching all users, ordered by creation date
       const q = query(usersCollectionRef, orderBy('createdAt', 'desc'));
       const querySnapshot = await getDocs(q);
       
@@ -51,7 +50,7 @@ export default function AdminUsersPage() {
       });
       
       setUsers(fetchedUsers);
-      // setTotalPages(Math.ceil(fetchedUsers.length / ITEMS_PER_PAGE)); // For future pagination
+      // setTotalPages(Math.ceil(fetchedUsers.length / ITEMS_PER_PAGE)); 
     } catch (err: any) {
       console.error("Error fetching users:", err);
       setError(`Failed to fetch users. ${err.message}. Ensure Firestore rules allow admin access to read the 'users' collection.`);
@@ -64,7 +63,7 @@ export default function AdminUsersPage() {
     fetchUsers();
   }, [fetchUsers]);
 
-  // const paginatedUsers = users.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE); // For future pagination
+  // const paginatedUsers = users.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE); 
 
   if (error) {
     return (
@@ -118,7 +117,7 @@ export default function AdminUsersPage() {
                     <Skeleton className="h-4 w-3/4" />
                     <Skeleton className="h-3 w-1/2" />
                   </div>
-                  <Skeleton className="h-8 w-20" />
+                  <Skeleton className="h-8 w-24" /> 
                 </div>
               ))}
             </div>
@@ -146,10 +145,11 @@ export default function AdminUsersPage() {
                       <TableCell className="text-right">{formatNumber(user.balance || 0, 0)}</TableCell>
                       <TableCell>{user.createdAt ? user.createdAt.toLocaleDateString() : 'N/A'}</TableCell>
                       <TableCell className="text-center">
-                        <Button variant="outline" size="sm" onClick={() => alert(`View details for ${user.name} (UID: ${user.id}) - To be implemented`)}>
-                          <Eye className="mr-1.5 h-4 w-4" /> Details
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/admin/users/${user.id}/transactions`}>
+                            <ListChecks className="mr-1.5 h-4 w-4" /> Transactions
+                          </Link>
                         </Button>
-                        {/* Add more action buttons here later, e.g., Edit, Ban */}
                       </TableCell>
                     </TableRow>
                   ))}
