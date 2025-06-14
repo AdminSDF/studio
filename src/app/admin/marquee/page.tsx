@@ -1,174 +1,172 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Annoyed, PlusCircle, Edit, Trash2, Info } from 'lucide-react';
-import { CONFIG } from '@/lib/constants';
+import { Annoyed, PlusCircle, Edit, Trash2, Info, AlertTriangle, RefreshCw } from 'lucide-react';
 import type { MarqueeItem } from '@/types';
-// import { db } from '@/lib/firebase'; // Uncomment when moving to Firestore
-// import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore'; // Uncomment for Firestore
+import { db } from '@/lib/firebase';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
-// const MARQUEE_COLLECTION = 'marquee_messages'; // Firestore collection name
+const MARQUEE_COLLECTION = 'marquee_items';
+
+interface MarqueeItemForAdmin extends Omit<MarqueeItem, 'createdAt'> {
+  id: string;
+  createdAt?: Date | null; // For display purposes
+}
 
 export default function AdminMarqueePage() {
-  // When moving to Firestore, uncomment state and Firestore logic
-  // const [marqueeItems, setMarqueeItems] = useState<MarqueeItem[]>([]);
-  // const [loading, setLoading] = useState(true);
-  // const [error, setError] = useState<string | null>(null);
+  const [marqueeItems, setMarqueeItems] = useState<MarqueeItemForAdmin[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [newItemText, setNewItemText] = useState('');
-  // const [editingItem, setEditingItem] = useState<MarqueeItem | null>(null);
+  const [editingItem, setEditingItem] = useState<MarqueeItemForAdmin | null>(null);
   const { toast } = useToast();
 
-  // For now, display hardcoded items
-  const [marqueeItems, _setMarqueeItems] = useState<MarqueeItem[]>(CONFIG.DEFAULT_MARQUEE_ITEMS.map(text => ({ text })));
-  const [loading, _setLoading] = useState(false); // Simulate no loading for hardcoded data
+  const fetchMarqueeItems = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const q = query(collection(db, MARQUEE_COLLECTION), orderBy('createdAt', 'asc'));
+      const querySnapshot = await getDocs(q);
+      const items = querySnapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          text: data.text,
+          createdAt: (data.createdAt as Timestamp)?.toDate() || null,
+        } as MarqueeItemForAdmin;
+      });
+      setMarqueeItems(items);
+    } catch (err: any) {
+      console.error("Error fetching marquee items:", err);
+      setError(`Failed to fetch marquee items: ${err.message}. Check Firestore rules and indexes for '${MARQUEE_COLLECTION}' on 'createdAt' (asc).`);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
+  useEffect(() => {
+    fetchMarqueeItems();
+  }, [fetchMarqueeItems]);
 
-  // useEffect(() => { // Uncomment when moving to Firestore
-  //   fetchMarqueeItems();
-  // }, []);
-
-  // const fetchMarqueeItems = async () => { // Uncomment for Firestore
-  //   setLoading(true);
-  //   setError(null);
-  //   try {
-  //     const q = query(collection(db, MARQUEE_COLLECTION), orderBy('createdAt', 'asc')); // Assuming a 'createdAt' field for ordering
-  //     const querySnapshot = await getDocs(q);
-  //     const items = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MarqueeItem)); // Assuming 'id' and 'text' fields
-  //     setMarqueeItems(items);
-  //   } catch (err: any) {
-  //     setError(`Failed to fetch marquee items: ${err.message}`);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-  const handleAddItem = async () => { // Update for Firestore
+  const handleAddItem = async () => {
     if (!newItemText.trim()) {
       toast({ title: "Error", description: "Marquee text cannot be empty.", variant: "destructive" });
       return;
     }
-    // setLoading(true);
-    // try {
-    //   await addDoc(collection(db, MARQUEE_COLLECTION), { text: newItemText.trim(), createdAt: serverTimestamp() });
-    //   setNewItemText('');
-    //   fetchMarqueeItems();
-    //   toast({ title: "Success", description: "Marquee item added." });
-    // } catch (err: any) {
-    //   toast({ title: "Error", description: `Failed to add item: ${err.message}`, variant: "destructive" });
-    // } finally {
-    //   setLoading(false);
-    // }
-    alert("Adding item (simulated). Firestore integration needed.");
-    setNewItemText('');
+    setLoading(true);
+    try {
+      await addDoc(collection(db, MARQUEE_COLLECTION), { 
+        text: newItemText.trim(), 
+        createdAt: serverTimestamp() 
+      });
+      setNewItemText('');
+      fetchMarqueeItems();
+      toast({ title: "Success", description: "Marquee item added." });
+    } catch (err: any) {
+      toast({ title: "Error", description: `Failed to add item: ${err.message}`, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // const handleEditItem = (item: MarqueeItem) => { // Uncomment for Firestore
-  //   setEditingItem(item);
-  //   setNewItemText(item.text); // Populate input for editing
-  // };
+  const handleEditItem = (item: MarqueeItemForAdmin) => {
+    setEditingItem(item);
+    setNewItemText(item.text);
+  };
 
-  // const handleUpdateItem = async () => { // Uncomment for Firestore
-  //   if (!editingItem || !newItemText.trim()) return;
-  //   setLoading(true);
-  //   try {
-  //     const itemRef = doc(db, MARQUEE_COLLECTION, editingItem.id!);
-  //     await updateDoc(itemRef, { text: newItemText.trim() });
-  //     setNewItemText('');
-  //     setEditingItem(null);
-  //     fetchMarqueeItems();
-  //     toast({ title: "Success", description: "Marquee item updated." });
-  //   } catch (err: any) {
-  //     toast({ title: "Error", description: `Failed to update item: ${err.message}`, variant: "destructive" });
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+  const handleUpdateItem = async () => {
+    if (!editingItem || !newItemText.trim()) return;
+    setLoading(true);
+    try {
+      const itemRef = doc(db, MARQUEE_COLLECTION, editingItem.id!);
+      await updateDoc(itemRef, { 
+        text: newItemText.trim(),
+        updatedAt: serverTimestamp() // Optional: track updates
+      });
+      setNewItemText('');
+      setEditingItem(null);
+      fetchMarqueeItems();
+      toast({ title: "Success", description: "Marquee item updated." });
+    } catch (err: any) {
+      toast({ title: "Error", description: `Failed to update item: ${err.message}`, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // const handleDeleteItem = async (itemId: string) => { // Uncomment for Firestore
-  //   if (!confirm("Are you sure you want to delete this marquee item?")) return;
-  //   setLoading(true);
-  //   try {
-  //     await deleteDoc(doc(db, MARQUEE_COLLECTION, itemId));
-  //     fetchMarqueeItems();
-  //     toast({ title: "Success", description: "Marquee item deleted." });
-  //   } catch (err: any) {
-  //     toast({ title: "Error", description: `Failed to delete item: ${err.message}`, variant: "destructive" });
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+  const handleDeleteItem = async (itemId: string) => {
+    if (!confirm("Are you sure you want to delete this marquee item?")) return;
+    setLoading(true);
+    try {
+      await deleteDoc(doc(db, MARQUEE_COLLECTION, itemId));
+      fetchMarqueeItems();
+      toast({ title: "Success", description: "Marquee item deleted." });
+    } catch (err: any) {
+      toast({ title: "Error", description: `Failed to delete item: ${err.message}`, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  if (loading && marqueeItems.length === 0) {
+  if (error) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-10 w-1/2" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-40 w-full" />
+      <div className="space-y-6 p-4">
+         <div className="flex items-center justify-between">
+           <h2 className="text-3xl font-bold tracking-tight text-primary">Marquee Management</h2>
+            <Button onClick={fetchMarqueeItems} variant="outline" size="sm" disabled={loading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Retry
+            </Button>
+        </div>
+        <Card className="border-destructive bg-destructive/10">
+          <CardHeader><CardTitle className="flex items-center text-destructive"><AlertTriangle className="mr-2 h-5 w-5"/>Error</CardTitle></CardHeader>
+          <CardContent><p className="text-destructive">{error}</p></CardContent>
+        </Card>
       </div>
     );
   }
 
-  // if (error) { // Uncomment for Firestore
-  //   return (
-  //     <Card className="border-destructive bg-destructive/10">
-  //       <CardHeader><CardTitle className="text-destructive">Error</CardTitle></CardHeader>
-  //       <CardContent><p>{error}</p></CardContent>
-  //     </Card>
-  //   );
-  // }
 
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold tracking-tight text-primary">Marquee Message Management</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-3xl font-bold tracking-tight text-primary">Marquee Message Management</h2>
+        <Button onClick={fetchMarqueeItems} variant="outline" size="sm" disabled={loading}>
+          <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+        </Button>
+      </div>
       
-      <Card className="shadow-md rounded-xl border-border bg-blue-50 border-blue-200">
-        <CardHeader>
-            <CardTitle className="flex items-center text-blue-700"><Info className="mr-2 h-5 w-5"/>Important Note</CardTitle>
-        </CardHeader>
-        <CardContent>
-            <p className="text-sm text-blue-600">
-                Currently, marquee messages are hardcoded in the application configuration.
-                To enable full management (add, edit, delete) from this admin panel,
-                the messages need to be stored in Firestore and the application logic
-                (specifically in `AppStateProvider`) updated to fetch them from there.
-            </p>
-            <p className="text-sm text-blue-600 mt-2">
-                The list below shows the current hardcoded messages for reference.
-                The "Add New Item" form is a placeholder for future Firestore integration.
-            </p>
-        </CardContent>
-      </Card>
-
       <Card className="shadow-md rounded-xl border-border">
         <CardHeader>
           <CardTitle className="flex items-center"><Annoyed className="mr-2 h-5 w-5 text-primary"/>Current Marquee Items</CardTitle>
           <CardDescription>List of messages currently displayed in the app's marquee.</CardDescription>
         </CardHeader>
         <CardContent>
-          {marqueeItems.length === 0 ? (
-            <p className="text-muted-foreground">No marquee items configured.</p>
+          {loading && marqueeItems.length === 0 ? (
+            <div className="space-y-2">
+              {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-md" />)}
+            </div>
+          ) : marqueeItems.length === 0 ? (
+            <p className="text-muted-foreground">No marquee items found in Firestore.</p>
           ) : (
             <ul className="space-y-2">
-              {marqueeItems.map((item, index) => (
-                <li key={index} className="flex justify-between items-center p-2 border rounded-md bg-muted/50">
-                  <span className="text-sm">{item.text}</span>
-                  {/* Placeholder for future edit/delete actions when using Firestore 
-                  <div className="space-x-2">
-                    <Button variant="ghost" size="icon" onClick={() => alert('Edit: Firestore needed')} disabled>
+              {marqueeItems.map((item) => (
+                <li key={item.id} className="flex justify-between items-center p-3 border rounded-lg bg-muted/50 hover:bg-muted/70 transition-colors">
+                  <span className="text-sm flex-grow mr-2">{item.text}</span>
+                  <div className="space-x-2 flex-shrink-0">
+                    <Button variant="outline" size="icon" onClick={() => handleEditItem(item)} className="h-8 w-8">
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => alert('Delete: Firestore needed')} disabled>
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                    <Button variant="destructive" size="icon" onClick={() => handleDeleteItem(item.id)} className="h-8 w-8">
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                  */}
                 </li>
               ))}
             </ul>
@@ -178,32 +176,37 @@ export default function AdminMarqueePage() {
 
       <Card className="shadow-md rounded-xl border-border">
         <CardHeader>
-          <CardTitle className="flex items-center"><PlusCircle className="mr-2 h-5 w-5 text-primary"/>Add New Marquee Item (Placeholder)</CardTitle>
-          <CardDescription>This form is a placeholder. Functionality requires Firestore integration.</CardDescription>
+          <CardTitle className="flex items-center">
+            <PlusCircle className="mr-2 h-5 w-5 text-primary"/>
+            {editingItem ? 'Edit Marquee Item' : 'Add New Marquee Item'}
+          </CardTitle>
+          <CardDescription>
+            {editingItem ? `Editing item ID: ${editingItem.id}` : 'Create a new message for the marquee.'}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div>
-            <Label htmlFor="newItemText">New Item Text</Label>
+            <Label htmlFor="itemText">Item Text</Label>
             <Input 
-              id="newItemText" 
+              id="itemText" 
               value={newItemText} 
               onChange={(e) => setNewItemText(e.target.value)}
-              placeholder="Enter new marquee message"
+              placeholder="Enter marquee message"
             />
           </div>
         </CardContent>
-        <CardFooter>
-          <Button onClick={handleAddItem} disabled={loading}>
-            {/* {editingItem ? 'Update Item' : 'Add Item'} */}
-            Add Item (Simulated)
+        <CardFooter className="gap-2">
+          <Button onClick={editingItem ? handleUpdateItem : handleAddItem} disabled={loading || !newItemText.trim()}>
+            {editingItem ? 'Update Item' : 'Add Item'}
           </Button>
-          {/* {editingItem && (
-            <Button variant="outline" onClick={() => { setEditingItem(null); setNewItemText(''); }} className="ml-2">
+          {editingItem && (
+            <Button variant="outline" onClick={() => { setEditingItem(null); setNewItemText(''); }} disabled={loading}>
               Cancel Edit
             </Button>
-          )} */}
+          )}
         </CardFooter>
       </Card>
     </div>
   );
 }
+

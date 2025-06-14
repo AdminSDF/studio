@@ -30,6 +30,7 @@ interface AppStateContextType {
   loadingAchievements: boolean;
   loadingQuests: boolean;
   loadingFaqs: boolean;
+  loadingMarquee: boolean; // Added
   setUserDataState: (data: UserData | null) => void;
   fetchUserData: () => Promise<void>;
   updateUserFirestoreData: (data: Partial<UserData>) => Promise<void>;
@@ -43,6 +44,7 @@ interface AppStateContextType {
   pageHistory: string[];
   addPageVisit: (page: string) => void;
   fetchLeaderboardData: () => Promise<void>;
+  fetchMarqueeItems: () => Promise<void>; // Added
   checkAndAwardAchievements: () => Promise<void>;
   purchaseTheme: (themeId: string) => Promise<boolean>;
   setActiveThemeState: (themeId: string) => void;
@@ -68,8 +70,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const { user, firebaseUser, loading: authLoading } = useAuth();
   const [userData, setUserDataState] = useState<UserData | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  // Initialize marqueeItems directly from CONFIG
-  const [marqueeItems, setMarqueeItems] = useState<MarqueeItem[]>(CONFIG.DEFAULT_MARQUEE_ITEMS.map(text => ({ text })));
+  const [marqueeItems, setMarqueeItems] = useState<MarqueeItem[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [achievements] = useState<Achievement[]>(CONFIG.ACHIEVEMENTS);
   const [userQuests, setUserQuests] = useState<UserQuest[]>([]);
@@ -79,6 +80,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [loadingAchievements, setLoadingAchievements] = useState(false);
   const [loadingQuests, setLoadingQuests] = useState(false);
   const [loadingFaqs, setLoadingFaqs] = useState(true);
+  const [loadingMarquee, setLoadingMarquee] = useState(true); // Added
   const [isOnline, setIsOnline] = useState(true);
   const [pageHistory, setPageHistory] = useState<string[]>([]);
   const [currentPersonalizedTip, setCurrentPersonalizedTip] = useState<string | null>(null);
@@ -377,6 +379,34 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [toast]);
 
+  const fetchMarqueeItems = useCallback(async () => {
+    setLoadingMarquee(true);
+    try {
+      const marqueeCollectionRef = collection(db, 'marquee_items');
+      const q = query(marqueeCollectionRef, orderBy('createdAt', 'asc'));
+      const querySnapshot = await getDocs(q);
+      let fetchedItems = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as MarqueeItem));
+
+      if (fetchedItems.length === 0 && CONFIG.DEFAULT_MARQUEE_ITEMS.length > 0) {
+        const batch = writeBatch(db);
+        CONFIG.DEFAULT_MARQUEE_ITEMS.forEach(itemText => {
+          const newItemRef = doc(collection(db, 'marquee_items'));
+          batch.set(newItemRef, { text: itemText.text, createdAt: serverTimestamp() });
+        });
+        await batch.commit();
+        const populatedSnapshot = await getDocs(q);
+        fetchedItems = populatedSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as MarqueeItem));
+      }
+      setMarqueeItems(fetchedItems);
+    } catch (error: any) {
+      console.error("Error fetching marquee items:", error);
+      toast({ title: "Marquee Error", description: `Could not load marquee items: ${error.message}`, variant: "destructive" });
+      setMarqueeItems(CONFIG.DEFAULT_MARQUEE_ITEMS.map(text => ({ text }))); // Fallback
+    } finally {
+      setLoadingMarquee(false);
+    }
+  }, [toast]);
+
   const refreshUserQuests = useCallback(async () => {
     if (!user) return;
     setLoadingQuests(true);
@@ -437,7 +467,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     if (user && !authLoading) {
       fetchUserData(); 
       fetchTransactions();
-      // fetchMarqueeItems removed
+      fetchMarqueeItems(); // Fetch from Firestore
       fetchLeaderboardData();
       fetchFaqs(); 
       refreshUserQuests(); 
@@ -478,6 +508,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         toast({ title: "Database Error: Transactions", description, variant: "destructive", duration: 7000 });
       });
 
+      const marqueeCollectionRef = collection(db, 'marquee_items');
+      const qMarquee = query(marqueeCollectionRef, orderBy('createdAt', 'asc'));
+      const unsubscribeMarquee = onSnapshot(qMarquee, (querySnapshot) => {
+        const items = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as MarqueeItem));
+        setMarqueeItems(items.length > 0 ? items : CONFIG.DEFAULT_MARQUEE_ITEMS.map(text => ({ text }))); // Fallback if empty
+      }, (error: FirestoreError) => {
+        console.error("Error in MARQUEE snapshot listener:", error.code, error.message);
+        toast({ title: "Database Error: Marquee", description: `Could not sync marquee messages. (${error.code})`, variant: "destructive" });
+        setMarqueeItems(CONFIG.DEFAULT_MARQUEE_ITEMS.map(text => ({ text }))); // Fallback on error
+      });
+
       const userQuestsRef = doc(db, 'user_quests', user.id);
       const unsubscribeUserQuests = onSnapshot(userQuestsRef, async (docSnap) => {
         if (docSnap.exists()) {
@@ -510,12 +551,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       return () => {
         unsubscribeUser();
         unsubscribeTransactions();
+        unsubscribeMarquee(); // Unsubscribe marquee listener
         unsubscribeUserQuests();
       };
 
     } else if (!user && !authLoading) {
       setUserDataState(null);
       setTransactions([]);
+      setMarqueeItems(CONFIG.DEFAULT_MARQUEE_ITEMS.map(text => ({ text }))); // Fallback
       setLeaderboard([]);
       setUserQuests([]);
       setFaqs([]);
@@ -523,8 +566,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setLoadingLeaderboard(false);
       setLoadingQuests(false);
       setLoadingFaqs(false);
+      setLoadingMarquee(false); // Set loading to false
     }
-  }, [user, authLoading, fetchUserData, fetchTransactions, fetchLeaderboardData, processFirestoreData, toast, fetchFaqs, refreshUserQuests]);
+  }, [user, authLoading, fetchUserData, fetchTransactions, fetchLeaderboardData, processFirestoreData, toast, fetchFaqs, refreshUserQuests, fetchMarqueeItems]);
 
   const checkAndAwardAchievements = useCallback(async () => {
     if (!userData || !user) return;
@@ -1285,11 +1329,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   return (
     <AppStateContext.Provider value={{
       userData, transactions, marqueeItems, leaderboard, achievements, userQuests, faqs,
-      loadingUserData, loadingLeaderboard, loadingAchievements, loadingQuests, loadingFaqs,
+      loadingUserData, loadingLeaderboard, loadingAchievements, loadingQuests, loadingFaqs, loadingMarquee,
       setUserDataState, fetchUserData, updateUserFirestoreData, addTransaction,
       updateEnergy, purchaseBooster, claimDailyBonus, submitRedeemRequest,
       resetUserProgress, isOnline, pageHistory, addPageVisit,
-      fetchLeaderboardData, checkAndAwardAchievements, purchaseTheme, setActiveThemeState,
+      fetchLeaderboardData, fetchMarqueeItems, checkAndAwardAchievements, purchaseTheme, setActiveThemeState,
       uploadProfilePicture, transferToUser,
       refreshUserQuests, claimQuestReward, updateQuestProgress,
       submitSupportTicket, fetchFaqs,
