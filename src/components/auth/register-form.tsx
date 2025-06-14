@@ -87,14 +87,18 @@ export function RegisterForm() {
         boostLevels: {},
         lastLoginBonusClaimed: null,
         referredBy: referredByUID,
-        createdAt: Timestamp.fromDate(new Date(firebaseUser.metadata.creationTime || now)),
+        createdAt: Timestamp.fromDate(new Date(firebaseUser.metadata.creationTime || now.toISOString())),
         name: name,
         email: email,
         photoURL: null,
+        photoStoragePath: null, // Added
         completedAchievements: {},
         referralsMadeCount: 0,
         activeTheme: CONFIG.APP_THEMES[0].id,
         unlockedThemes: [CONFIG.APP_THEMES[0].id],
+        frenzyEndTime: null, // Added
+        frenzyMultiplier: null, // Added
+        energySurgeEndTime: null, // Added
       };
 
       await setDoc(doc(db, 'users', firebaseUser.uid), newUserDoc);
