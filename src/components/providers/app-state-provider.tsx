@@ -698,6 +698,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     for (const quest of userQuests) {
       if (quest.completed) continue;
 
+      if (!quest.definition || !quest.definition.criteria) {
+        console.warn(`Quest ${quest.id} (name: ${quest.definition?.name || 'N/A'}) is missing definition or criteria. Skipping quest check.`);
+        continue;
+      }
+
       let progressMadeThisCheck = 0;
       let criteriaMetNow = false;
 
