@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MessageCircleQuestion, AlertTriangle, RefreshCw, Eye, Edit } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, orderBy, Timestamp, type DocumentData, doc, updateDoc, serverTimestamp } from 'firebase/firestore'; // Added serverTimestamp
+import { collection, getDocs, query, orderBy, Timestamp, type DocumentData, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import type { SupportTicket } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -82,7 +82,7 @@ export default function AdminSupportTicketsPage() {
       const ticketRef = doc(db, 'support_tickets', ticketId);
       await updateDoc(ticketRef, { 
         status: newStatus, 
-        updatedAt: serverTimestamp() // Include serverTimestamp here
+        updatedAt: serverTimestamp()
       }); 
       toast({ title: 'Status Updated', description: `Ticket ${ticketId} status updated to ${newStatus}.` });
       fetchSupportTickets(); 
@@ -95,8 +95,6 @@ export default function AdminSupportTicketsPage() {
   };
   
   const viewTicketDetails = (ticket: SupportTicketForAdmin) => {
-    // For a real app, this would open a modal or a new page with more details and response options.
-    // For now, using alert as a placeholder.
     let message = `Ticket ID: ${ticket.id}\n`;
     message += `User: ${ticket.userName} (${ticket.userEmail})\n`;
     message += `Category: ${ticket.category}\n`;
@@ -105,7 +103,7 @@ export default function AdminSupportTicketsPage() {
     message += `Updated: ${ticket.updatedAt ? ticket.updatedAt.toLocaleString() : 'N/A'}\n`;
     message += `Description:\n${ticket.description}\n\n`;
     message += `Admin Response: ${ticket.adminResponse || 'No response yet.'}\n\n`;
-    message += `PROMPT: Ask for new status or admin response.`;
+    message += `PROMPT: Enter new status (open, pending, resolved, closed) or admin response.`;
     
     const newStatusOrResponse = prompt(message, ticket.status);
 
@@ -113,7 +111,6 @@ export default function AdminSupportTicketsPage() {
       if (['open', 'pending', 'resolved', 'closed'].includes(newStatusOrResponse)) {
         handleUpdateStatus(ticket.id, newStatusOrResponse as SupportTicket['status']);
       } else {
-        // Assuming it's an admin response text
         const ticketRef = doc(db, 'support_tickets', ticket.id);
         updateDoc(ticketRef, {
           adminResponse: newStatusOrResponse,
@@ -191,7 +188,9 @@ export default function AdminSupportTicketsPage() {
                       </TableCell>
                       <TableCell className="capitalize">{ticket.category}</TableCell>
                       <TableCell>
-                        <Badge variant={getStatusVariant(ticket.status)} className="text-xs capitalize">{ticket.status}</Badge>
+                        <Badge variant={getStatusVariant(ticket.status)} className="text-xs capitalize">
+                          {ticket.status === 'open' ? 'Closed' : ticket.status}
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-xs max-w-sm truncate" title={ticket.description}>
                         {ticket.description}
