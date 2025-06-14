@@ -1,5 +1,4 @@
 
-
 import type { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
 
@@ -38,11 +37,11 @@ export interface UserData {
   currentEnergy: number;
   maxEnergy: number;
   tapPower: number;
-  lastEnergyUpdate: Date | null;
+  lastEnergyUpdate: Date | Timestamp | null; // Allow Timestamp for Firestore direct data
   boostLevels: Record<string, number>;
-  lastLoginBonusClaimed: Date | null;
+  lastLoginBonusClaimed: Date | Timestamp | null; // Allow Timestamp
   referredBy: string | null;
-  createdAt: Date | null;
+  createdAt: Date | Timestamp | null; // Allow Timestamp
   name?: string;
   email?: string;
   photoURL?: string | null;
@@ -229,3 +228,14 @@ export type Booster = {
   value: number;
   maxLevel: number;
 };
+
+export interface AdminActionLog {
+  id?: string;
+  adminId: string;
+  adminEmail: string | null;
+  actionType: 'REDEEM_REQUEST_APPROVED' | 'REDEEM_REQUEST_REJECTED' | 'SUPPORT_TICKET_STATUS_CHANGED' | 'SUPPORT_TICKET_RESPONDED' | 'USER_DATA_UPDATED' | string;
+  targetType: 'USER' | 'TRANSACTION' | 'SUPPORT_TICKET' | string;
+  targetId: string;
+  timestamp: Date | Timestamp;
+  details?: Record<string, any> | string;
+}

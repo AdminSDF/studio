@@ -8,11 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Gift, AlertTriangle, RefreshCw, CheckCircle, XCircle, UserCircle } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, orderBy, Timestamp, type DocumentData, doc, updateDoc, runTransaction, increment, serverTimestamp } from 'firebase/firestore'; // Added serverTimestamp
+import { collection, getDocs, query, where, orderBy, Timestamp, type DocumentData, doc, updateDoc, runTransaction, increment, serverTimestamp, addDoc } from 'firebase/firestore';
 import { formatNumber } from '@/lib/utils';
-import type { Transaction, PaymentDetails } from '@/types';
+import type { Transaction, PaymentDetails, AdminActionLog } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/components/providers/auth-provider';
 
 interface RedeemRequestForAdmin extends Omit<Transaction, 'date'> {
   date: Date | null;
@@ -20,6 +21,7 @@ interface RedeemRequestForAdmin extends Omit<Transaction, 'date'> {
 }
 
 export default function AdminRedeemRequestsPage() {
+  const { user: adminUser } = useAuth();
   const [requests, setRequests] = useState<RedeemRequestForAdmin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,10 +70,36 @@ export default function AdminRedeemRequestsPage() {
     fetchRedeemRequests();
   }, [fetchRedeemRequests]);
 
-  const handleUpdateRequestStatus = async (requestId: string, newStatus: 'completed' | 'failed', userId: string, amount: number) => {
+  const logAdminAction = async (actionType: AdminActionLog['actionType'], targetId: string, details: object) => {
+    if (!adminUser) return;
+    try {
+      await addDoc(collection(db, 'admin_actions'), {
+        adminId: adminUser.id,
+        adminEmail: adminUser.email,
+        actionType,
+        targetType: 'REDEEM_REQUEST',
+        targetId,
+        timestamp: serverTimestamp(),
+        details,
+      });
+    } catch (logError) {
+      console.error("Failed to log admin action:", logError);
+    }
+  };
+
+  const handleUpdateRequestStatus = async (requestId: string, newStatus: 'completed' | 'failed', userId: string, amount: number, currentRequest: RedeemRequestForAdmin) => {
     setUpdatingRequestId(requestId);
     try {
       const transactionRef = doc(db, 'transactions', requestId);
+      const actionDetails = {
+        oldStatus: currentRequest.status,
+        newStatus,
+        amount: currentRequest.amount,
+        inrAmount: currentRequest.inrAmount,
+        paymentMethod: currentRequest.paymentMethod,
+        userId: currentRequest.userId,
+        userName: currentRequest.userName,
+      };
       
       if (newStatus === 'failed') {
         const userRef = doc(db, 'users', userId);
@@ -82,16 +110,18 @@ export default function AdminRedeemRequestsPage() {
           firestoreTransaction.update(userRef, { balance: increment(amount) });
           firestoreTransaction.update(transactionRef, { 
             status: newStatus, 
-            updatedAt: serverTimestamp() // Include serverTimestamp here
+            updatedAt: serverTimestamp()
           }); 
         });
         toast({ title: 'Request Rejected', description: `Request ${requestId} marked as failed and ${formatNumber(amount)} SDF refunded to user.`, variant: 'default' });
+        await logAdminAction('REDEEM_REQUEST_REJECTED', requestId, actionDetails);
       } else {
         await updateDoc(transactionRef, { 
           status: newStatus, 
-          updatedAt: serverTimestamp() // Include serverTimestamp here
+          updatedAt: serverTimestamp()
         }); 
         toast({ title: 'Request Approved', description: `Request ${requestId} marked as completed.`, variant: 'default' });
+        await logAdminAction('REDEEM_REQUEST_APPROVED', requestId, actionDetails);
       }
       fetchRedeemRequests(); 
     } catch (err: any) {
@@ -195,7 +225,7 @@ export default function AdminRedeemRequestsPage() {
                           variant="default" 
                           size="sm" 
                           className="bg-success hover:bg-success/90 text-success-foreground"
-                          onClick={() => handleUpdateRequestStatus(req.id, 'completed', req.userId, req.amount)}
+                          onClick={() => handleUpdateRequestStatus(req.id, 'completed', req.userId, req.amount, req)}
                           disabled={updatingRequestId === req.id}
                         >
                           <CheckCircle className="mr-1.5 h-4 w-4" /> Approve
@@ -203,7 +233,7 @@ export default function AdminRedeemRequestsPage() {
                         <Button 
                           variant="destructive" 
                           size="sm"
-                          onClick={() => handleUpdateRequestStatus(req.id, 'failed', req.userId, req.amount)}
+                          onClick={() => handleUpdateRequestStatus(req.id, 'failed', req.userId, req.amount, req)}
                           disabled={updatingRequestId === req.id}
                         >
                           <XCircle className="mr-1.5 h-4 w-4" /> Reject
@@ -220,4 +250,3 @@ export default function AdminRedeemRequestsPage() {
     </div>
   );
 }
-

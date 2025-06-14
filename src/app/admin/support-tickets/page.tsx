@@ -8,10 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MessageCircleQuestion, AlertTriangle, RefreshCw, Eye, Edit } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, orderBy, Timestamp, type DocumentData, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import type { SupportTicket } from '@/types';
+import { collection, getDocs, query, orderBy, Timestamp, type DocumentData, doc, updateDoc, serverTimestamp, addDoc } from 'firebase/firestore';
+import type { SupportTicket, AdminActionLog } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/components/providers/auth-provider';
 
 interface SupportTicketForAdmin extends Omit<SupportTicket, 'createdAt' | 'updatedAt'> {
   createdAt: Date | null;
@@ -33,6 +34,7 @@ const getStatusVariant = (status: string): "default" | "secondary" | "destructiv
 };
 
 export default function AdminSupportTicketsPage() {
+  const { user: adminUser } = useAuth();
   const [tickets, setTickets] = useState<SupportTicketForAdmin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +78,24 @@ export default function AdminSupportTicketsPage() {
     fetchSupportTickets();
   }, [fetchSupportTickets]);
 
-  const handleUpdateStatus = async (ticketId: string, newStatus: SupportTicket['status']) => {
+  const logAdminAction = async (actionType: AdminActionLog['actionType'], targetId: string, details: object) => {
+    if (!adminUser) return;
+    try {
+      await addDoc(collection(db, 'admin_actions'), {
+        adminId: adminUser.id,
+        adminEmail: adminUser.email,
+        actionType,
+        targetType: 'SUPPORT_TICKET',
+        targetId,
+        timestamp: serverTimestamp(),
+        details,
+      });
+    } catch (logError) {
+      console.error("Failed to log admin action:", logError);
+    }
+  };
+
+  const handleUpdateStatus = async (ticketId: string, newStatus: SupportTicket['status'], oldStatus?: SupportTicket['status']) => {
     setUpdatingTicketId(ticketId);
     try {
       const ticketRef = doc(db, 'support_tickets', ticketId);
@@ -85,6 +104,7 @@ export default function AdminSupportTicketsPage() {
         updatedAt: serverTimestamp()
       }); 
       toast({ title: 'Status Updated', description: `Ticket ${ticketId} status updated to ${newStatus}.` });
+      await logAdminAction('SUPPORT_TICKET_STATUS_CHANGED', ticketId, { oldStatus: oldStatus || 'unknown', newStatus });
       fetchSupportTickets(); 
     } catch (err: any) {
       console.error(`Error updating status for ticket ${ticketId}:`, err);
@@ -102,21 +122,23 @@ export default function AdminSupportTicketsPage() {
     message += `Created: ${ticket.createdAt ? ticket.createdAt.toLocaleString() : 'N/A'}\n`;
     message += `Updated: ${ticket.updatedAt ? ticket.updatedAt.toLocaleString() : 'N/A'}\n`;
     message += `Description:\n${ticket.description}\n\n`;
-    message += `Admin Response: ${ticket.adminResponse || 'No response yet.'}\n\n`;
-    message += `PROMPT: Enter new status (open, pending, resolved, closed) or admin response.`;
+    message += `Current Admin Response: ${ticket.adminResponse || 'No response yet.'}\n\n`;
+    message += `PROMPT: Enter new status (open, pending, resolved, closed) OR enter a new admin response text.`;
     
     const newStatusOrResponse = prompt(message, ticket.status);
 
     if (newStatusOrResponse) {
       if (['open', 'pending', 'resolved', 'closed'].includes(newStatusOrResponse)) {
-        handleUpdateStatus(ticket.id, newStatusOrResponse as SupportTicket['status']);
+        handleUpdateStatus(ticket.id, newStatusOrResponse as SupportTicket['status'], ticket.status);
       } else {
+        // Assume it's an admin response
         const ticketRef = doc(db, 'support_tickets', ticket.id);
         updateDoc(ticketRef, {
           adminResponse: newStatusOrResponse,
           updatedAt: serverTimestamp()
-        }).then(() => {
+        }).then(async () => {
           toast({title: "Response Added", description: "Admin response saved."});
+          await logAdminAction('SUPPORT_TICKET_RESPONDED', ticket.id, { response: newStatusOrResponse });
           fetchSupportTickets();
         }).catch(err => {
           toast({title: "Error", description: `Failed to save response: ${err.message}`, variant: "destructive"});
@@ -211,4 +233,3 @@ export default function AdminSupportTicketsPage() {
     </div>
   );
 }
-

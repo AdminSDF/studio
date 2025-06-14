@@ -2,7 +2,7 @@
 'use client';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ShieldCheck, LayoutDashboard, Users, ListChecks, LogOut, Settings2, Annoyed, Gift, MessageCircleQuestion } from 'lucide-react'; // Corrected icon
+import { ShieldCheck, LayoutDashboard, Users, ListChecks, LogOut, Settings2, Annoyed, Gift, MessageCircleQuestion, ScrollText } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -134,7 +134,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <AdminNavLink href="/admin/redeem-requests" icon={Gift} onClick={() => setSidebarOpen(false)}>Redeem Requests</AdminNavLink>
             <AdminNavLink href="/admin/support-tickets" icon={MessageCircleQuestion} onClick={() => setSidebarOpen(false)}>Support Tickets</AdminNavLink>
             <AdminNavLink href="/admin/marquee" icon={Annoyed} onClick={() => setSidebarOpen(false)}>Marquee Msgs</AdminNavLink>
-            {/* Add more admin links here */}
+            <AdminNavLink href="/admin/action-logs" icon={ScrollText} onClick={() => setSidebarOpen(false)}>Action Logs</AdminNavLink>
           </nav>
         </aside>
 

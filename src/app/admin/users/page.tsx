@@ -6,12 +6,12 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, AlertTriangle, RefreshCw, ListChecks } from 'lucide-react'; // Changed Eye to ListChecks
+import { Users, AlertTriangle, RefreshCw, Eye } from 'lucide-react'; // Changed ListChecks to Eye
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, orderBy, Timestamp, type DocumentData } from 'firebase/firestore';
 import { formatNumber } from '@/lib/utils';
 import type { UserData } from '@/types';
-import Link from 'next/link'; // Added Link import
+import Link from 'next/link';
 
 interface UserForAdminDisplay extends Omit<Partial<UserData>, 'createdAt' | 'lastLoginBonusClaimed' | 'lastEnergyUpdate' | 'frenzyEndTime' | 'energySurgeEndTime'> {
   id: string; // UID
@@ -146,8 +146,8 @@ export default function AdminUsersPage() {
                       <TableCell>{user.createdAt ? user.createdAt.toLocaleDateString() : 'N/A'}</TableCell>
                       <TableCell className="text-center">
                         <Button asChild variant="outline" size="sm">
-                          <Link href={`/admin/users/${user.id}/transactions`}>
-                            <ListChecks className="mr-1.5 h-4 w-4" /> Transactions
+                          <Link href={`/admin/users/${user.id}`}>
+                            <Eye className="mr-1.5 h-4 w-4" /> View Details
                           </Link>
                         </Button>
                       </TableCell>
