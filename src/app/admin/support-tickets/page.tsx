@@ -80,7 +80,10 @@ export default function AdminSupportTicketsPage() {
     setUpdatingTicketId(ticketId);
     try {
       const ticketRef = doc(db, 'support_tickets', ticketId);
-      await updateDoc(ticketRef, { status: newStatus, updatedAt: serverTimestamp() }); // Use serverTimestamp
+      await updateDoc(ticketRef, { 
+        status: newStatus, 
+        updatedAt: serverTimestamp() // Include serverTimestamp here
+      }); 
       toast({ title: 'Status Updated', description: `Ticket ${ticketId} status updated to ${newStatus}.` });
       fetchSupportTickets(); 
     } catch (err: any) {
@@ -92,7 +95,37 @@ export default function AdminSupportTicketsPage() {
   };
   
   const viewTicketDetails = (ticket: SupportTicketForAdmin) => {
-    alert(`View details for Ticket ID: ${ticket.id}\nUser: ${ticket.userName}\nCategory: ${ticket.category}\nDescription: ${ticket.description}\nStatus: ${ticket.status}\nResponse functionality to be implemented.`);
+    // For a real app, this would open a modal or a new page with more details and response options.
+    // For now, using alert as a placeholder.
+    let message = `Ticket ID: ${ticket.id}\n`;
+    message += `User: ${ticket.userName} (${ticket.userEmail})\n`;
+    message += `Category: ${ticket.category}\n`;
+    message += `Status: ${ticket.status}\n`;
+    message += `Created: ${ticket.createdAt ? ticket.createdAt.toLocaleString() : 'N/A'}\n`;
+    message += `Updated: ${ticket.updatedAt ? ticket.updatedAt.toLocaleString() : 'N/A'}\n`;
+    message += `Description:\n${ticket.description}\n\n`;
+    message += `Admin Response: ${ticket.adminResponse || 'No response yet.'}\n\n`;
+    message += `PROMPT: Ask for new status or admin response.`;
+    
+    const newStatusOrResponse = prompt(message, ticket.status);
+
+    if (newStatusOrResponse) {
+      if (['open', 'pending', 'resolved', 'closed'].includes(newStatusOrResponse)) {
+        handleUpdateStatus(ticket.id, newStatusOrResponse as SupportTicket['status']);
+      } else {
+        // Assuming it's an admin response text
+        const ticketRef = doc(db, 'support_tickets', ticket.id);
+        updateDoc(ticketRef, {
+          adminResponse: newStatusOrResponse,
+          updatedAt: serverTimestamp()
+        }).then(() => {
+          toast({title: "Response Added", description: "Admin response saved."});
+          fetchSupportTickets();
+        }).catch(err => {
+          toast({title: "Error", description: `Failed to save response: ${err.message}`, variant: "destructive"});
+        });
+      }
+    }
   };
 
 
@@ -164,24 +197,8 @@ export default function AdminSupportTicketsPage() {
                         {ticket.description}
                       </TableCell>
                       <TableCell className="text-center space-x-1">
-                        <Button variant="outline" size="sm" onClick={() => viewTicketDetails(ticket)}>
-                          <Eye className="mr-1 h-3 w-3" /> Details
-                        </Button>
-                        <Button 
-                            variant="secondary" 
-                            size="sm" 
-                            onClick={() => {
-                                const newStatus = prompt(`Update status for ${ticket.id} (current: ${ticket.status}). Enter new status (open, pending, resolved, closed):`, ticket.status) as SupportTicket['status'] | null;
-                                if (newStatus && ['open', 'pending', 'resolved', 'closed'].includes(newStatus)) {
-                                    handleUpdateStatus(ticket.id, newStatus);
-                                } else if (newStatus !== null) {
-                                    toast({title: "Invalid Status", description: "Please enter a valid status.", variant: "destructive"});
-                                }
-                            }}
-                            disabled={updatingTicketId === ticket.id}
-                            className="text-xs"
-                        >
-                          <Edit className="mr-1 h-3 w-3" /> Status
+                        <Button variant="outline" size="sm" onClick={() => viewTicketDetails(ticket)} disabled={updatingTicketId === ticket.id}>
+                          <Eye className="mr-1 h-3 w-3" /> View/Respond
                         </Button>
                       </TableCell>
                     </TableRow>

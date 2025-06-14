@@ -80,11 +80,17 @@ export default function AdminRedeemRequestsPage() {
           if (!userDoc.exists()) throw new Error("User document not found for refund.");
           
           firestoreTransaction.update(userRef, { balance: increment(amount) });
-          firestoreTransaction.update(transactionRef, { status: newStatus, updatedAt: serverTimestamp() }); // Use serverTimestamp
+          firestoreTransaction.update(transactionRef, { 
+            status: newStatus, 
+            updatedAt: serverTimestamp() // Include serverTimestamp here
+          }); 
         });
-        toast({ title: 'Request Rejected', description: `Request ${requestId} marked as failed and ${amount} SDF refunded to user.`, variant: 'default' });
+        toast({ title: 'Request Rejected', description: `Request ${requestId} marked as failed and ${formatNumber(amount)} SDF refunded to user.`, variant: 'default' });
       } else {
-        await updateDoc(transactionRef, { status: newStatus, updatedAt: serverTimestamp() }); // Use serverTimestamp
+        await updateDoc(transactionRef, { 
+          status: newStatus, 
+          updatedAt: serverTimestamp() // Include serverTimestamp here
+        }); 
         toast({ title: 'Request Approved', description: `Request ${requestId} marked as completed.`, variant: 'default' });
       }
       fetchRedeemRequests(); 
