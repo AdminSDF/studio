@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Gift, AlertTriangle, RefreshCw, CheckCircle, XCircle, UserCircle } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, orderBy, Timestamp, type DocumentData, doc, updateDoc, runTransaction, increment } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, Timestamp, type DocumentData, doc, updateDoc, runTransaction, increment, serverTimestamp } from 'firebase/firestore'; // Added serverTimestamp
 import { formatNumber } from '@/lib/utils';
 import type { Transaction, PaymentDetails } from '@/types';
 import { useToast } from '@/hooks/use-toast';
@@ -30,13 +30,12 @@ export default function AdminRedeemRequestsPage() {
     setLoading(true);
     setError(null);
     try {
-      // Firestore index needed: transactions collection, fields 'type' (ASC), 'status' (ASC), 'date' (ASC/DESC).
       const transactionsCollectionRef = collection(db, 'transactions');
       const q = query(
         transactionsCollectionRef, 
         where('type', '==', 'redeem'), 
         where('status', '==', 'pending'), 
-        orderBy('date', 'asc') // Process oldest first
+        orderBy('date', 'asc')
       );
       const querySnapshot = await getDocs(q);
       
@@ -75,22 +74,20 @@ export default function AdminRedeemRequestsPage() {
       const transactionRef = doc(db, 'transactions', requestId);
       
       if (newStatus === 'failed') {
-        // If failing, refund the amount to the user.
         const userRef = doc(db, 'users', userId);
         await runTransaction(db, async (firestoreTransaction) => {
           const userDoc = await firestoreTransaction.get(userRef);
           if (!userDoc.exists()) throw new Error("User document not found for refund.");
           
           firestoreTransaction.update(userRef, { balance: increment(amount) });
-          firestoreTransaction.update(transactionRef, { status: newStatus, updatedAt: Timestamp.now() });
+          firestoreTransaction.update(transactionRef, { status: newStatus, updatedAt: serverTimestamp() }); // Use serverTimestamp
         });
         toast({ title: 'Request Rejected', description: `Request ${requestId} marked as failed and ${amount} SDF refunded to user.`, variant: 'default' });
       } else {
-        // If completing, just update the transaction status.
-        await updateDoc(transactionRef, { status: newStatus, updatedAt: Timestamp.now() });
+        await updateDoc(transactionRef, { status: newStatus, updatedAt: serverTimestamp() }); // Use serverTimestamp
         toast({ title: 'Request Approved', description: `Request ${requestId} marked as completed.`, variant: 'default' });
       }
-      fetchRedeemRequests(); // Refresh list
+      fetchRedeemRequests(); 
     } catch (err: any) {
       console.error(`Error updating request ${requestId} to ${newStatus}:`, err);
       toast({ title: 'Update Failed', description: `Could not update request: ${err.message}`, variant: 'destructive' });
@@ -213,7 +210,6 @@ export default function AdminRedeemRequestsPage() {
             </div>
           )}
         </CardContent>
-        {/* Footer for future pagination */}
       </Card>
     </div>
   );

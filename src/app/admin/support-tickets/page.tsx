@@ -6,9 +6,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageCircleQuestion, AlertTriangle, RefreshCw, Eye, Edit } from 'lucide-react'; // Corrected Icon
+import { MessageCircleQuestion, AlertTriangle, RefreshCw, Eye, Edit } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, orderBy, Timestamp, type DocumentData, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, Timestamp, type DocumentData, doc, updateDoc, serverTimestamp } from 'firebase/firestore'; // Added serverTimestamp
 import type { SupportTicket } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -22,11 +22,11 @@ const getStatusVariant = (status: string): "default" | "secondary" | "destructiv
   switch (status) {
     case 'resolved':
     case 'closed':
-      return 'default'; // Greenish or primary
+      return 'default'; 
     case 'open':
-      return 'destructive'; // Reddish for open/urgent
+      return 'destructive'; 
     case 'pending':
-      return 'secondary'; // Yellowish
+      return 'secondary'; 
     default:
       return 'outline';
   }
@@ -43,8 +43,6 @@ export default function AdminSupportTicketsPage() {
     setLoading(true);
     setError(null);
     try {
-      // Firestore index needed: support_tickets collection, field 'createdAt' (descending).
-      // Consider composite index 'status' (ASC), 'createdAt' (DESC) for filtering by status.
       const ticketsCollectionRef = collection(db, 'support_tickets');
       const q = query(ticketsCollectionRef, orderBy('createdAt', 'desc'));
       const querySnapshot = await getDocs(q);
@@ -82,9 +80,9 @@ export default function AdminSupportTicketsPage() {
     setUpdatingTicketId(ticketId);
     try {
       const ticketRef = doc(db, 'support_tickets', ticketId);
-      await updateDoc(ticketRef, { status: newStatus, updatedAt: Timestamp.now() });
+      await updateDoc(ticketRef, { status: newStatus, updatedAt: serverTimestamp() }); // Use serverTimestamp
       toast({ title: 'Status Updated', description: `Ticket ${ticketId} status updated to ${newStatus}.` });
-      fetchSupportTickets(); // Refresh list
+      fetchSupportTickets(); 
     } catch (err: any) {
       console.error(`Error updating status for ticket ${ticketId}:`, err);
       toast({ title: 'Update Failed', description: `Could not update ticket status: ${err.message}`, variant: 'destructive' });
@@ -93,7 +91,6 @@ export default function AdminSupportTicketsPage() {
     }
   };
   
-  // Placeholder for viewing full details or responding
   const viewTicketDetails = (ticket: SupportTicketForAdmin) => {
     alert(`View details for Ticket ID: ${ticket.id}\nUser: ${ticket.userName}\nCategory: ${ticket.category}\nDescription: ${ticket.description}\nStatus: ${ticket.status}\nResponse functionality to be implemented.`);
   };
@@ -170,7 +167,6 @@ export default function AdminSupportTicketsPage() {
                         <Button variant="outline" size="sm" onClick={() => viewTicketDetails(ticket)}>
                           <Eye className="mr-1 h-3 w-3" /> Details
                         </Button>
-                         {/* Basic status update example - could be a dropdown or modal for more options */}
                         <Button 
                             variant="secondary" 
                             size="sm" 
@@ -195,7 +191,6 @@ export default function AdminSupportTicketsPage() {
             </div>
           )}
         </CardContent>
-        {/* Footer for future pagination */}
       </Card>
     </div>
   );
