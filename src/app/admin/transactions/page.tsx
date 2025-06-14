@@ -96,87 +96,87 @@ export default function AdminTransactionsPage() {
     return (
       <div className="space-y-6 p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">Manage Transactions</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Manage Transactions</h2>
           <Button onClick={fetchTransactions} variant="outline" size="sm" disabled={loading}>
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Retry
           </Button>
         </div>
         <Card className="border-destructive bg-destructive/10 rounded-xl shadow-md">
           <CardHeader>
-            <CardTitle className="flex items-center text-destructive"><AlertTriangle className="mr-2 h-5 w-5"/>Error</CardTitle>
+            <CardTitle className="flex items-center text-destructive text-lg sm:text-xl"><AlertTriangle className="mr-2 h-5 w-5"/>Error</CardTitle>
           </CardHeader>
-          <CardContent><p className="text-destructive">{error}</p></CardContent>
+          <CardContent><p className="text-destructive text-sm sm:text-base">{error}</p></CardContent>
         </Card>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight text-foreground">Transaction Management</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Transaction Management</h2>
         <Button onClick={fetchTransactions} variant="outline" size="sm" disabled={loading}>
-          <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+          <RefreshCw className={`mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
         </Button>
       </div>
       <Card className={cardStyle}>
-        <CardHeader>
-          <CardTitle className="flex items-center text-xl"><ListChecks className="mr-2 h-5 w-5 text-primary"/>All Transactions</CardTitle>
-          <CardDescription>View and manage application transactions.</CardDescription>
+        <CardHeader className="p-3 sm:p-4 md:p-6">
+          <CardTitle className="flex items-center text-lg sm:text-xl"><ListChecks className="mr-2 h-4.5 w-4.5 sm:h-5 sm:w-5 text-primary"/>All Transactions</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">View and manage application transactions.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 sm:p-0 md:p-0">
           {loading ? (
-            <div className="space-y-2">
-              {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-md" />)}
+            <div className="space-y-2 p-3 sm:p-4">
+              {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 sm:h-12 w-full rounded-md" />)}
             </div>
           ) : transactions.length === 0 ? (
-             <p className="text-muted-foreground text-center py-8">No transactions found.</p>
+             <p className="text-muted-foreground text-center py-6 sm:py-8 text-sm sm:text-base">No transactions found.</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs uppercase text-muted-foreground">Date</TableHead>
-                    <TableHead className="text-xs uppercase text-muted-foreground">User</TableHead>
-                    <TableHead className="text-xs uppercase text-muted-foreground">Type</TableHead>
-                    <TableHead className="text-right text-xs uppercase text-muted-foreground">Amount (SDF)</TableHead>
-                    <TableHead className="text-right text-xs uppercase text-muted-foreground">Amount (INR)</TableHead>
-                    <TableHead className="text-xs uppercase text-muted-foreground">Status</TableHead>
-                    <TableHead className="text-xs uppercase text-muted-foreground">Payment/Details</TableHead>
-                    <TableHead className="text-center text-xs uppercase text-muted-foreground">Actions</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3">Date</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3">User</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3">Type</TableHead>
+                    <TableHead className="text-right text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3">Amount (SDF)</TableHead>
+                    <TableHead className="text-right text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3 hidden md:table-cell">Amount (INR)</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3">Status</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3 hidden lg:table-cell">Payment/Details</TableHead>
+                    <TableHead className="text-center text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {transactions.map((txn) => (
                     <TableRow key={txn.id} className="hover:bg-muted/40">
-                      <TableCell className="text-sm">{txn.date ? txn.date.toLocaleDateString() : 'N/A'}</TableCell>
-                      <TableCell className="whitespace-nowrap text-sm">
-                        <div className="flex items-center gap-2">
-                           <UserCircle className="h-4 w-4 text-muted-foreground"/>
+                      <TableCell className="text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3">{txn.date ? txn.date.toLocaleDateString() : 'N/A'}</TableCell>
+                      <TableCell className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                           <UserCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground"/>
                            <div className="flex flex-col">
-                             <span className="font-medium truncate max-w-[100px]">{txn.userName || 'N/A'}</span>
-                             <span className="text-xs text-muted-foreground truncate max-w-[100px]">{txn.userId}</span>
+                             <span className="font-medium truncate max-w-[80px] sm:max-w-[100px]">{txn.userName || 'N/A'}</span>
+                             <span className="text-[10px] sm:text-xs text-muted-foreground truncate max-w-[80px] sm:max-w-[100px]">{txn.userId}</span>
                            </div>
                         </div>
                       </TableCell>
-                      <TableCell className="capitalize text-sm">{txn.type.replace(/_/g, ' ')}</TableCell>
-                      <TableCell className={cn("text-right font-medium text-sm", txn.amount < 0 ? "text-destructive" : "text-success")}>
+                      <TableCell className="capitalize text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3">{txn.type.replace(/_/g, ' ')}</TableCell>
+                      <TableCell className={cn("text-right font-medium text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3", txn.amount < 0 ? "text-destructive" : "text-success")}>
                         {txn.amount > 0 ? '+' : ''}{formatNumber(txn.amount, 2)}
                       </TableCell>
-                      <TableCell className="text-right text-sm">
+                      <TableCell className="text-right text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3 hidden md:table-cell">
                         {txn.type === 'redeem' ? `₹${formatNumber(txn.inrAmount || 0, 2)}` : 'N/A'}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusVariant(txn.status)} className={cn("text-xs capitalize", getStatusTextClass(txn.status))}>
+                      <TableCell className="px-2 sm:px-4 py-2 sm:py-3">
+                        <Badge variant={getStatusVariant(txn.status)} className={cn("text-[9px] sm:text-xs capitalize px-1.5 sm:px-2 py-0.5 sm:py-1", getStatusTextClass(txn.status))}>
                             {txn.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-xs max-w-[200px] truncate" title={txn.type === 'redeem' ? renderPaymentDetails(txn.paymentDetails, txn.paymentMethod) : txn.details || 'N/A'}>
+                      <TableCell className="text-[10px] sm:text-xs max-w-[150px] sm:max-w-[200px] truncate px-2 sm:px-4 py-2 sm:py-3 hidden lg:table-cell" title={txn.type === 'redeem' ? renderPaymentDetails(txn.paymentDetails, txn.paymentMethod) : txn.details || 'N/A'}>
                         {txn.type === 'redeem' ? renderPaymentDetails(txn.paymentDetails, txn.paymentMethod) : txn.details || 'N/A'}
                       </TableCell>
-                      <TableCell className="text-center">
-                        <Button variant="outline" size="sm" className="text-xs" onClick={() => alert(`View details for Txn ID: ${txn.id} - To be implemented`)}>
-                          <Eye className="mr-1.5 h-3.5 w-3.5" /> Details
+                      <TableCell className="text-center px-2 sm:px-4 py-2 sm:py-3">
+                        <Button variant="outline" size="sm" className="text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3" onClick={() => alert(`View details for Txn ID: ${txn.id} - To be implemented`)}>
+                          <Eye className="mr-1 h-3 w-3 sm:mr-1.5 sm:h-3.5 sm:w-3.5" /> Details
                         </Button>
                       </TableCell>
                     </TableRow>

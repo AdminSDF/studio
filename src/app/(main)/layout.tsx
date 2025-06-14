@@ -11,10 +11,10 @@ import { OfflineEarningsModal } from '@/components/shared/offline-earnings-modal
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAppState } from '@/components/providers/app-state-provider';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react'; // Added useState
+import { useEffect, useState } from 'react'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import { CONFIG } from '@/lib/constants';
-import { AdContainer } from '@/components/shared/ad-container'; // Added AdContainer import
+import { AdContainer } from '@/components/shared/ad-container'; 
 
 export default function MainAppLayout({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
@@ -28,7 +28,7 @@ export default function MainAppLayout({ children }: { children: ReactNode }) {
     addTransaction
   } = useAppState();
   const router = useRouter();
-  const [marqueeAdTrigger, setMarqueeAdTrigger] = useState(true); // State for marquee ad trigger
+  const [marqueeAdTrigger, setMarqueeAdTrigger] = useState(true); 
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -50,23 +50,23 @@ export default function MainAppLayout({ children }: { children: ReactNode }) {
       });
     }
     closeOfflineEarningsModal();
-    setMarqueeAdTrigger(prev => !prev); // Also trigger marquee ad refresh on claim
+    setMarqueeAdTrigger(prev => !prev); 
   };
 
 
   if (authLoading || (!userData && loadingUserData)) { 
      return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
-        <div className="w-full max-w-md space-y-4">
-          <Skeleton className="h-20 w-full rounded-lg" /> 
-          <Skeleton className="h-8 w-full rounded-md" /> 
-          <Skeleton className="h-10 w-full rounded-md" /> {/* Placeholder for marquee ad */}
-          <div className="flex-grow p-4 space-y-4"> 
-            <Skeleton className="h-32 w-full rounded-lg" />
-            <Skeleton className="h-40 w-full rounded-lg" />
-            <Skeleton className="h-20 w-full rounded-lg" />
+        <div className="w-full max-w-md space-y-3 sm:space-y-4">
+          <Skeleton className="h-16 sm:h-20 w-full rounded-lg" /> 
+          <Skeleton className="h-6 sm:h-8 w-full rounded-md" /> 
+          <Skeleton className="h-8 sm:h-10 w-full rounded-md" /> {/* Placeholder for marquee ad */}
+          <div className="flex-grow p-2 sm:p-4 space-y-3 sm:space-y-4"> 
+            <Skeleton className="h-28 sm:h-32 w-full rounded-lg" />
+            <Skeleton className="h-32 sm:h-40 w-full rounded-lg" />
+            <Skeleton className="h-16 sm:h-20 w-full rounded-lg" />
           </div>
-          <Skeleton className="h-16 w-full rounded-lg" /> 
+          <Skeleton className="h-14 sm:h-16 w-full rounded-lg" /> 
         </div>
       </div>
     );
@@ -82,7 +82,7 @@ export default function MainAppLayout({ children }: { children: ReactNode }) {
       <AppHeader />
       <MarqueeBar />
       {/* Ad Container below Marquee Bar */}
-      <div className="w-full my-2 -mx-4 md:-mx-6">
+      <div className="w-full my-1 sm:my-2">
         <AdContainer pageContext="layout_marquee" trigger={marqueeAdTrigger} />
       </div>
       <main className="flex-grow overflow-y-auto bg-background">
@@ -96,7 +96,6 @@ export default function MainAppLayout({ children }: { children: ReactNode }) {
         onClaim={handleClaimOfflineEarnings}
       />
       <AppNavbar />
-      {/* <AppFooter /> */}
     </div>
   );
 }

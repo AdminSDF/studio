@@ -73,87 +73,87 @@ export default function AdminActionLogsPage() {
     return (
       <div className="space-y-6 p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">Admin Action Logs</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Admin Action Logs</h2>
           <Button onClick={fetchActionLogs} variant="outline" size="sm" disabled={loading}>
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Retry
           </Button>
         </div>
         <Card className="border-destructive bg-destructive/10 rounded-xl shadow-md">
-          <CardHeader><CardTitle className="flex items-center text-destructive"><AlertTriangle className="mr-2 h-5 w-5"/>Error</CardTitle></CardHeader>
-          <CardContent><p className="text-destructive">{error}</p></CardContent>
+          <CardHeader><CardTitle className="flex items-center text-destructive text-lg sm:text-xl"><AlertTriangle className="mr-2 h-5 w-5"/>Error</CardTitle></CardHeader>
+          <CardContent><p className="text-destructive text-sm sm:text-base">{error}</p></CardContent>
         </Card>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight text-foreground">Admin Action Logs</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Admin Action Logs</h2>
         <Button onClick={fetchActionLogs} variant="outline" size="sm" disabled={loading}>
-          <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+          <RefreshCw className={`mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
         </Button>
       </div>
       <Card className={cardStyle}>
-        <CardHeader>
-          <CardTitle className="flex items-center text-xl"><ScrollText className="mr-2 h-5 w-5 text-primary"/>Activity Records</CardTitle>
-          <CardDescription>Chronological log of administrative actions performed.</CardDescription>
+        <CardHeader className="p-3 sm:p-4 md:p-6">
+          <CardTitle className="flex items-center text-lg sm:text-xl"><ScrollText className="mr-2 h-4.5 w-4.5 sm:h-5 sm:w-5 text-primary"/>Activity Records</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">Chronological log of administrative actions performed.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 sm:p-0 md:p-0">
           {loading ? (
-            <div className="space-y-2">
-              {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-md" />)}
+            <div className="space-y-2 p-3 sm:p-4">
+              {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 sm:h-12 w-full rounded-md" />)}
             </div>
           ) : logs.length === 0 ? (
-             <p className="text-muted-foreground text-center py-8">No admin actions logged yet.</p>
+             <p className="text-muted-foreground text-center py-6 sm:py-8 text-sm sm:text-base">No admin actions logged yet.</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs uppercase text-muted-foreground">Timestamp</TableHead>
-                    <TableHead className="text-xs uppercase text-muted-foreground">Admin</TableHead>
-                    <TableHead className="text-xs uppercase text-muted-foreground">Action Type</TableHead>
-                    <TableHead className="text-xs uppercase text-muted-foreground">Target Type</TableHead>
-                    <TableHead className="text-xs uppercase text-muted-foreground">Target ID</TableHead>
-                    <TableHead className="text-center text-xs uppercase text-muted-foreground">Details</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3">Timestamp</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3">Admin</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3">Action Type</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3 hidden md:table-cell">Target Type</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3 hidden md:table-cell">Target ID</TableHead>
+                    <TableHead className="text-center text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3">Details</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {logs.map((log) => (
                     <TableRow key={log.id} className="hover:bg-muted/40">
-                      <TableCell className="text-sm">{log.timestamp ? log.timestamp.toLocaleString() : 'N/A'}</TableCell>
-                      <TableCell className="text-xs">
-                        <div className="font-medium text-foreground">{log.adminEmail}</div>
-                        <div className="text-muted-foreground font-mono">{log.adminId}</div>
+                      <TableCell className="text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3">{log.timestamp ? log.timestamp.toLocaleString() : 'N/A'}</TableCell>
+                      <TableCell className="text-[10px] sm:text-xs px-2 sm:px-4 py-2 sm:py-3">
+                        <div className="font-medium text-foreground truncate max-w-[100px] sm:max-w-[150px]">{log.adminEmail}</div>
+                        <div className="text-muted-foreground font-mono truncate max-w-[100px] sm:max-w-[150px]">{log.adminId}</div>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="text-xs whitespace-nowrap capitalize">
+                      <TableCell className="px-2 sm:px-4 py-2 sm:py-3">
+                        <Badge variant="secondary" className="text-[9px] sm:text-xs whitespace-nowrap capitalize">
                             {log.actionType.replace(/_/g, ' ').toLowerCase()}
                         </Badge>
                       </TableCell>
-                      <TableCell className="capitalize text-sm">{log.targetType?.replace(/_/g, ' ').toLowerCase() || 'N/A'}</TableCell>
-                      <TableCell className="text-xs font-mono truncate max-w-[100px]">{log.targetId}</TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="capitalize text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3 hidden md:table-cell">{log.targetType?.replace(/_/g, ' ').toLowerCase() || 'N/A'}</TableCell>
+                      <TableCell className="text-[10px] sm:text-xs font-mono truncate max-w-[80px] sm:max-w-[100px] px-2 sm:px-4 py-2 sm:py-3 hidden md:table-cell">{log.targetId}</TableCell>
+                      <TableCell className="text-center px-2 sm:px-4 py-2 sm:py-3">
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="text-xs" onClick={() => setSelectedLog(log)}>View</Button>
+                            <Button variant="outline" size="sm" className="text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3" onClick={() => setSelectedLog(log)}>View</Button>
                           </DialogTrigger>
                           {selectedLog && selectedLog.id === log.id && (
-                            <DialogContent className="sm:max-w-md rounded-xl">
+                            <DialogContent className="sm:max-w-md rounded-xl p-4 sm:p-6">
                               <DialogHeader>
-                                <DialogTitle className="text-lg">Action Log Details</DialogTitle>
-                                <DialogDescription className="text-xs">
+                                <DialogTitle className="text-base sm:text-lg">Action Log Details</DialogTitle>
+                                <DialogDescription className="text-[10px] sm:text-xs">
                                   Log ID: {selectedLog.id}
                                 </DialogDescription>
                               </DialogHeader>
-                              <div className="py-2 text-sm space-y-1.5 max-h-[60vh] overflow-y-auto">
+                              <div className="py-2 text-xs sm:text-sm space-y-1 sm:space-y-1.5 max-h-[60vh] overflow-y-auto">
                                 <p><strong>Admin:</strong> {selectedLog.adminEmail} ({selectedLog.adminId})</p>
                                 <p><strong>Action:</strong> <span className="capitalize">{selectedLog.actionType.replace(/_/g, ' ').toLowerCase()}</span></p>
-                                <p><strong>Target:</strong> {selectedLog.targetType?.replace(/_/g, ' ').toLowerCase() || 'N/A'} - <span className="font-mono text-xs">{selectedLog.targetId}</span></p>
+                                <p><strong>Target:</strong> {selectedLog.targetType?.replace(/_/g, ' ').toLowerCase() || 'N/A'} - <span className="font-mono text-[10px] sm:text-xs">{selectedLog.targetId}</span></p>
                                 <p><strong>Timestamp:</strong> {selectedLog.timestamp?.toLocaleString()}</p>
                                 <strong>Details:</strong>
-                                <pre className="bg-muted p-3 rounded-md text-xs whitespace-pre-wrap border border-border/50">
+                                <pre className="bg-muted p-2 sm:p-3 rounded-md text-[10px] sm:text-xs whitespace-pre-wrap border border-border/50">
                                   {JSON.stringify(selectedLog.details, null, 2)}
                                 </pre>
                               </div>

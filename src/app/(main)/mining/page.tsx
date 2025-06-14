@@ -14,6 +14,7 @@ import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/components/providers/auth-provider';
 import { PersonalizedTipDisplay } from '@/components/shared/personalized-tip-display';
+import { cn } from '@/lib/utils';
 
 // Helper to show floating tap value
 function showFloatingTapValue(amount: number, coinElementId: string) {
@@ -21,7 +22,7 @@ function showFloatingTapValue(amount: number, coinElementId: string) {
   if (!coinContainer) return;
 
   const floatEl = document.createElement('div');
-  floatEl.className = 'floating-tap-value absolute top-1/2 left-1/2 pointer-events-none text-xl font-bold text-accent animate-floatUp z-10'; // Reduced text size
+  floatEl.className = 'floating-tap-value absolute top-1/2 left-1/2 pointer-events-none text-lg md:text-xl font-bold text-accent animate-floatUp z-10'; // Adjusted text size
   floatEl.textContent = `+${formatNumber(amount, 2)}`;
   coinContainer.appendChild(floatEl);
   setTimeout(() => {
@@ -177,16 +178,16 @@ export default function MiningPage() {
 
   if (!userData) {
     return (
-      <div className="p-3 md:p-4 space-y-4">
-        <Skeleton className="h-[100px] w-full max-w-xs mx-auto rounded-xl" /> 
-        <Skeleton className="h-48 w-48 mx-auto rounded-full" /> 
+      <div className="p-2 sm:p-3 md:p-4 space-y-3 sm:space-y-4">
+        <Skeleton className="h-[80px] sm:h-[100px] w-full max-w-xs mx-auto rounded-xl" /> 
+        <Skeleton className="h-36 w-36 sm:h-40 sm:w-40 md:h-48 md:w-48 mx-auto rounded-full" /> 
         <Skeleton className="h-4 w-1/2 mx-auto mt-1 rounded-md" /> 
-        <div className="grid grid-cols-2 gap-3 mt-3">
-          <Skeleton className="h-20 w-full rounded-xl" />
-          <Skeleton className="h-20 w-full rounded-xl" />
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-2 sm:mt-3">
+          <Skeleton className="h-16 sm:h-20 w-full rounded-xl" />
+          <Skeleton className="h-16 sm:h-20 w-full rounded-xl" />
         </div>
-        <Skeleton className="h-16 w-full rounded-xl" />
-        <Skeleton className="h-16 w-full rounded-xl" />
+        <Skeleton className="h-12 sm:h-16 w-full rounded-xl" />
+        <Skeleton className="h-12 sm:h-16 w-full rounded-xl" />
       </div>
     );
   }
@@ -195,140 +196,148 @@ export default function MiningPage() {
   const balanceInrValue = userData.balance * CONFIG.CONVERSION_RATE;
   const remainingToRedeem = Math.max(0, CONFIG.MIN_REDEEM - userData.balance);
 
-  const circleRadius = 90; // Reduced from 120
-  const circleStrokeWidth = 10; // Reduced from 12
-  const circleDiameter = (circleRadius + circleStrokeWidth) * 2;
-  const circumference = 2 * Math.PI * circleRadius;
-  const strokeDashoffset = circumference * (1 - energyPercent / 100);
+  const circleRadius = 70; // Base mobile size
+  const mdCircleRadius = 90; // Medium screen size
+  const circleStrokeWidth = 8; // Base mobile
+  const mdCircleStrokeWidth = 10; // Medium screen
+  
+  // Dynamic sizing for SVG container based on viewport (CSS handles actual SVG scaling for sharpness)
+  const svgContainerSizeClass = "w-[160px] h-[160px] md:w-[200px] md:h-[200px]";
+  const tapButtonSizeClass = "w-36 h-36 md:w-44 md:h-44";
+  const tapButtonImageSize = 140; // Mobile
+  const mdTapButtonImageSize = 160; // Desktop
 
 
   return (
     <>
-      {/* Reduced main padding, space-y, and pb */}
-      <div className="p-3 md:p-4 space-y-4 pb-16"> 
+      <div className="p-2 sm:p-3 md:p-4 space-y-3 sm:space-y-4 pb-16"> 
         <Card className="w-full max-w-xs mx-auto shadow-lg border-primary/20 rounded-xl bg-gradient-to-br from-card to-secondary/10">
-          <CardHeader className="pb-2 pt-3 px-4"> {/* Reduced padding */}
-            <CardTitle className="text-lg font-semibold text-primary flex items-center"> {/* Reduced font size */}
-              <Coins className="mr-2 h-5 w-5 text-accent" /> {/* Reduced icon size slightly */}
+          <CardHeader className="pb-1.5 pt-2.5 px-3 sm:pb-2 sm:pt-3 sm:px-4"> {/* Adjusted padding */}
+            <CardTitle className="text-base sm:text-lg font-semibold text-primary flex items-center"> {/* Adjusted font size */}
+              <Coins className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 text-accent" /> {/* Adjusted icon size */}
               Your Balance
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-0.5 px-4 pb-3"> {/* Reduced padding and space-y */}
-            <div className="text-3xl font-bold text-foreground"> {/* Reduced font size */}
-              {formatNumber(userData.balance)} <span className="text-xl opacity-80">{CONFIG.COIN_SYMBOL}</span>
+          <CardContent className="space-y-0.5 px-3 pb-2.5 sm:px-4 sm:pb-3"> {/* Adjusted padding */}
+            <div className="text-2xl sm:text-3xl font-bold text-foreground"> {/* Adjusted font size */}
+              {formatNumber(userData.balance)} <span className="text-lg sm:text-xl opacity-80">{CONFIG.COIN_SYMBOL}</span>
             </div>
-            <p className="text-xs text-muted-foreground"> {/* Reduced font size */}
+            <p className="text-xs sm:text-xs text-muted-foreground"> {/* Adjusted font size */}
               ≈ ₹{formatNumber(balanceInrValue)}
             </p>
           </CardContent>
         </Card>
 
-        <div className="flex flex-col items-center my-4 relative" id="coin-container"> {/* Reduced margin */}
+        <div className="flex flex-col items-center my-3 sm:my-4 relative" id="coin-container"> {/* Adjusted margin */}
           {showTapHint && isOnline && userData && userData.currentEnergy >= 1 && (
             <div
-              className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[calc(100%_+_20px)] 
-                        px-2.5 py-1 bg-accent text-accent-foreground text-xs font-semibold rounded-md shadow-lg
+              className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[calc(100%_+_15px)] 
+                        px-2 py-0.5 sm:px-2.5 sm:py-1 bg-accent text-accent-foreground text-[10px] sm:text-xs font-semibold rounded-md shadow-lg
                         animate-bounce z-20 pointer-events-none"
             >
               Tap Here!
               <div
                 className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0
-                          border-l-[5px] border-l-transparent
-                          border-r-[5px] border-r-transparent
-                          border-t-[5px] border-t-accent"
+                          border-l-[4px] sm:border-l-[5px] border-l-transparent
+                          border-r-[4px] sm:border-r-[5px] border-r-transparent
+                          border-t-[4px] sm:border-t-[5px] border-t-accent"
               />
             </div>
           )}
 
-          {/* Reduced w/h of SVG container and button */}
-          <div className="relative w-[200px] h-[200px] flex items-center justify-center mb-2"> 
-            <svg width={circleDiameter} height={circleDiameter} viewBox={`0 0 ${circleDiameter} ${circleDiameter}`} className="absolute inset-0 transform -rotate-90">
+          <div className={cn("relative flex items-center justify-center mb-1.5 sm:mb-2", svgContainerSizeClass)}> 
+             <svg 
+              width="100%" 
+              height="100%" 
+              viewBox={`0 0 ${(mdCircleRadius + mdCircleStrokeWidth) * 2} ${(mdCircleRadius + mdCircleStrokeWidth) * 2}`} // Use larger viewBox for scaling
+              className="absolute inset-0 transform -rotate-90"
+            >
               <circle
-                cx={circleDiameter / 2}
-                cy={circleDiameter / 2}
-                r={circleRadius}
-                strokeWidth={circleStrokeWidth}
-                className="stroke-muted/40 fill-transparent" // Made stroke lighter
+                cx={(mdCircleRadius + mdCircleStrokeWidth)}
+                cy={(mdCircleRadius + mdCircleStrokeWidth)}
+                r={mdCircleRadius}
+                strokeWidth={mdCircleStrokeWidth}
+                className="stroke-muted/30 md:stroke-muted/40 fill-transparent"
               />
               <circle
-                cx={circleDiameter / 2}
-                cy={circleDiameter / 2}
-                r={circleRadius}
-                strokeWidth={circleStrokeWidth}
-                strokeDasharray={circumference}
-                strokeDashoffset={strokeDashoffset}
+                cx={(mdCircleRadius + mdCircleStrokeWidth)}
+                cy={(mdCircleRadius + mdCircleStrokeWidth)}
+                r={mdCircleRadius}
+                strokeWidth={mdCircleStrokeWidth}
+                strokeDasharray={2 * Math.PI * mdCircleRadius}
+                strokeDashoffset={(2 * Math.PI * mdCircleRadius) * (1 - energyPercent / 100)}
                 className="stroke-primary fill-transparent transition-all duration-300 ease-linear"
                 strokeLinecap="round"
               />
             </svg>
-            {/* Reduced button size and image size */}
             <Button
               id="tap-coin"
               variant="default"
               onClick={handleTap}
-              className="relative w-44 h-44 rounded-full bg-foreground animate-neon-glow active:scale-95 transition-transform duration-150 flex items-center justify-center focus-visible:ring-4 focus-visible:ring-primary/50 group"
+              className={cn(
+                "relative rounded-full bg-foreground animate-neon-glow active:scale-95 transition-transform duration-150 flex items-center justify-center focus-visible:ring-4 focus-visible:ring-primary/50 group",
+                tapButtonSizeClass
+              )}
               aria-label={`Tap to mine ${CONFIG.COIN_SYMBOL}`}
               disabled={!isOnline || userData.currentEnergy < 1}
             >
               <Image
                 src={sdfCoinLogoUrl}
                 alt={`${CONFIG.COIN_SYMBOL} Coin`}
-                width={160} 
-                height={160}
-                className="rounded-full pointer-events-none absolute opacity-90 group-hover:opacity-100 transition-opacity object-contain"
+                width={mdTapButtonImageSize} // Use larger for better quality scaling down
+                height={mdTapButtonImageSize}
+                className="rounded-full pointer-events-none absolute opacity-90 group-hover:opacity-100 transition-opacity object-contain w-full h-full"
                 priority
                 data-ai-hint="coin logo"
               />
             </Button>
           </div>
-          <div className="text-center mt-1"> {/* Reduced margin */}
-              <p className="text-base font-semibold text-foreground"> {/* Reduced font size */}
-                  <Zap className="inline-block mr-1 h-4 w-4 text-accent align-text-bottom" /> {/* Reduced icon size */}
+          <div className="text-center mt-0.5 sm:mt-1"> {/* Adjusted margin */}
+              <p className="text-sm sm:text-base font-semibold text-foreground"> {/* Adjusted font size */}
+                  <Zap className="inline-block mr-1 h-3.5 w-3.5 sm:h-4 sm:w-4 text-accent align-text-bottom" /> {/* Adjusted icon size */}
                   {formatNumber(userData.currentEnergy, 0)} / {formatNumber(userData.maxEnergy, 0)}
               </p>
-              <p className="text-xs text-muted-foreground">{energyRegenTimerText}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">{energyRegenTimerText}</p>
           </div>
         </div>
 
 
-        <div className="grid grid-cols-2 gap-3"> {/* Reduced gap */}
-          <Card className="text-center shadow-md rounded-lg border-border/70"> {/* Reduced rounded */}
-            <CardHeader className="pb-1 pt-2 px-2"><CardTitle className="text-xs flex items-center justify-center text-muted-foreground"><Target className="mr-1.5 text-primary h-4 w-4" />Taps Today</CardTitle></CardHeader> {/* Reduced padding, font, icon */}
-            <CardContent className="pt-0 pb-2 px-2"><p className="text-2xl font-bold text-foreground">{formatNumber(userData.tapCountToday, 0)}</p></CardContent> {/* Reduced padding, font */}
+        <div className="grid grid-cols-2 gap-2 sm:gap-3"> {/* Adjusted gap */}
+          <Card className="text-center shadow-md rounded-lg border-border/70">
+            <CardHeader className="pb-0.5 pt-1.5 px-1.5 sm:pb-1 sm:pt-2 sm:px-2"><CardTitle className="text-[10px] sm:text-xs flex items-center justify-center text-muted-foreground"><Target className="mr-1 sm:mr-1.5 text-primary h-3.5 w-3.5 sm:h-4 sm:w-4" />Taps Today</CardTitle></CardHeader>
+            <CardContent className="pt-0 pb-1.5 px-1.5 sm:pb-2 sm:px-2"><p className="text-xl sm:text-2xl font-bold text-foreground">{formatNumber(userData.tapCountToday, 0)}</p></CardContent>
           </Card>
-          <Card className="text-center shadow-md rounded-lg border-border/70"> {/* Reduced rounded */}
-            <CardHeader className="pb-1 pt-2 px-2"><CardTitle className="text-xs flex items-center justify-center text-muted-foreground"><TrendingUp className="mr-1.5 text-primary h-4 w-4" />Tap Power</CardTitle></CardHeader> {/* Reduced padding, font, icon */}
-            <CardContent className="pt-0 pb-2 px-2"><p className="text-2xl font-bold text-foreground">{formatNumber(userData.tapPower)} <span className="text-xs text-muted-foreground">{CONFIG.COIN_SYMBOL}</span></p></CardContent> {/* Reduced padding, font */}
+          <Card className="text-center shadow-md rounded-lg border-border/70">
+            <CardHeader className="pb-0.5 pt-1.5 px-1.5 sm:pb-1 sm:pt-2 sm:px-2"><CardTitle className="text-[10px] sm:text-xs flex items-center justify-center text-muted-foreground"><TrendingUp className="mr-1 sm:mr-1.5 text-primary h-3.5 w-3.5 sm:h-4 sm:w-4" />Tap Power</CardTitle></CardHeader>
+            <CardContent className="pt-0 pb-1.5 px-1.5 sm:pb-2 sm:px-2"><p className="text-xl sm:text-2xl font-bold text-foreground">{formatNumber(userData.tapPower)} <span className="text-[10px] sm:text-xs text-muted-foreground">{CONFIG.COIN_SYMBOL}</span></p></CardContent>
           </Card>
         </div>
 
       </div>
       {/* Ad Container above Redeem Status */}
-      <div className="w-full my-2 -mx-3 md:-mx-4"> {/* Reduced vertical margin and adjusted negative horizontal for new padding */}
+      <div className="w-full my-1.5 sm:my-2 -mx-2 sm:-mx-3 md:-mx-4"> {/* Adjusted margins */}
         <AdContainer pageContext="mining_middle" trigger={middleAdTrigger} />
       </div>
-      <div className="p-3 md:p-4 space-y-4 pb-16 pt-2"> {/* Re-open padding div, reduced top/bottom padding */}
-        <Card className="shadow-md rounded-lg border-border/70"> {/* Reduced rounded */}
-          <CardHeader className="pb-2 pt-3 px-3"> {/* Reduced padding */}
-            <CardTitle className="text-base flex items-center font-semibold"><Info className="mr-2 text-primary h-4 w-4" />Redeem Status</CardTitle> {/* Reduced font, icon */}
+      <div className="p-2 sm:p-3 md:p-4 space-y-3 sm:space-y-4 pb-16 pt-1 sm:pt-2"> {/* Adjusted padding */}
+        <Card className="shadow-md rounded-lg border-border/70">
+          <CardHeader className="pb-1.5 pt-2 px-2.5 sm:pb-2 sm:pt-3 sm:px-3"> {/* Adjusted padding */}
+            <CardTitle className="text-sm sm:text-base flex items-center font-semibold"><Info className="mr-1.5 sm:mr-2 text-primary h-3.5 w-3.5 sm:h-4 sm:w-4" />Redeem Status</CardTitle> {/* Adjusted font, icon */}
           </CardHeader>
-          <CardContent className="space-y-0.5 px-3 pb-3"> {/* Reduced padding, space-y */}
-            <p className="text-xs">Minimum redeem: <strong className="text-primary">{CONFIG.MIN_REDEEM} {CONFIG.COIN_SYMBOL}</strong></p> {/* Reduced font */}
+          <CardContent className="space-y-0.5 px-2.5 pb-2.5 sm:px-3 sm:pb-3"> {/* Adjusted padding, space-y */}
+            <p className="text-[11px] sm:text-xs">Minimum redeem: <strong className="text-primary">{CONFIG.MIN_REDEEM} {CONFIG.COIN_SYMBOL}</strong></p> {/* Adjusted font */}
             {remainingToRedeem > 0 ? (
-              <p className="text-xs text-destructive flex items-center"><AlertTriangle className="h-3 w-3 mr-1 flex-shrink-0"/>You need {formatNumber(remainingToRedeem)} more {CONFIG.COIN_SYMBOL} to redeem.</p> 
+              <p className="text-[11px] sm:text-xs text-destructive flex items-center"><AlertTriangle className="h-3 w-3 mr-1 flex-shrink-0"/>You need {formatNumber(remainingToRedeem)} more {CONFIG.COIN_SYMBOL} to redeem.</p> 
             ) : (
-              <p className="text-xs text-success font-semibold flex items-center">🎉 You can now redeem your coins!</p>
+              <p className="text-[11px] sm:text-xs text-success font-semibold flex items-center">🎉 You can now redeem your coins!</p>
             )}
           </CardContent>
         </Card>
         <PersonalizedTipDisplay />
       </div>
       {/* Existing Ad Container at the bottom */}
-      <div className="w-full my-2 -mx-3 md:-mx-4"> {/* Reduced vertical margin and adjusted negative horizontal */}
+      <div className="w-full my-1.5 sm:my-2 -mx-2 sm:-mx-3 md:-mx-4"> {/* Adjusted margins */}
         <AdContainer pageContext="mining_bottom" trigger={bottomAdTrigger} />
       </div>
     </>
   );
 }
-
-    

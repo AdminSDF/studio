@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ShieldCheck, LayoutDashboard, Users, ListChecks, LogOut, Settings2, Annoyed, Gift, MessageCircleQuestion, ScrollText } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
-import { useRouter, usePathname } from 'next/navigation'; // Added usePathname
+import { useRouter, usePathname } from 'next/navigation'; 
 import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CONFIG } from '@/lib/constants';
@@ -99,35 +99,35 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-muted/20"> {/* Slightly lighter overall background */}
-      <header className="bg-card border-b border-border/70 sticky top-0 z-50"> {/* Softer border */}
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2"> {/* Reduced gap */}
-            <Button variant="ghost" size="icon" className="md:hidden text-muted-foreground hover:text-primary" onClick={() => setSidebarOpen(!sidebarOpen)}>
-              <Settings2 className="h-5 w-5" /> {/* Slightly smaller icon */}
+    <div className="min-h-screen flex flex-col bg-muted/20">
+      <header className="bg-card border-b border-border/70 sticky top-0 z-50">
+        <div className="container mx-auto px-4 h-14 sm:h-16 flex items-center justify-between">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Button variant="ghost" size="icon" className="md:hidden text-muted-foreground hover:text-primary h-9 w-9 sm:h-10 sm:w-10" onClick={() => setSidebarOpen(!sidebarOpen)}>
+              <Settings2 className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
             </Button>
-            <Link href="/admin/dashboard" className="flex items-center gap-2.5">
-              <Image src={sdfCoinLogoUrl} alt={`${CONFIG.APP_NAME} Logo`} width={28} height={28} className="rounded-full" /> {/* Slightly smaller logo */}
-              <h1 className="text-lg font-semibold text-foreground">{CONFIG.APP_NAME} - Admin</h1> {/* Slightly smaller title */}
+            <Link href="/admin/dashboard" className="flex items-center gap-2 sm:gap-2.5">
+              <Image src={sdfCoinLogoUrl} alt={`${CONFIG.APP_NAME} Logo`} width={24} height={24} sm:width={28} sm:height={28} className="rounded-full" />
+              <h1 className="text-base sm:text-lg font-semibold text-foreground">{CONFIG.APP_NAME} - Admin</h1>
             </Link>
           </div>
-          <nav className="flex items-center gap-3"> {/* Reduced gap */}
-            <Link href="/mining" className="text-xs text-muted-foreground hover:text-primary transition-colors font-medium">
+          <nav className="flex items-center gap-2 sm:gap-3">
+            <Link href="/mining" className="text-[10px] sm:text-xs text-muted-foreground hover:text-primary transition-colors font-medium px-1.5 py-1 sm:px-2">
               View App
             </Link>
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-primary text-xs font-medium">
-              <LogOut className="mr-1.5 h-3.5 w-3.5" /> Logout
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-primary text-[10px] sm:text-xs font-medium h-auto px-1.5 py-1 sm:px-2">
+              <LogOut className="mr-1 sm:mr-1.5 h-3 w-3 sm:h-3.5 sm:w-3.5" /> Logout
             </Button>
           </nav>
         </div>
       </header>
 
-      <div className="flex-1 flex container mx-auto py-6 gap-6">
+      <div className="flex-1 flex flex-col md:flex-row container mx-auto py-3 sm:py-4 md:py-6 gap-3 sm:gap-4 md:gap-6">
         <aside className={cn(
-          "fixed inset-y-0 left-0 z-40 w-60 bg-card p-4 rounded-r-xl shadow-lg border-r border-border/70 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:rounded-xl md:shadow-lg md:border", // Enhanced shadow and rounded corners
+          "fixed inset-y-0 left-0 z-40 w-56 sm:w-60 bg-card p-3 sm:p-4 rounded-r-lg shadow-lg border-r border-border/70 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:rounded-xl md:shadow-lg md:border",
           sidebarOpen ? "translate-x-0 pt-16 md:pt-4" : "-translate-x-full pt-4 md:pt-4" 
         )}>
-          <nav className="space-y-1.5"> {/* Reduced space-y */}
+          <nav className="space-y-1 sm:space-y-1.5">
             <AdminNavLink href="/admin/dashboard" icon={LayoutDashboard} onClick={() => setSidebarOpen(false)}>Dashboard</AdminNavLink>
             <AdminNavLink href="/admin/users" icon={Users} onClick={() => setSidebarOpen(false)}>Users</AdminNavLink>
             <AdminNavLink href="/admin/transactions" icon={ListChecks} onClick={() => setSidebarOpen(false)}>All Transactions</AdminNavLink>
@@ -138,12 +138,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </nav>
         </aside>
 
-        <main className="flex-1 bg-card p-6 rounded-xl shadow-xl border border-border/60"> {/* Enhanced shadow and consistent styling */}
+        <main className="flex-1 bg-card p-3 sm:p-4 md:p-6 rounded-xl shadow-xl border border-border/60 overflow-y-auto">
           {children}
         </main>
       </div>
       
-      <footer className="text-center p-4 text-xs text-muted-foreground/80 border-t border-border/50 mt-auto"> {/* Softer footer */}
+      <footer className="text-center p-3 sm:p-4 text-[10px] sm:text-xs text-muted-foreground/80 border-t border-border/50 mt-auto">
         &copy; {new Date().getFullYear()} {CONFIG.APP_NAME} Admin Panel. All Rights Reserved.
       </footer>
     </div>
@@ -166,14 +166,14 @@ function AdminNavLink({ href, icon: Icon, children, onClick }: AdminNavLinkProps
       href={href}
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out group",
+        "flex items-center gap-2.5 sm:gap-3 px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ease-in-out group",
         isActive 
-          ? "bg-primary/15 text-primary shadow-sm border-l-4 border-primary" 
-          : "text-muted-foreground hover:bg-primary/5 hover:text-primary hover:pl-4"
+          ? "bg-primary/15 text-primary shadow-sm border-l-2 sm:border-l-4 border-primary" 
+          : "text-muted-foreground hover:bg-primary/5 hover:text-primary hover:pl-3 sm:hover:pl-4"
       )}
     >
-      <Icon className={cn("h-4.5 w-4.5", isActive ? "text-primary" : "text-muted-foreground group-hover:text-primary")} />
-      {children}
+      <Icon className={cn("h-4 w-4 sm:h-4.5 sm:w-4.5", isActive ? "text-primary" : "text-muted-foreground group-hover:text-primary")} />
+      <span className="truncate">{children}</span>
     </Link>
   );
 }

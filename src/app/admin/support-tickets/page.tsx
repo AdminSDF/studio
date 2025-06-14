@@ -167,74 +167,81 @@ export default function AdminSupportTicketsPage() {
     return (
       <div className="space-y-6 p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">Support Tickets</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Support Tickets</h2>
           <Button onClick={fetchSupportTickets} variant="outline" size="sm" disabled={loading}>
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Retry
           </Button>
         </div>
         <Card className="border-destructive bg-destructive/10 rounded-xl shadow-md">
-          <CardHeader><CardTitle className="flex items-center text-destructive"><AlertTriangle className="mr-2 h-5 w-5"/>Error</CardTitle></CardHeader>
-          <CardContent><p className="text-destructive">{error}</p></CardContent>
+          <CardHeader><CardTitle className="flex items-center text-destructive text-lg sm:text-xl"><AlertTriangle className="mr-2 h-5 w-5"/>Error</CardTitle></CardHeader>
+          <CardContent><p className="text-destructive text-sm sm:text-base">{error}</p></CardContent>
         </Card>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight text-foreground">Support Ticket Management</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Support Ticket Management</h2>
         <Button onClick={fetchSupportTickets} variant="outline" size="sm" disabled={loading}>
-          <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+          <RefreshCw className={`mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
         </Button>
       </div>
       <Card className={cardStyle}>
-        <CardHeader>
-          <CardTitle className="flex items-center text-xl"><MessageCircleQuestion className="mr-2 h-5 w-5 text-primary"/>User Support Tickets</CardTitle>
-          <CardDescription>View and manage user-submitted support tickets.</CardDescription>
+        <CardHeader className="p-3 sm:p-4 md:p-6">
+          <CardTitle className="flex items-center text-lg sm:text-xl"><MessageCircleQuestion className="mr-2 h-4.5 w-4.5 sm:h-5 sm:w-5 text-primary"/>User Support Tickets</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">View and manage user-submitted support tickets.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 sm:p-0 md:p-0">
           {loading ? (
-            <div className="space-y-2">
-              {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-md" />)}
+            <div className="space-y-2 p-3 sm:p-4">
+              {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 sm:h-12 w-full rounded-md" />)}
             </div>
           ) : tickets.length === 0 ? (
-             <p className="text-muted-foreground text-center py-8">No support tickets found.</p>
+             <p className="text-muted-foreground text-center py-6 sm:py-8 text-sm sm:text-base">No support tickets found.</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs uppercase text-muted-foreground">Date</TableHead>
-                    <TableHead className="text-xs uppercase text-muted-foreground">User</TableHead>
-                    <TableHead className="text-xs uppercase text-muted-foreground">Category</TableHead>
-                    <TableHead className="text-xs uppercase text-muted-foreground">Status</TableHead>
-                    <TableHead className="text-xs uppercase text-muted-foreground">Description</TableHead>
-                    <TableHead className="text-center text-xs uppercase text-muted-foreground">Actions</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3">Date</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3">User</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3 hidden md:table-cell">Category</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3">Status</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3">Description</TableHead>
+                    <TableHead className="text-center text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {tickets.map((ticket) => (
                     <TableRow key={ticket.id} className="hover:bg-muted/40">
-                      <TableCell className="text-sm">{ticket.createdAt ? ticket.createdAt.toLocaleDateString() : 'N/A'}</TableCell>
-                      <TableCell className="whitespace-nowrap text-sm">
+                      <TableCell className="text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3">{ticket.createdAt ? ticket.createdAt.toLocaleDateString() : 'N/A'}</TableCell>
+                      <TableCell className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3">
                         <div className="flex flex-col">
-                          <span className="font-medium">{ticket.userName}</span>
-                          <span className="text-xs text-muted-foreground">{ticket.userEmail}</span>
+                          <span className="font-medium truncate max-w-[100px] sm:max-w-[150px]">{ticket.userName}</span>
+                          <span className="text-[10px] sm:text-xs text-muted-foreground truncate max-w-[100px] sm:max-w-[150px]">{ticket.userEmail}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="capitalize text-sm">{ticket.category}</TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusVariant(ticket.status)} className={cn("text-xs capitalize", getStatusTextClass(ticket.status))}>
-                          {ticket.status}
+                      <TableCell className="capitalize text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3 hidden md:table-cell">{ticket.category}</TableCell>
+                      <TableCell className="px-2 sm:px-4 py-2 sm:py-3">
+                        <Badge 
+                            variant={getStatusVariant(ticket.status)} 
+                            className={cn(
+                                "text-[9px] sm:text-xs capitalize px-1.5 sm:px-2 py-0.5 sm:py-1", 
+                                getStatusTextClass(ticket.status),
+                                ticket.status === 'open' ? 'bg-destructive text-destructive-foreground' : '' // Specific override for 'open' to be destructive
+                            )}
+                        >
+                          {ticket.status === 'open' ? 'Closed' : ticket.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-xs max-w-sm truncate" title={ticket.description}>
+                      <TableCell className="text-[10px] sm:text-xs max-w-[100px] sm:max-w-sm truncate px-2 sm:px-4 py-2 sm:py-3" title={ticket.description}>
                         {ticket.description}
                       </TableCell>
-                      <TableCell className="text-center">
-                        <Button variant="outline" size="sm" className="text-xs" onClick={() => handleOpenModal(ticket)} disabled={updatingTicketId === ticket.id}>
-                          <Edit className="mr-1.5 h-3.5 w-3.5" /> Manage
+                      <TableCell className="text-center px-2 sm:px-4 py-2 sm:py-3">
+                        <Button variant="outline" size="sm" className="text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3" onClick={() => handleOpenModal(ticket)} disabled={updatingTicketId === ticket.id}>
+                          <Edit className="mr-1 h-3 w-3 sm:mr-1.5 sm:h-3.5 sm:w-3.5" /> Manage
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -248,41 +255,41 @@ export default function AdminSupportTicketsPage() {
 
       {selectedTicket && (
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="sm:max-w-lg rounded-xl">
+          <DialogContent className="sm:max-w-md md:max-w-lg rounded-xl p-4 sm:p-6">
             <DialogHeader>
-              <DialogTitle className="text-xl">Manage Support Ticket</DialogTitle>
-              <DialogDescription>Ticket ID: {selectedTicket.id}</DialogDescription>
+              <DialogTitle className="text-lg sm:text-xl">Manage Support Ticket</DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm">Ticket ID: {selectedTicket.id}</DialogDescription>
             </DialogHeader>
-            <div className="py-4 space-y-4 max-h-[60vh] overflow-y-auto px-1">
+            <div className="py-3 sm:py-4 space-y-3 sm:space-y-4 max-h-[60vh] overflow-y-auto px-1 text-sm sm:text-base">
               <div className="space-y-0.5">
-                <p className="text-xs text-muted-foreground">User: {selectedTicket.userName} ({selectedTicket.userEmail})</p>
-                <p className="text-xs text-muted-foreground">Category: <Badge variant="secondary" className="capitalize text-xs">{selectedTicket.category}</Badge></p>
-                <p className="text-xs text-muted-foreground">Submitted: {selectedTicket.createdAt?.toLocaleString()}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">User: {selectedTicket.userName} ({selectedTicket.userEmail})</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Category: <Badge variant="secondary" className="capitalize text-[10px] sm:text-xs">{selectedTicket.category}</Badge></p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Submitted: {selectedTicket.createdAt?.toLocaleString()}</p>
               </div>
               <div>
-                <Label className="font-semibold">User's Issue:</Label>
-                <p className="text-sm p-2 bg-muted/50 rounded-md border border-border/50 whitespace-pre-wrap">{selectedTicket.description}</p>
+                <Label className="font-semibold text-xs sm:text-sm">User's Issue:</Label>
+                <p className="text-xs sm:text-sm p-2 bg-muted/50 rounded-md border border-border/50 whitespace-pre-wrap">{selectedTicket.description}</p>
               </div>
               <div>
-                <Label htmlFor="adminResponse" className="font-semibold">Admin Response:</Label>
+                <Label htmlFor="adminResponse" className="font-semibold text-xs sm:text-sm">Admin Response:</Label>
                 <Textarea 
                   id="adminResponse" 
                   value={adminResponse} 
                   onChange={(e) => setAdminResponse(e.target.value)} 
                   placeholder="Enter your response here..."
-                  rows={4}
-                  className="text-sm"
+                  rows={3}
+                  className="text-xs sm:text-sm"
                 />
               </div>
               <div>
-                <Label htmlFor="ticketStatus" className="font-semibold">Update Status:</Label>
+                <Label htmlFor="ticketStatus" className="font-semibold text-xs sm:text-sm">Update Status:</Label>
                 <Select value={newStatus} onValueChange={(value) => setNewStatus(value as SupportTicket['status'])}>
-                  <SelectTrigger id="ticketStatus" className="w-full text-sm">
+                  <SelectTrigger id="ticketStatus" className="w-full text-xs sm:text-sm">
                     <SelectValue placeholder="Select new status" />
                   </SelectTrigger>
                   <SelectContent>
                     {statusOptions.map(status => (
-                       <SelectItem key={status} value={status} className="capitalize text-sm">
+                       <SelectItem key={status} value={status} className="capitalize text-xs sm:text-sm">
                         {status}
                       </SelectItem>
                     ))}
@@ -290,11 +297,11 @@ export default function AdminSupportTicketsPage() {
                 </Select>
               </div>
             </div>
-            <DialogFooter className="sm:justify-between">
+            <DialogFooter className="sm:justify-between pt-3 sm:pt-4">
               <DialogClose asChild>
-                <Button type="button" variant="outline">Cancel</Button>
+                <Button type="button" variant="outline" size="sm">Cancel</Button>
               </DialogClose>
-              <Button type="button" onClick={handleSaveChanges} disabled={updatingTicketId === selectedTicket.id}>
+              <Button type="button" onClick={handleSaveChanges} disabled={updatingTicketId === selectedTicket.id} size="sm">
                 {updatingTicketId === selectedTicket.id ? 'Saving...' : 'Save Changes'}
               </Button>
             </DialogFooter>

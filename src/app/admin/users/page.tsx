@@ -65,7 +65,7 @@ export default function AdminUsersPage() {
     return (
       <div className="space-y-6 p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">Manage Users</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Manage Users</h2>
           <Button onClick={fetchUsers} variant="outline" size="sm" disabled={loading}>
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             Retry
@@ -73,13 +73,13 @@ export default function AdminUsersPage() {
         </div>
         <Card className="border-destructive bg-destructive/10 rounded-xl shadow-md">
           <CardHeader>
-            <CardTitle className="flex items-center text-destructive">
+            <CardTitle className="flex items-center text-destructive text-lg sm:text-xl">
               <AlertTriangle className="mr-2 h-5 w-5"/>Error Fetching Users
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-destructive">{error}</p>
-            <p className="text-sm text-muted-foreground mt-2">
+            <p className="text-destructive text-sm sm:text-base">{error}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-2">
               Please check your Firestore security rules to ensure administrators have read access to the 'users' collection.
               Also, verify your internet connection and that Firebase services are operational.
             </p>
@@ -90,60 +90,60 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight text-foreground">User Management</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">User Management</h2>
         <Button onClick={fetchUsers} variant="outline" size="sm" disabled={loading}>
-          <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh Users
+          <RefreshCw className={`mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
         </Button>
       </div>
       <Card className={cardStyle}>
-        <CardHeader>
-          <CardTitle className="flex items-center text-xl"><Users className="mr-2 h-5 w-5 text-primary"/>User List</CardTitle>
-          <CardDescription>View and manage application users.</CardDescription>
+        <CardHeader className="p-3 sm:p-4 md:p-6">
+          <CardTitle className="flex items-center text-lg sm:text-xl"><Users className="mr-2 h-4.5 w-4.5 sm:h-5 sm:w-5 text-primary"/>User List</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">View and manage application users.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 sm:p-0 md:p-0">
           {loading ? (
-            <div className="space-y-4">
+            <div className="space-y-3 p-3 sm:p-4">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center space-x-4 p-2">
-                  <Skeleton className="h-10 w-10 rounded-full" />
+                <div key={i} className="flex items-center space-x-3 sm:space-x-4 p-2">
+                  <Skeleton className="h-8 w-8 sm:h-10 sm:w-10 rounded-full" />
                   <div className="space-y-1 flex-1">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
+                    <Skeleton className="h-3.5 sm:h-4 w-3/4" />
+                    <Skeleton className="h-2.5 sm:h-3 w-1/2" />
                   </div>
-                  <Skeleton className="h-8 w-24 rounded-md" /> 
+                  <Skeleton className="h-7 w-16 sm:h-8 sm:w-20 rounded-md" /> 
                 </div>
               ))}
             </div>
           ) : users.length === 0 ? (
-             <p className="text-muted-foreground text-center py-8">No users found.</p>
+             <p className="text-muted-foreground text-center py-6 sm:py-8 text-sm sm:text-base">No users found.</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[150px] text-xs uppercase text-muted-foreground">User ID</TableHead>
-                    <TableHead className="text-xs uppercase text-muted-foreground">Name</TableHead>
-                    <TableHead className="text-xs uppercase text-muted-foreground">Email</TableHead>
-                    <TableHead className="text-right text-xs uppercase text-muted-foreground">Balance (SDF)</TableHead>
-                    <TableHead className="text-xs uppercase text-muted-foreground">Joined</TableHead>
-                    <TableHead className="text-center text-xs uppercase text-muted-foreground">Actions</TableHead>
+                    <TableHead className="w-[100px] sm:w-[150px] text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3">User ID</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3">Name</TableHead>
+                    <TableHead className="hidden md:table-cell text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3">Email</TableHead>
+                    <TableHead className="text-right text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3">Balance (SDF)</TableHead>
+                    <TableHead className="hidden sm:table-cell text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3">Joined</TableHead>
+                    <TableHead className="text-center text-[10px] sm:text-xs uppercase text-muted-foreground px-2 sm:px-4 py-2 sm:py-3">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {users.map((user) => (
                     <TableRow key={user.id} className="hover:bg-muted/40">
-                      <TableCell className="font-mono text-xs truncate max-w-[100px]">{user.id}</TableCell>
-                      <TableCell className="font-medium text-sm">{user.name}</TableCell>
-                      <TableCell className="text-sm">{user.email}</TableCell>
-                      <TableCell className="text-right text-sm">{formatNumber(user.balance || 0, 0)}</TableCell>
-                      <TableCell className="text-sm">{user.createdAt ? user.createdAt.toLocaleDateString() : 'N/A'}</TableCell>
-                      <TableCell className="text-center">
-                        <Button asChild variant="outline" size="sm" className="text-xs">
+                      <TableCell className="font-mono text-[10px] sm:text-xs truncate max-w-[80px] sm:max-w-[100px] px-2 sm:px-4 py-2 sm:py-3">{user.id}</TableCell>
+                      <TableCell className="font-medium text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3 truncate max-w-[100px] sm:max-w-[150px]">{user.name}</TableCell>
+                      <TableCell className="hidden md:table-cell text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3 truncate max-w-[150px]">{user.email}</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3">{formatNumber(user.balance || 0, 0)}</TableCell>
+                      <TableCell className="hidden sm:table-cell text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3">{user.createdAt ? user.createdAt.toLocaleDateString() : 'N/A'}</TableCell>
+                      <TableCell className="text-center px-2 sm:px-4 py-2 sm:py-3">
+                        <Button asChild variant="outline" size="sm" className="text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3">
                           <Link href={`/admin/users/${user.id}`}>
-                            <Eye className="mr-1.5 h-3.5 w-3.5" /> View
+                            <Eye className="mr-1 h-3 w-3 sm:mr-1.5 sm:h-3.5 sm:w-3.5" /> View
                           </Link>
                         </Button>
                       </TableCell>
