@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ListChecks, AlertTriangle, RefreshCw, Eye, BadgeDollarSign, UserCircle } from 'lucide-react';
+import { ListChecks, AlertTriangle, RefreshCw, Eye, UserCircle } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, orderBy, Timestamp, type DocumentData } from 'firebase/firestore';
 import { formatNumber } from '@/lib/utils';
@@ -15,36 +15,42 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 const ITEMS_PER_PAGE = 20;
+const cardStyle = "rounded-xl shadow-md border border-border/60 hover:border-primary/40 hover:shadow-primary/10 transition-all duration-300";
 
 interface TransactionForAdminDisplay extends Omit<Transaction, 'date'> {
   date: Date | null;
-  userName?: string; // Add userName for easier display
+  userName?: string; 
 }
 
-const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
+const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" | "success" => {
   switch (status) {
-    case 'completed': return 'default'; // Or a success-like variant if you add one
-    case 'pending': return 'secondary'; // Orange/Yellowish
+    case 'completed': return 'success'; 
+    case 'pending': return 'secondary'; 
     case 'failed': return 'destructive';
     default: return 'outline';
   }
 };
+const getStatusTextClass = (status: string): string => {
+    switch (status) {
+      case 'completed': return 'text-success-foreground';
+      case 'pending': return 'text-secondary-foreground';
+      case 'failed': return 'text-destructive-foreground';
+      default: return 'text-muted-foreground';
+    }
+}
+
 
 export default function AdminTransactionsPage() {
   const [transactions, setTransactions] = useState<TransactionForAdminDisplay[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // const [currentPage, setCurrentPage] = useState(1); // For future pagination
-  // const [totalPages, setTotalPages] = useState(1); // For future pagination
 
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // Firestore index needed: transactions collection, field 'date' (descending).
-      // Additional indexes for filtering by type or status might be useful later.
       const transactionsCollectionRef = collection(db, 'transactions');
-      const q = query(transactionsCollectionRef, orderBy('date', 'desc')); // Fetch latest first
+      const q = query(transactionsCollectionRef, orderBy('date', 'desc'));
       const querySnapshot = await getDocs(q);
       
       const fetchedTransactions: TransactionForAdminDisplay[] = querySnapshot.docs.map((doc) => {
@@ -58,7 +64,6 @@ export default function AdminTransactionsPage() {
       });
       
       setTransactions(fetchedTransactions);
-      // setTotalPages(Math.ceil(fetchedTransactions.length / ITEMS_PER_PAGE)); // For future pagination
     } catch (err: any) {
       console.error("Error fetching transactions:", err);
       let errMsg = `Failed to fetch transactions. ${err.message}.`;
@@ -77,8 +82,6 @@ export default function AdminTransactionsPage() {
     fetchTransactions();
   }, [fetchTransactions]);
 
-  // const paginatedTransactions = transactions.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-
   const renderPaymentDetails = (details?: PaymentDetails, method?: string) => {
     if (!details || !method) return 'N/A';
     switch (method) {
@@ -93,12 +96,12 @@ export default function AdminTransactionsPage() {
     return (
       <div className="space-y-6 p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-bold tracking-tight text-primary">Manage Transactions</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-foreground">Manage Transactions</h2>
           <Button onClick={fetchTransactions} variant="outline" size="sm" disabled={loading}>
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Retry
           </Button>
         </div>
-        <Card className="border-destructive bg-destructive/10">
+        <Card className="border-destructive bg-destructive/10 rounded-xl shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center text-destructive"><AlertTriangle className="mr-2 h-5 w-5"/>Error</CardTitle>
           </CardHeader>
@@ -111,14 +114,14 @@ export default function AdminTransactionsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight text-primary">Transaction Management</h2>
+        <h2 className="text-3xl font-bold tracking-tight text-foreground">Transaction Management</h2>
         <Button onClick={fetchTransactions} variant="outline" size="sm" disabled={loading}>
           <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
         </Button>
       </div>
-      <Card className="shadow-md rounded-xl border-border">
+      <Card className={cardStyle}>
         <CardHeader>
-          <CardTitle className="flex items-center"><ListChecks className="mr-2 h-5 w-5 text-primary"/>All Transactions</CardTitle>
+          <CardTitle className="flex items-center text-xl"><ListChecks className="mr-2 h-5 w-5 text-primary"/>All Transactions</CardTitle>
           <CardDescription>View and manage application transactions.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -133,45 +136,47 @@ export default function AdminTransactionsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="text-right">Amount (SDF)</TableHead>
-                    <TableHead className="text-right">Amount (INR)</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Payment/Details</TableHead>
-                    <TableHead className="text-center">Actions</TableHead>
+                    <TableHead className="text-xs uppercase text-muted-foreground">Date</TableHead>
+                    <TableHead className="text-xs uppercase text-muted-foreground">User</TableHead>
+                    <TableHead className="text-xs uppercase text-muted-foreground">Type</TableHead>
+                    <TableHead className="text-right text-xs uppercase text-muted-foreground">Amount (SDF)</TableHead>
+                    <TableHead className="text-right text-xs uppercase text-muted-foreground">Amount (INR)</TableHead>
+                    <TableHead className="text-xs uppercase text-muted-foreground">Status</TableHead>
+                    <TableHead className="text-xs uppercase text-muted-foreground">Payment/Details</TableHead>
+                    <TableHead className="text-center text-xs uppercase text-muted-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {transactions.map((txn) => (
-                    <TableRow key={txn.id}>
-                      <TableCell>{txn.date ? txn.date.toLocaleDateString() : 'N/A'}</TableCell>
-                      <TableCell className="whitespace-nowrap">
+                    <TableRow key={txn.id} className="hover:bg-muted/40">
+                      <TableCell className="text-sm">{txn.date ? txn.date.toLocaleDateString() : 'N/A'}</TableCell>
+                      <TableCell className="whitespace-nowrap text-sm">
                         <div className="flex items-center gap-2">
                            <UserCircle className="h-4 w-4 text-muted-foreground"/>
                            <div className="flex flex-col">
-                             <span className="text-xs font-medium truncate max-w-[100px]">{txn.userName || 'N/A'}</span>
+                             <span className="font-medium truncate max-w-[100px]">{txn.userName || 'N/A'}</span>
                              <span className="text-xs text-muted-foreground truncate max-w-[100px]">{txn.userId}</span>
                            </div>
                         </div>
                       </TableCell>
-                      <TableCell className="capitalize">{txn.type.replace(/_/g, ' ')}</TableCell>
-                      <TableCell className={cn("text-right font-medium", txn.amount < 0 ? "text-destructive" : "text-success")}>
+                      <TableCell className="capitalize text-sm">{txn.type.replace(/_/g, ' ')}</TableCell>
+                      <TableCell className={cn("text-right font-medium text-sm", txn.amount < 0 ? "text-destructive" : "text-success")}>
                         {txn.amount > 0 ? '+' : ''}{formatNumber(txn.amount, 2)}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right text-sm">
                         {txn.type === 'redeem' ? `₹${formatNumber(txn.inrAmount || 0, 2)}` : 'N/A'}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={getStatusVariant(txn.status)} className="text-xs capitalize">{txn.status}</Badge>
+                        <Badge variant={getStatusVariant(txn.status)} className={cn("text-xs capitalize", getStatusTextClass(txn.status))}>
+                            {txn.status}
+                        </Badge>
                       </TableCell>
-                      <TableCell className="text-xs max-w-[200px] truncate">
+                      <TableCell className="text-xs max-w-[200px] truncate" title={txn.type === 'redeem' ? renderPaymentDetails(txn.paymentDetails, txn.paymentMethod) : txn.details || 'N/A'}>
                         {txn.type === 'redeem' ? renderPaymentDetails(txn.paymentDetails, txn.paymentMethod) : txn.details || 'N/A'}
                       </TableCell>
                       <TableCell className="text-center">
-                        <Button variant="outline" size="sm" onClick={() => alert(`View details for Txn ID: ${txn.id} - To be implemented`)}>
-                          <Eye className="mr-1.5 h-4 w-4" /> Details
+                        <Button variant="outline" size="sm" className="text-xs" onClick={() => alert(`View details for Txn ID: ${txn.id} - To be implemented`)}>
+                          <Eye className="mr-1.5 h-3.5 w-3.5" /> Details
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -181,13 +186,6 @@ export default function AdminTransactionsPage() {
             </div>
           )}
         </CardContent>
-        {/* Footer for future pagination
-        <CardFooter className="flex justify-end space-x-2 pt-4 border-t">
-           <Button variant="outline" size="sm" disabled>Previous</Button>
-           <span className="text-sm text-muted-foreground">Page X of Y</span>
-           <Button variant="outline" size="sm" disabled>Next</Button>
-        </CardFooter>
-        */}
       </Card>
     </div>
   );

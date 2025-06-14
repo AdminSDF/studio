@@ -12,7 +12,6 @@ import { CONFIG } from '@/lib/constants';
 import { startOfMonth, endOfMonth, subDays, format, getMonth, getYear, subMonths } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Placeholder data for DAU chart - remains static for now
 const dailyActiveUsersDataStatic = [
   { name: 'Mon', DAU: 400 },
   { name: 'Tue', DAU: 300 },
@@ -28,7 +27,10 @@ interface ChartData {
   [key: string]: number | string;
 }
 
+const cardStyle = "rounded-xl shadow-md border border-border/60 hover:border-primary/40 hover:shadow-primary/10 transition-all duration-300";
+
 export default function AdminDashboardPage() {
+  console.log("AdminDashboard: fetchData triggered in /src/app/admin/dashboard/page.tsx. Attempting to load real data from Firestore...");
   const [totalUsers, setTotalUsers] = useState<number | null>(null);
   const [pendingRedemptionsCount, setPendingRedemptionsCount] = useState<number | null>(null);
   const [transactions24hCount, setTransactions24hCount] = useState<number | null>(null);
@@ -39,17 +41,14 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
-    console.log("AdminDashboard: fetchData triggered in /src/app/admin/dashboard/page.tsx. Attempting to load real data from Firestore...");
     setLoadingStats(true);
     setLoadingChart(true);
     setError(null);
     try {
-      // Fetch Total Users
       const usersQuery = query(collection(db, "users"));
       const usersSnapshot = await getCountFromServer(usersQuery);
       setTotalUsers(usersSnapshot.data().count);
 
-      // Fetch Pending Redemptions
       const pendingRedemptionsQuery = query(
         collection(db, "transactions"),
         where("type", "==", "redeem"),
@@ -58,7 +57,6 @@ export default function AdminDashboardPage() {
       const pendingRedemptionsSnapshot = await getCountFromServer(pendingRedemptionsQuery);
       setPendingRedemptionsCount(pendingRedemptionsSnapshot.data().count);
 
-      // Fetch Transactions in last 24h
       const twentyFourHoursAgo = subDays(new Date(), 1);
       const transactions24hQuery = query(
         collection(db, "transactions"),
@@ -67,7 +65,6 @@ export default function AdminDashboardPage() {
       const transactions24hSnapshot = await getCountFromServer(transactions24hQuery);
       setTransactions24hCount(transactions24hSnapshot.data().count);
 
-      // Fetch Monthly Revenue (sum of completed redeem INR amounts)
       const currentMonthStart = startOfMonth(new Date());
       const currentMonthEnd = endOfMonth(new Date());
       const revenueQuery = query(
@@ -85,7 +82,6 @@ export default function AdminDashboardPage() {
       setMonthlyRevenue(totalRevenue);
       setLoadingStats(false);
 
-      // Fetch Transaction Volume for Chart (last 6 months, app currency)
       const monthsData: { [key: string]: number } = {};
       const monthLabels: string[] = [];
       for (let i = 5; i >= 0; i--) {
@@ -138,7 +134,7 @@ export default function AdminDashboardPage() {
             <RefreshCw className="mr-2 h-4 w-4" /> Retry
           </Button>
         </div>
-        <Card className="border-destructive bg-destructive/10">
+        <Card className="border-destructive bg-destructive/10 rounded-xl shadow-md">
           <CardHeader><CardTitle className="flex items-center text-destructive"><AlertTriangle className="mr-2 h-5 w-5"/>Error</CardTitle></CardHeader>
           <CardContent><p className="text-destructive">{error}</p></CardContent>
         </Card>
@@ -149,7 +145,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight text-primary">Admin Dashboard</h2>
+        <h2 className="text-3xl font-bold tracking-tight text-foreground">Admin Dashboard</h2> {/* Changed to foreground for better contrast */}
         <Button onClick={fetchData} variant="outline" size="sm" disabled={loadingStats || loadingChart}>
           <RefreshCw className={`mr-2 h-4 w-4 ${ (loadingStats || loadingChart) ? 'animate-spin' : ''}`} /> Refresh Data
         </Button>
@@ -193,12 +189,12 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="shadow-md rounded-xl">
+        <Card className={cardStyle}>
           <CardHeader>
             <CardTitle>Daily Active Users (DAU)</CardTitle>
             <CardDescription>Overview of user activity this week. (Static Data)</CardDescription>
           </CardHeader>
-          <CardContent className="h-[300px]">
+          <CardContent className="h-[300px] p-4">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dailyActiveUsersDataStatic}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
@@ -216,15 +212,15 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-md rounded-xl">
+        <Card className={cardStyle}>
           <CardHeader>
             <CardTitle>Transaction Volume ({CONFIG.COIN_SYMBOL})</CardTitle>
             <CardDescription>Monthly transaction totals for the last 6 months.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[300px]">
+          <CardContent className="h-[300px] p-4">
             {loadingChart ? (
                 <div className="flex items-center justify-center h-full">
-                    <Skeleton className="h-full w-full" />
+                    <Skeleton className="h-full w-full rounded-md" /> {/* Added rounded-md */}
                 </div>
             ) : transactionVolumeData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -252,21 +248,21 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card className="shadow-md rounded-xl">
+        <Card className={cardStyle}>
           <CardHeader>
             <CardTitle className="flex items-center"><Settings className="mr-2 h-5 w-5"/>App Settings</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-1.5">
             <p className="text-sm text-muted-foreground">
               Current App Version: <span className="font-semibold text-foreground">1.0.3</span>
             </p>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground">
               Maintenance Mode: <span className="font-semibold text-success">Inactive</span>
             </p>
              <Button variant="outline" size="sm" className="mt-4">Manage Settings</Button>
           </CardContent>
         </Card>
-        <Card className="shadow-md rounded-xl">
+        <Card className={cardStyle}>
           <CardHeader>
             <CardTitle className="flex items-center"><AlertTriangle className="mr-2 h-5 w-5 text-destructive"/>System Alerts</CardTitle>
           </CardHeader>
@@ -289,7 +285,7 @@ interface DashboardStatCardProps {
 
 function DashboardStatCard({ title, value, icon: Icon, description, valueClass }: DashboardStatCardProps) {
   return (
-    <Card className="shadow-lg hover:shadow-primary/20 transition-shadow duration-300 rounded-xl border-border">
+    <Card className="rounded-xl shadow-md border border-border/60 hover:border-primary/40 hover:shadow-primary/10 transition-all duration-300">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
         <Icon className="h-5 w-5 text-muted-foreground" />
@@ -304,7 +300,7 @@ function DashboardStatCard({ title, value, icon: Icon, description, valueClass }
 
 function SkeletonStatCard() {
   return (
-    <Card className="shadow-lg rounded-xl border-border">
+    <Card className="rounded-xl shadow-md border border-border/60">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <Skeleton className="h-5 w-24" /> 
         <Skeleton className="h-5 w-5 rounded-full" />
@@ -316,6 +312,3 @@ function SkeletonStatCard() {
     </Card>
   );
 }
-    
-
-    

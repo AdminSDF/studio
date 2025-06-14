@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ShieldCheck, LayoutDashboard, Users, ListChecks, LogOut, Settings2, Annoyed, Gift, MessageCircleQuestion, ScrollText } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation'; // Added usePathname
 import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CONFIG } from '@/lib/constants';
@@ -99,24 +99,24 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-muted/40">
-      <header className="bg-card border-b border-border shadow-sm sticky top-0 z-50">
+    <div className="min-h-screen flex flex-col bg-muted/20"> {/* Slightly lighter overall background */}
+      <header className="bg-card border-b border-border/70 sticky top-0 z-50"> {/* Softer border */}
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSidebarOpen(!sidebarOpen)}>
-              <Settings2 className="h-6 w-6" />
+          <div className="flex items-center gap-2"> {/* Reduced gap */}
+            <Button variant="ghost" size="icon" className="md:hidden text-muted-foreground hover:text-primary" onClick={() => setSidebarOpen(!sidebarOpen)}>
+              <Settings2 className="h-5 w-5" /> {/* Slightly smaller icon */}
             </Button>
-            <Link href="/admin/dashboard" className="flex items-center gap-2">
-              <Image src={sdfCoinLogoUrl} alt={`${CONFIG.APP_NAME} Logo`} width={32} height={32} className="rounded-full" />
-              <h1 className="text-xl font-semibold text-foreground">{CONFIG.APP_NAME} - Admin</h1>
+            <Link href="/admin/dashboard" className="flex items-center gap-2.5">
+              <Image src={sdfCoinLogoUrl} alt={`${CONFIG.APP_NAME} Logo`} width={28} height={28} className="rounded-full" /> {/* Slightly smaller logo */}
+              <h1 className="text-lg font-semibold text-foreground">{CONFIG.APP_NAME} - Admin</h1> {/* Slightly smaller title */}
             </Link>
           </div>
-          <nav className="flex items-center gap-4">
-            <Link href="/mining" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+          <nav className="flex items-center gap-3"> {/* Reduced gap */}
+            <Link href="/mining" className="text-xs text-muted-foreground hover:text-primary transition-colors font-medium">
               View App
             </Link>
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-primary">
-              <LogOut className="mr-1.5 h-4 w-4" /> Logout
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-primary text-xs font-medium">
+              <LogOut className="mr-1.5 h-3.5 w-3.5" /> Logout
             </Button>
           </nav>
         </div>
@@ -124,10 +124,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
       <div className="flex-1 flex container mx-auto py-6 gap-6">
         <aside className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 bg-card p-4 rounded-r-lg shadow-lg border-r border-border transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:rounded-lg md:shadow md:border",
-          sidebarOpen ? "translate-x-0 pt-16" : "-translate-x-full pt-4 md:pt-4"
+          "fixed inset-y-0 left-0 z-40 w-60 bg-card p-4 rounded-r-xl shadow-lg border-r border-border/70 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:rounded-xl md:shadow-lg md:border", // Enhanced shadow and rounded corners
+          sidebarOpen ? "translate-x-0 pt-16 md:pt-4" : "-translate-x-full pt-4 md:pt-4" 
         )}>
-          <nav className="space-y-2">
+          <nav className="space-y-1.5"> {/* Reduced space-y */}
             <AdminNavLink href="/admin/dashboard" icon={LayoutDashboard} onClick={() => setSidebarOpen(false)}>Dashboard</AdminNavLink>
             <AdminNavLink href="/admin/users" icon={Users} onClick={() => setSidebarOpen(false)}>Users</AdminNavLink>
             <AdminNavLink href="/admin/transactions" icon={ListChecks} onClick={() => setSidebarOpen(false)}>All Transactions</AdminNavLink>
@@ -138,13 +138,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </nav>
         </aside>
 
-        <main className="flex-1 bg-card p-6 rounded-lg shadow border border-border ml-0 md:ml-0">
+        <main className="flex-1 bg-card p-6 rounded-xl shadow-xl border border-border/60"> {/* Enhanced shadow and consistent styling */}
           {children}
         </main>
       </div>
       
-      <footer className="text-center p-4 text-xs text-muted-foreground border-t border-border mt-auto">
-        &copy; {new Date().getFullYear()} {CONFIG.APP_NAME} Admin Panel
+      <footer className="text-center p-4 text-xs text-muted-foreground/80 border-t border-border/50 mt-auto"> {/* Softer footer */}
+        &copy; {new Date().getFullYear()} {CONFIG.APP_NAME} Admin Panel. All Rights Reserved.
       </footer>
     </div>
   );
@@ -158,15 +158,21 @@ interface AdminNavLinkProps {
 }
 
 function AdminNavLink({ href, icon: Icon, children, onClick }: AdminNavLinkProps) {
+  const pathname = usePathname();
+  const isActive = pathname === href || (href !== "/admin/dashboard" && pathname.startsWith(href));
+
   return (
     <Link
       href={href}
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors",
+        "flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out group",
+        isActive 
+          ? "bg-primary/15 text-primary shadow-sm border-l-4 border-primary" 
+          : "text-muted-foreground hover:bg-primary/5 hover:text-primary hover:pl-4"
       )}
     >
-      <Icon className="h-5 w-5" />
+      <Icon className={cn("h-4.5 w-4.5", isActive ? "text-primary" : "text-muted-foreground group-hover:text-primary")} />
       {children}
     </Link>
   );

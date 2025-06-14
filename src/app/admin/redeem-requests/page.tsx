@@ -15,6 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/components/providers/auth-provider';
 
+const cardStyle = "rounded-xl shadow-md border border-border/60 hover:border-primary/40 hover:shadow-primary/10 transition-all duration-300";
+
 interface RedeemRequestForAdmin extends Omit<Transaction, 'date'> {
   date: Date | null;
   userName?: string;
@@ -152,12 +154,12 @@ export default function AdminRedeemRequestsPage() {
     return (
       <div className="space-y-6 p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-bold tracking-tight text-primary">Redeem Requests</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-foreground">Redeem Requests</h2>
           <Button onClick={fetchRedeemRequests} variant="outline" size="sm" disabled={loading}>
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Retry
           </Button>
         </div>
-        <Card className="border-destructive bg-destructive/10">
+        <Card className="border-destructive bg-destructive/10 rounded-xl shadow-md">
           <CardHeader><CardTitle className="flex items-center text-destructive"><AlertTriangle className="mr-2 h-5 w-5"/>Error</CardTitle></CardHeader>
           <CardContent><p className="text-destructive">{error}</p></CardContent>
         </Card>
@@ -168,14 +170,14 @@ export default function AdminRedeemRequestsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight text-primary">Pending Redeem Requests</h2>
+        <h2 className="text-3xl font-bold tracking-tight text-foreground">Pending Redeem Requests</h2>
         <Button onClick={fetchRedeemRequests} variant="outline" size="sm" disabled={loading}>
           <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
         </Button>
       </div>
-      <Card className="shadow-md rounded-xl border-border">
+      <Card className={cardStyle}>
         <CardHeader>
-          <CardTitle className="flex items-center"><Gift className="mr-2 h-5 w-5 text-primary"/>Manage Requests</CardTitle>
+          <CardTitle className="flex items-center text-xl"><Gift className="mr-2 h-5 w-5 text-primary"/>Manage Requests</CardTitle>
           <CardDescription>Approve or reject pending user redeem requests.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -190,31 +192,31 @@ export default function AdminRedeemRequestsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead className="text-right">Amount (SDF)</TableHead>
-                    <TableHead className="text-right">Amount (INR)</TableHead>
-                    <TableHead>Method</TableHead>
-                    <TableHead>Details</TableHead>
-                    <TableHead className="text-center">Actions</TableHead>
+                    <TableHead className="text-xs uppercase text-muted-foreground">Date</TableHead>
+                    <TableHead className="text-xs uppercase text-muted-foreground">User</TableHead>
+                    <TableHead className="text-right text-xs uppercase text-muted-foreground">Amount (SDF)</TableHead>
+                    <TableHead className="text-right text-xs uppercase text-muted-foreground">Amount (INR)</TableHead>
+                    <TableHead className="text-xs uppercase text-muted-foreground">Method</TableHead>
+                    <TableHead className="text-xs uppercase text-muted-foreground">Details</TableHead>
+                    <TableHead className="text-center text-xs uppercase text-muted-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {requests.map((req) => (
-                    <TableRow key={req.id}>
-                      <TableCell>{req.date ? req.date.toLocaleDateString() : 'N/A'}</TableCell>
-                       <TableCell className="whitespace-nowrap">
+                    <TableRow key={req.id} className="hover:bg-muted/40">
+                      <TableCell className="text-sm">{req.date ? req.date.toLocaleDateString() : 'N/A'}</TableCell>
+                       <TableCell className="whitespace-nowrap text-sm">
                         <div className="flex items-center gap-2">
                            <UserCircle className="h-4 w-4 text-muted-foreground"/>
                            <div className="flex flex-col">
-                             <span className="text-xs font-medium truncate max-w-[100px]">{req.userName || 'N/A'}</span>
+                             <span className="font-medium truncate max-w-[100px]">{req.userName || 'N/A'}</span>
                              <span className="text-xs text-muted-foreground truncate max-w-[100px]">{req.userId}</span>
                            </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right font-medium">{formatNumber(req.amount, 2)}</TableCell>
-                      <TableCell className="text-right font-medium">₹{formatNumber(req.inrAmount || 0, 2)}</TableCell>
-                      <TableCell className="capitalize">
+                      <TableCell className="text-right font-medium text-sm">{formatNumber(req.amount, 2)}</TableCell>
+                      <TableCell className="text-right font-medium text-sm">₹{formatNumber(req.inrAmount || 0, 2)}</TableCell>
+                      <TableCell className="capitalize text-sm">
                         <Badge variant="outline" className="text-xs">{req.paymentMethod || 'N/A'}</Badge>
                       </TableCell>
                       <TableCell className="text-xs max-w-xs truncate" title={renderPaymentDetails(req.paymentDetails, req.paymentMethod)}>
@@ -224,19 +226,20 @@ export default function AdminRedeemRequestsPage() {
                         <Button 
                           variant="default" 
                           size="sm" 
-                          className="bg-success hover:bg-success/90 text-success-foreground"
+                          className="bg-success hover:bg-success/90 text-success-foreground text-xs"
                           onClick={() => handleUpdateRequestStatus(req.id, 'completed', req.userId, req.amount, req)}
                           disabled={updatingRequestId === req.id}
                         >
-                          <CheckCircle className="mr-1.5 h-4 w-4" /> Approve
+                          <CheckCircle className="mr-1.5 h-3.5 w-3.5" /> Approve
                         </Button>
                         <Button 
                           variant="destructive" 
                           size="sm"
+                          className="text-xs"
                           onClick={() => handleUpdateRequestStatus(req.id, 'failed', req.userId, req.amount, req)}
                           disabled={updatingRequestId === req.id}
                         >
-                          <XCircle className="mr-1.5 h-4 w-4" /> Reject
+                          <XCircle className="mr-1.5 h-3.5 w-3.5" /> Reject
                         </Button>
                       </TableCell>
                     </TableRow>

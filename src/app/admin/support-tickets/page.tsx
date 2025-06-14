@@ -6,24 +6,40 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageCircleQuestion, AlertTriangle, RefreshCw, Eye, Edit } from 'lucide-react';
+import { MessageCircleQuestion, AlertTriangle, RefreshCw, Eye, Edit, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, orderBy, Timestamp, type DocumentData, doc, updateDoc, serverTimestamp, addDoc } from 'firebase/firestore';
 import type { SupportTicket, AdminActionLog } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/components/providers/auth-provider';
+import { cn } from '@/lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const cardStyle = "rounded-xl shadow-md border border-border/60 hover:border-primary/40 hover:shadow-primary/10 transition-all duration-300";
 
 interface SupportTicketForAdmin extends Omit<SupportTicket, 'createdAt' | 'updatedAt'> {
   createdAt: Date | null;
   updatedAt?: Date | null;
 }
 
-const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
+const getStatusVariant = (status: SupportTicket['status']): "default" | "secondary" | "destructive" | "outline" | "success" => {
   switch (status) {
     case 'resolved':
     case 'closed':
-      return 'default'; 
+      return 'success'; 
     case 'open':
       return 'destructive'; 
     case 'pending':
@@ -33,12 +49,33 @@ const getStatusVariant = (status: string): "default" | "secondary" | "destructiv
   }
 };
 
+const getStatusTextClass = (status: SupportTicket['status']): string => {
+    switch (status) {
+      case 'resolved':
+      case 'closed':
+        return 'text-success-foreground';
+      case 'open':
+        return 'text-destructive-foreground';
+      case 'pending':
+        return 'text-secondary-foreground';
+      default:
+        return 'text-muted-foreground';
+    }
+}
+
+const statusOptions: SupportTicket['status'][] = ['open', 'pending', 'resolved', 'closed'];
+
+
 export default function AdminSupportTicketsPage() {
   const { user: adminUser } = useAuth();
   const [tickets, setTickets] = useState<SupportTicketForAdmin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingTicketId, setUpdatingTicketId] = useState<string | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicketForAdmin | null>(null);
+  const [adminResponse, setAdminResponse] = useState('');
+  const [newStatus, setNewStatus] = useState<SupportTicket['status']>('open');
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { toast } = useToast();
 
   const fetchSupportTickets = useCallback(async () => {
@@ -95,69 +132,47 @@ export default function AdminSupportTicketsPage() {
     }
   };
 
-  const handleUpdateStatus = async (ticketId: string, newStatus: SupportTicket['status'], oldStatus?: SupportTicket['status']) => {
-    setUpdatingTicketId(ticketId);
+  const handleOpenModal = (ticket: SupportTicketForAdmin) => {
+    setSelectedTicket(ticket);
+    setAdminResponse(ticket.adminResponse || '');
+    setNewStatus(ticket.status);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveChanges = async () => {
+    if (!selectedTicket) return;
+    setUpdatingTicketId(selectedTicket.id);
     try {
-      const ticketRef = doc(db, 'support_tickets', ticketId);
-      await updateDoc(ticketRef, { 
+      const ticketRef = doc(db, 'support_tickets', selectedTicket.id);
+      const updates: Partial<SupportTicket> & {updatedAt: any} = { 
         status: newStatus, 
+        adminResponse: adminResponse,
         updatedAt: serverTimestamp()
-      }); 
-      toast({ title: 'Status Updated', description: `Ticket ${ticketId} status updated to ${newStatus}.` });
-      await logAdminAction('SUPPORT_TICKET_STATUS_CHANGED', ticketId, { oldStatus: oldStatus || 'unknown', newStatus });
+      };
+      await updateDoc(ticketRef, updates); 
+      toast({ title: 'Ticket Updated', description: `Ticket ${selectedTicket.id} has been updated.` });
+      await logAdminAction('SUPPORT_TICKET_UPDATED', selectedTicket.id, { newStatus, adminResponse });
       fetchSupportTickets(); 
+      setIsModalOpen(false);
+      setSelectedTicket(null);
     } catch (err: any) {
-      console.error(`Error updating status for ticket ${ticketId}:`, err);
-      toast({ title: 'Update Failed', description: `Could not update ticket status: ${err.message}`, variant: 'destructive' });
+      console.error(`Error updating ticket ${selectedTicket.id}:`, err);
+      toast({ title: 'Update Failed', description: `Could not update ticket: ${err.message}`, variant: 'destructive' });
     } finally {
       setUpdatingTicketId(null);
     }
   };
-  
-  const viewTicketDetails = (ticket: SupportTicketForAdmin) => {
-    let message = `Ticket ID: ${ticket.id}\n`;
-    message += `User: ${ticket.userName} (${ticket.userEmail})\n`;
-    message += `Category: ${ticket.category}\n`;
-    message += `Status: ${ticket.status}\n`;
-    message += `Created: ${ticket.createdAt ? ticket.createdAt.toLocaleString() : 'N/A'}\n`;
-    message += `Updated: ${ticket.updatedAt ? ticket.updatedAt.toLocaleString() : 'N/A'}\n`;
-    message += `Description:\n${ticket.description}\n\n`;
-    message += `Current Admin Response: ${ticket.adminResponse || 'No response yet.'}\n\n`;
-    message += `PROMPT: Enter new status (open, pending, resolved, closed) OR enter a new admin response text.`;
-    
-    const newStatusOrResponse = prompt(message, ticket.status);
-
-    if (newStatusOrResponse) {
-      if (['open', 'pending', 'resolved', 'closed'].includes(newStatusOrResponse)) {
-        handleUpdateStatus(ticket.id, newStatusOrResponse as SupportTicket['status'], ticket.status);
-      } else {
-        // Assume it's an admin response
-        const ticketRef = doc(db, 'support_tickets', ticket.id);
-        updateDoc(ticketRef, {
-          adminResponse: newStatusOrResponse,
-          updatedAt: serverTimestamp()
-        }).then(async () => {
-          toast({title: "Response Added", description: "Admin response saved."});
-          await logAdminAction('SUPPORT_TICKET_RESPONDED', ticket.id, { response: newStatusOrResponse });
-          fetchSupportTickets();
-        }).catch(err => {
-          toast({title: "Error", description: `Failed to save response: ${err.message}`, variant: "destructive"});
-        });
-      }
-    }
-  };
-
 
   if (error) {
     return (
       <div className="space-y-6 p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-bold tracking-tight text-primary">Support Tickets</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-foreground">Support Tickets</h2>
           <Button onClick={fetchSupportTickets} variant="outline" size="sm" disabled={loading}>
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Retry
           </Button>
         </div>
-        <Card className="border-destructive bg-destructive/10">
+        <Card className="border-destructive bg-destructive/10 rounded-xl shadow-md">
           <CardHeader><CardTitle className="flex items-center text-destructive"><AlertTriangle className="mr-2 h-5 w-5"/>Error</CardTitle></CardHeader>
           <CardContent><p className="text-destructive">{error}</p></CardContent>
         </Card>
@@ -168,14 +183,14 @@ export default function AdminSupportTicketsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight text-primary">Support Ticket Management</h2>
+        <h2 className="text-3xl font-bold tracking-tight text-foreground">Support Ticket Management</h2>
         <Button onClick={fetchSupportTickets} variant="outline" size="sm" disabled={loading}>
           <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
         </Button>
       </div>
-      <Card className="shadow-md rounded-xl border-border">
+      <Card className={cardStyle}>
         <CardHeader>
-          <CardTitle className="flex items-center"><MessageCircleQuestion className="mr-2 h-5 w-5 text-primary"/>User Support Tickets</CardTitle>
+          <CardTitle className="flex items-center text-xl"><MessageCircleQuestion className="mr-2 h-5 w-5 text-primary"/>User Support Tickets</CardTitle>
           <CardDescription>View and manage user-submitted support tickets.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -190,36 +205,36 @@ export default function AdminSupportTicketsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Description (Summary)</TableHead>
-                    <TableHead className="text-center">Actions</TableHead>
+                    <TableHead className="text-xs uppercase text-muted-foreground">Date</TableHead>
+                    <TableHead className="text-xs uppercase text-muted-foreground">User</TableHead>
+                    <TableHead className="text-xs uppercase text-muted-foreground">Category</TableHead>
+                    <TableHead className="text-xs uppercase text-muted-foreground">Status</TableHead>
+                    <TableHead className="text-xs uppercase text-muted-foreground">Description</TableHead>
+                    <TableHead className="text-center text-xs uppercase text-muted-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {tickets.map((ticket) => (
-                    <TableRow key={ticket.id}>
-                      <TableCell>{ticket.createdAt ? ticket.createdAt.toLocaleDateString() : 'N/A'}</TableCell>
-                      <TableCell className="whitespace-nowrap">
+                    <TableRow key={ticket.id} className="hover:bg-muted/40">
+                      <TableCell className="text-sm">{ticket.createdAt ? ticket.createdAt.toLocaleDateString() : 'N/A'}</TableCell>
+                      <TableCell className="whitespace-nowrap text-sm">
                         <div className="flex flex-col">
                           <span className="font-medium">{ticket.userName}</span>
                           <span className="text-xs text-muted-foreground">{ticket.userEmail}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="capitalize">{ticket.category}</TableCell>
+                      <TableCell className="capitalize text-sm">{ticket.category}</TableCell>
                       <TableCell>
-                        <Badge variant={getStatusVariant(ticket.status)} className="text-xs capitalize">
-                          {ticket.status === 'open' ? 'Closed' : ticket.status}
+                        <Badge variant={getStatusVariant(ticket.status)} className={cn("text-xs capitalize", getStatusTextClass(ticket.status))}>
+                          {ticket.status}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-xs max-w-sm truncate" title={ticket.description}>
                         {ticket.description}
                       </TableCell>
-                      <TableCell className="text-center space-x-1">
-                        <Button variant="outline" size="sm" onClick={() => viewTicketDetails(ticket)} disabled={updatingTicketId === ticket.id}>
-                          <Eye className="mr-1 h-3 w-3" /> View/Respond
+                      <TableCell className="text-center">
+                        <Button variant="outline" size="sm" className="text-xs" onClick={() => handleOpenModal(ticket)} disabled={updatingTicketId === ticket.id}>
+                          <Edit className="mr-1.5 h-3.5 w-3.5" /> Manage
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -230,6 +245,62 @@ export default function AdminSupportTicketsPage() {
           )}
         </CardContent>
       </Card>
+
+      {selectedTicket && (
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogContent className="sm:max-w-lg rounded-xl">
+            <DialogHeader>
+              <DialogTitle className="text-xl">Manage Support Ticket</DialogTitle>
+              <DialogDescription>Ticket ID: {selectedTicket.id}</DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4 max-h-[60vh] overflow-y-auto px-1">
+              <div className="space-y-0.5">
+                <p className="text-xs text-muted-foreground">User: {selectedTicket.userName} ({selectedTicket.userEmail})</p>
+                <p className="text-xs text-muted-foreground">Category: <Badge variant="secondary" className="capitalize text-xs">{selectedTicket.category}</Badge></p>
+                <p className="text-xs text-muted-foreground">Submitted: {selectedTicket.createdAt?.toLocaleString()}</p>
+              </div>
+              <div>
+                <Label className="font-semibold">User's Issue:</Label>
+                <p className="text-sm p-2 bg-muted/50 rounded-md border border-border/50 whitespace-pre-wrap">{selectedTicket.description}</p>
+              </div>
+              <div>
+                <Label htmlFor="adminResponse" className="font-semibold">Admin Response:</Label>
+                <Textarea 
+                  id="adminResponse" 
+                  value={adminResponse} 
+                  onChange={(e) => setAdminResponse(e.target.value)} 
+                  placeholder="Enter your response here..."
+                  rows={4}
+                  className="text-sm"
+                />
+              </div>
+              <div>
+                <Label htmlFor="ticketStatus" className="font-semibold">Update Status:</Label>
+                <Select value={newStatus} onValueChange={(value) => setNewStatus(value as SupportTicket['status'])}>
+                  <SelectTrigger id="ticketStatus" className="w-full text-sm">
+                    <SelectValue placeholder="Select new status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map(status => (
+                       <SelectItem key={status} value={status} className="capitalize text-sm">
+                        {status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter className="sm:justify-between">
+              <DialogClose asChild>
+                <Button type="button" variant="outline">Cancel</Button>
+              </DialogClose>
+              <Button type="button" onClick={handleSaveChanges} disabled={updatingTicketId === selectedTicket.id}>
+                {updatingTicketId === selectedTicket.id ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
