@@ -4,277 +4,225 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions ---
+    // Helper Functions
+    function isSignedIn() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
     function isOwner(userId) {
-      return request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId;
     }
 
     function isAdmin() {
-      // Ensure 'admin' claim is explicitly true.
-      // Checking for 'exists' or '!= null' can be risky if the claim could be set to false.
-      return request.auth.token.admin == true;
+      return isSignedIn() && request.auth.token.admin == true;
     }
 
-    function isValidTimestampOrNull(value) {
-      return value == null || value is timestamp;
-    }
-
-    // Function to check if a user profile can be publicly read (e.g., for leaderboard)
+    // Function to check if the document represents a public user profile (for listing/reading by others)
+    // Ensures essential fields for public display are present and correctly typed.
     function isPublicUserProfile(userData) {
-      // For leaderboard/public view, we mainly care about display name and balance.
-      // photoURL is optional.
       return userData.balance is number &&
              (userData.name is string || userData.name == null) && // Name can be string or null
-             (userData.photoURL is string || userData.photoURL == null); // photoURL can be string or null
+             (userData.photoURL is string || userData.photoURL == null) && // photoURL can be string or null
+             (userData.createdAt is timestamp); // Ensure createdAt is a timestamp
     }
 
-    // Function to validate the structure and types of a new user document on creation.
-    function isValidNewUserDocument(data) {
-      // Initial balance can be 0 or the referral bonus amount.
-      let isValidBalance = (data.balance == 0 || data.balance == 10); // 10 is CONFIG.REFERRAL_BONUS_FOR_NEW_USER
+    // Validates fields for a new user document creation.
+    function isValidNewUserDocument(newData, userId) {
+      let initialBoostLevels = {}; // Define as empty map
+      let initialCompletedAchievements = {}; // Define as empty map
+      let initialUnlockedThemes = ["default_aqua"]; // Default theme must be unlocked
 
-      return isValidBalance
-             && data.tapCountToday == 0
-             && data.lastTapDate is string // Client will send today's date string
-             && data.currentEnergy is number && data.currentEnergy > 0
-             && data.maxEnergy is number && data.maxEnergy > 0
-             && data.tapPower is number && data.tapPower > 0
-             && data.lastEnergyUpdate == request.time // Must be server timestamp on create
-             && data.boostLevels is map && data.boostLevels.size() == 0
-             && data.lastLoginBonusClaimed == null // Must be null initially
-             && (data.referredBy is string || data.referredBy == null)
-             && data.createdAt == request.time // Must be server timestamp on create
-             && data.name is string
-             && data.email is string
-             && data.photoURL == null // Must be null initially
-             && data.photoStoragePath == null // Must be null initially
-             && data.completedAchievements is map && data.completedAchievements.size() == 0
-             && data.referralsMadeCount == 0
-             && data.activeTheme is string // Default theme ID
-             && data.unlockedThemes is list && data.unlockedThemes.size() == 1 // Only default theme
-             && data.frenzyEndTime == null
-             && data.frenzyMultiplier == null
-             && data.energySurgeEndTime == null
-             // Ensure all expected fields are present and no extra fields.
-             && data.keys().hasAll(['balance', 'tapCountToday', 'lastTapDate', 'currentEnergy', 'maxEnergy', 'tapPower', 'lastEnergyUpdate', 'boostLevels', 'lastLoginBonusClaimed', 'referredBy', 'createdAt', 'name', 'email', 'photoURL', 'photoStoragePath', 'completedAchievements', 'referralsMadeCount', 'activeTheme', 'unlockedThemes', 'frenzyEndTime', 'frenzyMultiplier', 'energySurgeEndTime'])
-             && data.keys().size() == 22;
+      return isOwner(userId) && // User can only create their own document
+             newData.userId == userId && // Correctly set userId on the document itself (redundant if doc ID is userId)
+             newData.email == request.auth.token.email &&
+             newData.name == request.resource.data.name && // Name can be set by user on creation
+             newData.balance == 0 || (newData.referredBy != null && newData.balance == 10) && // Initial balance rules
+             newData.tapCountToday == 0 &&
+             newData.currentEnergy == 100 && // Assuming CONFIG.INITIAL_MAX_ENERGY
+             newData.maxEnergy == 100 &&     // Assuming CONFIG.INITIAL_MAX_ENERGY
+             newData.tapPower == 0.1 &&      // Assuming CONFIG.INITIAL_TAP_POWER
+             newData.boostLevels == initialBoostLevels &&
+             newData.lastLoginBonusClaimed == null &&
+             // newData.referredBy can be string or null
+             newData.createdAt == request.time && // Must be server timestamp
+             newData.lastEnergyUpdate == request.time && // Must be server timestamp
+             newData.lastTapDate is string && // Should be set by client to today's date string
+             (newData.photoURL == null || newData.photoURL is string) &&
+             (newData.photoStoragePath == null || newData.photoStoragePath is string) &&
+             newData.completedAchievements == initialCompletedAchievements &&
+             newData.referralsMadeCount == 0 &&
+             newData.activeTheme == "default_aqua" &&
+             newData.unlockedThemes == initialUnlockedThemes &&
+             newData.frenzyEndTime == null &&
+             newData.frenzyMultiplier == null &&
+             newData.energySurgeEndTime == null &&
+             (!('updatedAt' in newData) || newData.updatedAt == request.time); // Optional updatedAt on create
     }
 
-    // Function to check if the fields being updated by the owner in their profile are allowed.
-    function isAllowedOwnerProfileFieldsUpdate(newData, existingData) {
-        // Fields an owner IS allowed to change directly via profile update
-        let modifiableByOwner = ['name', 'photoURL', 'photoStoragePath', 'activeTheme', 'updatedAt'];
+    // Owner can only update these specific fields on their own profile.
+    // Other fields are managed by game logic / transactions.
+    function isAllowedOwnerProfileFieldsUpdate() {
+      let allowedToChangeByOwner = ['name', 'photoURL', 'photoStoragePath', 'activeTheme'];
+      let changedKeys = request.resource.data.diff(resource.data).affectedKeys();
+      let onlyPermittedFieldsAreChanging = changedKeys.hasOnly(allowedToChangeByOwner.concat(['updatedAt']));
 
-        // Check if any fields *not* in modifiableByOwner AND *not* in existingData.keys() are being added
-        if (newData.keys().toSet().difference(existingData.keys().toSet()).difference(modifiableByOwner.toSet()).size() > 0) {
-            return false; // Trying to add a non-modifiable field
-        }
-
-        // Check if any existing fields *not* in modifiableByOwner are being changed
-        let changedExistingSystemFields = existingData.keys().filter(key =>
-            !(key in modifiableByOwner) && (key in newData) && newData[key] != existingData[key]
-        );
-        if (changedExistingSystemFields.size() > 0) {
-            return false; // Trying to change a system-managed or immutable field
-        }
-
-        // Type checks for fields that can be modified
-        return (newData.keys().has('name') ? (newData.name is string || newData.name == null) : true) &&
-               (newData.keys().has('photoURL') ? (newData.photoURL is string || newData.photoURL == null) : true) &&
-               (newData.keys().has('photoStoragePath') ? (newData.photoStoragePath is string || newData.photoStoragePath == null) : true) &&
-               (newData.keys().has('activeTheme') ? newData.activeTheme is string : true) &&
-               // If updatedAt is being written, it must be the server timestamp.
-               // If not present in newData, it means it's not being updated by this operation.
-               (newData.keys().has('updatedAt') ? newData.updatedAt == request.time : true);
+      return isOwner(userId) && // Ensure this function is used in a context where userId is defined
+             onlyPermittedFieldsAreChanging &&
+             request.resource.data.updatedAt == request.time &&
+             request.resource.data.email == resource.data.email && // email must not change
+             request.resource.data.createdAt == resource.data.createdAt; // createdAt must not change
     }
 
-    function isValidTransactionData(data, operation) {
-      let commonFields = ['userId', 'amount', 'type', 'status', 'date']; // userName, userEmail are optional for system txns
-      let allCommonFieldsPresent = data.keys().hasAll(commonFields);
+    // Helper function for P2P recipient update by the sender
+    // Ensures only balance is incremented and updatedAt is set.
+    function isAllowedP2PRecipientUpdate(newUserData, oldUserData) {
+      let changedKeys = newUserData.diff(oldUserData).affectedKeys();
+      return changedKeys.hasOnly(['balance', 'updatedAt']) &&
+             newUserData.balance > oldUserData.balance && // Ensure balance increased (actual amount checked by transaction)
+             newUserData.updatedAt == request.time;
+    }
 
-      let basicTypesCorrect = data.userId is string &&
-                              (data.keys().has('userName') ? (data.userName is string || data.userName == null) : true) &&
-                              (data.keys().has('userEmail') ? (data.userEmail is string || data.userEmail == null) : true) &&
-                              data.amount is number && // Can be positive or negative
-                              data.type is string &&
-                              data.status is string && (data.status == 'pending' || data.status == 'completed' || data.status == 'failed') &&
-                              (operation == 'create' ? data.date == request.time : data.date is timestamp);
 
-      if (!allCommonFieldsPresent || !basicTypesCorrect) { return false; }
+    // Validates fields for a new transaction document.
+    function isValidTransactionCreate(newData) {
+      let commonValid = newData.amount is number &&
+                        newData.type is string &&
+                        newData.status is string &&
+                        newData.date == request.time && // Transaction date must be server time
+                        (newData.userId == request.auth.uid ||
+                          (newData.type == 'p2p_receive' && newData.relatedUserId == request.auth.uid && newData.userId != request.auth.uid)
+                        );
 
-      if (data.type == 'redeem') {
-        return data.keys().hasAll(['inrAmount', 'paymentMethod', 'paymentDetails']) &&
-               data.inrAmount is number && data.inrAmount >= 0 &&
-               data.paymentMethod is string && data.paymentDetails is map &&
-               (operation == 'create' ? data.status == 'pending' : true); // Redeem requests start as pending
+      let typeSpecificValid = false;
+      if (newData.type == 'redeem') {
+        typeSpecificValid = newData.status == 'pending' &&
+                            newData.paymentMethod is string &&
+                            newData.paymentDetails is map &&
+                            newData.inrAmount is number && newData.inrAmount > 0 &&
+                            newData.userId == request.auth.uid;
+      } else if (newData.type == 'booster_purchase') {
+        typeSpecificValid = newData.status == 'completed' &&
+                            newData.details is string &&
+                            newData.userId == request.auth.uid;
+      } else if (newData.type == 'daily_bonus') {
+        typeSpecificValid = newData.status == 'completed' &&
+                            newData.userId == request.auth.uid;
+      } else if (newData.type == 'referral_bonus') {
+        typeSpecificValid = newData.status == 'completed' &&
+                            (newData.details is string || newData.details == null) &&
+                            newData.userId == request.auth.uid;
+      } else if (newData.type == 'achievement_reward') {
+        typeSpecificValid = newData.status == 'completed' &&
+                            newData.details is string &&
+                            newData.userId == request.auth.uid;
+      } else if (newData.type == 'p2p_send') {
+        typeSpecificValid = newData.status == 'completed' &&
+                            newData.relatedUserId is string && newData.relatedUserId != request.auth.uid &&
+                            newData.userId == request.auth.uid &&
+                            (newData.relatedUserName is string || newData.relatedUserName == null) &&
+                            (newData.userName is string || newData.userName == null);
+      } else if (newData.type == 'p2p_receive') {
+        typeSpecificValid = newData.status == 'completed' &&
+                            newData.relatedUserId == request.auth.uid && // Sender is the relatedUserId
+                            newData.userId != request.auth.uid && // Recipient is userId
+                            (newData.relatedUserName is string || newData.relatedUserName == null) &&
+                            (newData.userName is string || newData.userName == null);
+      } else if (newData.type == 'quest_reward') {
+        typeSpecificValid = newData.status == 'completed' && newData.details is string &&
+                            newData.userId == request.auth.uid;
+      } else if (newData.type == 'theme_purchase') {
+        typeSpecificValid = newData.status == 'completed' && newData.details is string &&
+                            newData.userId == request.auth.uid;
+      } else if (newData.type == 'offline_earnings') {
+        typeSpecificValid = newData.status == 'completed' &&
+                            newData.userId == request.auth.uid;
+      } else {
+        typeSpecificValid = false; // Unknown type not allowed unless explicitly handled
       }
-      if (data.type == 'p2p_send' || data.type == 'p2p_receive') {
-        return data.keys().hasAll(['relatedUserId']) && // relatedUserName is optional but good to have
-               data.relatedUserId is string &&
-               (data.keys().has('relatedUserName') ? (data.relatedUserName is string || data.relatedUserName == null) : true);
-      }
-      // For other types, check necessary fields. Example: booster_purchase needs 'details'
-      if (data.type == 'booster_purchase' || data.type == 'theme_purchase' || data.type == 'achievement_reward' || data.type == 'quest_reward' || data.type == 'referral_bonus') {
-        return data.keys().has('details') && data.details is string;
-      }
-      // Daily bonus and offline earnings don't need extra details from client.
-      if (data.type == 'daily_bonus' || data.type == 'offline_earnings') {
-          return true;
-      }
-      return false; // Unknown transaction type by default is not valid
+      return commonValid && typeSpecificValid;
     }
 
-    function isValidMarqueeItem(data) {
-      return data.text is string && data.text.size() > 0 && data.text.size() <= 200 &&
-             (data.keys().has('createdAt') ? data.createdAt == request.time : true) && // On create
-             (data.keys().has('updatedAt') ? data.updatedAt == request.time : true); // On update
+    // Allows admin to update transaction status (e.g., for redeem requests).
+    function isAdminTransactionUpdate(newData, oldData) {
+      let changedKeys = newData.diff(oldData).affectedKeys();
+      return isAdmin() &&
+             changedKeys.hasOnly(['status', 'updatedAt']) && // Admin can only change status and updatedAt
+             newData.updatedAt == request.time &&
+             newData.userId == oldData.userId && // Cannot change owner
+             newData.type == oldData.type &&     // Cannot change type
+             newData.amount == oldData.amount;   // Cannot change amount
     }
 
-    function isSupportTicketOwner(ticketData) {
-        return request.auth.uid == ticketData.userId;
-    }
-
-    function isValidSupportTicketData(data, operation) {
-        let requiredFieldsOnCreate = ['userId', 'userName', 'userEmail', 'category', 'description', 'status', 'createdAt'];
-        let validStatus = data.status == 'open' || data.status == 'pending' || data.status == 'resolved' || data.status == 'closed';
-
-        if (operation == 'create') {
-            return data.keys().hasAll(requiredFieldsOnCreate) &&
-                   data.userId == request.auth.uid &&
-                   data.userName is string && data.userName.size() > 0 &&
-                   data.userEmail is string && data.userEmail.matches('.+@.+') &&
-                   data.category is string && data.category.size() > 0 &&
-                   data.description is string && data.description.size() > 0 &&
-                   data.status == 'open' && // New tickets are always 'open'
-                   data.createdAt == request.time;
-        }
-        if (operation == 'update') {
-            // Admin can update status and adminResponse
-            return validStatus &&
-                   (data.keys().has('adminResponse') ? data.adminResponse is string : true) &&
-                   data.updatedAt == request.time;
-        }
-        return false;
-    }
-
-    function isValidUserQuestDocument(newData, existingData) {
-        // Primarily for creation or ensuring structure for read
-        if (existingData == null) { // Creation
-            return newData.keys().hasAll(['lastQuestRefresh', 'activeDailyQuestIds']) &&
-                   newData.lastQuestRefresh == request.time &&
-                   newData.activeDailyQuestIds is list;
-        }
-        // For updates, mainly lastQuestRefresh and activeDailyQuestIds might change by system
-        return newData.lastQuestRefresh is timestamp && newData.activeDailyQuestIds is list;
-    }
-
-    function isValidDailyQuestSubDocument(newData, existingData) {
-        let requiredFields = ['definition', 'progress', 'completed', 'claimed', 'assignedAt'];
-        if (!newData.keys().hasAll(requiredFields)) return false;
-
-        if (existingData == null) { // Creation
-            return newData.definition is map && // definition should be a map copy of QuestDefinition
-                   newData.progress == 0 &&
-                   newData.completed == false &&
-                   newData.claimed == false &&
-                   newData.assignedAt == request.time;
-        }
-        // Updates by user/system: progress, completed, claimed
-        return newData.definition is map && // Should not change
-               newData.progress is number && newData.progress >= 0 &&
-               newData.completed is bool &&
-               newData.claimed is bool &&
-               newData.assignedAt is timestamp; // Should not change
-    }
-
-    function isValidAdminActionLog(data) {
-        return data.keys().hasAll(['adminId', 'adminEmail', 'actionType', 'targetType', 'targetId', 'timestamp']) &&
-               data.adminId == request.auth.uid && // Action must be logged by the performing admin
-               data.adminEmail == request.auth.token.email &&
-               data.actionType is string &&
-               data.targetType is string &&
-               data.targetId is string &&
-               data.timestamp == request.time && // Logged at the time of action
-               (data.keys().has('details') ? (data.details is map || data.details is string) : true); // Details are optional
-    }
-
-    // --- Rules for Collections ---
+    // Collection Rules
     match /users/{userId} {
-      allow read: if request.auth.uid != null; // Any authenticated user can read basic user profiles if isPublicUserProfile passes.
-      allow get: if request.auth.uid != null && (isOwner(userId) || isAdmin() || isPublicUserProfile(resource.data));
+      allow read: if isSignedIn() || isAdmin(); // More permissive read needed for P2P and admin user lookups.
+                                              // Client should handle what to display.
 
-      // User can create their own document if data is valid.
-      allow create: if isOwner(userId) && isValidNewUserDocument(request.resource.data);
+      allow create: if isValidNewUserDocument(request.resource.data, userId);
 
-      allow update: if isAdmin() || // Admins can update any field.
-                      // Owner can update specific profile fields as defined in the helper.
-                      (isOwner(userId) && isAllowedOwnerProfileFieldsUpdate(request.resource.data, resource.data)) ||
-                      // Non-owner (sender in P2P) can update ONLY recipient's balance (increment) and updatedAt.
-                      (request.auth.uid != null && request.auth.uid != userId &&
-                       request.resource.data.keys().hasAll(['balance', 'updatedAt']) &&
-                       request.resource.data.keys().size() == 2 &&
-                       request.resource.data.balance is number &&
-                       request.resource.data.balance > resource.data.balance && // Must be an increment
-                       request.resource.data.updatedAt == request.time);
-      allow delete: if isAdmin(); // Only admins can delete user accounts.
+      allow update: if isSignedIn() &&
+                       ( (isOwner(userId) && isAllowedOwnerProfileFieldsUpdate()) || // Owner updating their allowed fields
+                         (isAdmin() && request.resource.data.updatedAt == request.time) || // Admin can update any field (carefully)
+                         (!isOwner(userId) && isAllowedP2PRecipientUpdate(request.resource.data, resource.data)) // P2P update by sender
+                       );
+      allow delete: if isAdmin(); // Only admin can delete user documents
     }
 
     match /transactions/{transactionId} {
-      allow read, list: if request.auth.uid != null && (isOwner(resource.data.userId) || isAdmin());
-      allow create: if request.auth.uid != null &&
-                       isValidTransactionData(request.resource.data, 'create') &&
-                       (
-                         // User can create their own transaction
-                         (isOwner(request.resource.data.userId)) ||
-                         // Sender can create a 'p2p_receive' transaction for the recipient
-                         (request.resource.data.type == 'p2p_receive' &&
-                          request.resource.data.relatedUserId == request.auth.uid && // sender is the relatedUserId
-                          request.resource.data.userId != request.auth.uid // recipient is the main userId
-                         )
-                       );
-      allow update: if isAdmin() && // Admins can update status (e.g., for redeem requests)
-                       (request.resource.data.status is string && (request.resource.data.status == 'completed' || request.resource.data.status == 'failed')) &&
-                       request.resource.data.updatedAt == request.time;
+      allow read: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isSignedIn() && isValidTransactionCreate(request.resource.data);
+      allow update: if isAdminTransactionUpdate(request.resource.data, resource.data);
       allow delete: if isAdmin();
     }
 
     match /marquee_items/{itemId} {
-      allow read: if true; // Marquee items are public.
+      allow read: if true; // Marquee items are public
       allow list: if true;
-      allow create, update, delete: if isAdmin() && isValidMarqueeItem(request.resource.data);
+      allow create, update, delete: if isAdmin();
     }
 
     match /faqs/{faqId} {
-        allow read: if true; // FAQs are public
-        allow list: if true;
-        allow create, update, delete: if isAdmin(); // Admin can manage FAQs
+      allow read: if true; // FAQs are public
+      allow list: if true;
+      allow create, update, delete: if isAdmin();
     }
 
     match /support_tickets/{ticketId} {
-        allow read: if request.auth.uid != null && (isSupportTicketOwner(resource.data) || isAdmin());
-        allow list: if request.auth.uid != null && isAdmin(); // Only admin can list all tickets
-        allow create: if request.auth.uid != null && isValidSupportTicketData(request.resource.data, 'create') && isSupportTicketOwner(request.resource.data);
-        allow update: if request.auth.uid != null && isAdmin() && isValidSupportTicketData(request.resource.data, 'update');
-        allow delete: if request.auth.uid != null && isAdmin();
+      allow read: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isSignedIn() &&
+                     request.resource.data.userId == request.auth.uid &&
+                     request.resource.data.status == 'open' &&
+                     request.resource.data.createdAt == request.time &&
+                     request.resource.data.category is string &&
+                     request.resource.data.description is string &&
+                     request.resource.data.userName is string &&
+                     request.resource.data.userEmail is string &&
+                     !('adminResponse' in request.resource.data) && // User cannot set admin response on create
+                     !('updatedAt' in request.resource.data); // User cannot set updatedAt on create
+      allow update: if isAdmin() &&
+                     request.resource.data.userId == resource.data.userId && // Cannot change ticket owner
+                     request.resource.data.updatedAt == request.time &&
+                     // Admin can update status and adminResponse
+                     request.resource.data.keys().hasAll(['status', 'adminResponse', 'updatedAt',
+                                                          'userId', 'userName', 'userEmail', 'category', 'description', 'createdAt']); // Ensure no other fields added
+      allow delete: if isAdmin();
     }
 
     match /user_quests/{userId} {
-        allow read, update: if isOwner(userId) || isAdmin();
-        // Creation of user_quests document might happen implicitly with first daily_quest or explicitly
-        allow create: if isOwner(userId) && isValidUserQuestDocument(request.resource.data, null);
-
-        match /daily_quests/{questId} {
-            allow read: if isOwner(userId) || isAdmin();
-            allow create: if isOwner(userId) && isValidDailyQuestSubDocument(request.resource.data, null);
-            allow update: if isOwner(userId) && isValidDailyQuestSubDocument(request.resource.data, resource.data);
-            allow delete: if isAdmin(); // Or if logic requires user to delete/reset (rare)
-        }
+      allow read, write: if isOwner(userId) || isAdmin();
+      match /daily_quests/{questId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
     }
 
     match /admin_actions/{logId} {
-        allow read, list: if isAdmin(); // Only admins can read action logs
-        allow create: if isAdmin() && isValidAdminActionLog(request.resource.data);
-        allow update, delete: if false; // Logs should be immutable
+      allow read: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin() &&
+                     request.resource.data.adminId == request.auth.uid &&
+                     request.resource.data.timestamp == request.time;
+      // No update/delete for logs by default, unless specifically needed.
+      allow update, delete: if false;
     }
   }
 }
