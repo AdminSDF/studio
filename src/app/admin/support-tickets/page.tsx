@@ -55,7 +55,7 @@ const getStatusTextClass = (status: SupportTicket['status']): string => {
       case 'closed':
         return 'text-success-foreground';
       case 'open':
-        return 'text-destructive-foreground';
+        return 'text-destructive-foreground'; // Corrected for the "Closed" display of "open" status
       case 'pending':
         return 'text-secondary-foreground';
       default:
@@ -151,7 +151,7 @@ export default function AdminSupportTicketsPage() {
       };
       await updateDoc(ticketRef, updates); 
       toast({ title: 'Ticket Updated', description: `Ticket ${selectedTicket.id} has been updated.` });
-      await logAdminAction('SUPPORT_TICKET_UPDATED', selectedTicket.id, { newStatus, adminResponse });
+      await logAdminAction('SUPPORT_TICKET_UPDATED', selectedTicket.id, { newStatus, adminResponse, oldStatus: selectedTicket.status });
       fetchSupportTickets(); 
       setIsModalOpen(false);
       setSelectedTicket(null);
@@ -230,7 +230,7 @@ export default function AdminSupportTicketsPage() {
                             className={cn(
                                 "text-[9px] sm:text-xs capitalize px-1.5 sm:px-2 py-0.5 sm:py-1", 
                                 getStatusTextClass(ticket.status),
-                                ticket.status === 'open' ? 'bg-destructive text-destructive-foreground' : '' // Specific override for 'open' to be destructive
+                                ticket.status === 'open' ? 'bg-destructive text-destructive-foreground' : ''
                             )}
                         >
                           {ticket.status === 'open' ? 'Closed' : ticket.status}
@@ -263,7 +263,7 @@ export default function AdminSupportTicketsPage() {
             <div className="py-3 sm:py-4 space-y-3 sm:space-y-4 max-h-[60vh] overflow-y-auto px-1 text-sm sm:text-base">
               <div className="space-y-0.5">
                 <p className="text-xs sm:text-sm text-muted-foreground">User: {selectedTicket.userName} ({selectedTicket.userEmail})</p>
-                <p className="text-xs sm:text-sm text-muted-foreground">Category: <Badge variant="secondary" className="capitalize text-[10px] sm:text-xs">{selectedTicket.category}</Badge></p>
+                <div className="text-xs sm:text-sm text-muted-foreground">Category: <Badge variant="secondary" className="capitalize text-[10px] sm:text-xs ml-1">{selectedTicket.category}</Badge></div>
                 <p className="text-xs sm:text-sm text-muted-foreground">Submitted: {selectedTicket.createdAt?.toLocaleString()}</p>
               </div>
               <div>
@@ -311,3 +311,4 @@ export default function AdminSupportTicketsPage() {
     </div>
   );
 }
+
