@@ -25,12 +25,14 @@ interface AppStateContextType {
   achievements: Achievement[];
   userQuests: UserQuest[];
   faqs: FAQEntry[];
+  userSupportTickets: SupportTicket[]; // Added
   loadingUserData: boolean;
   loadingLeaderboard: boolean;
   loadingAchievements: boolean;
   loadingQuests: boolean;
   loadingFaqs: boolean;
-  loadingMarquee: boolean; // Added
+  loadingMarquee: boolean;
+  loadingUserSupportTickets: boolean; // Added
   setUserDataState: (data: UserData | null) => void;
   fetchUserData: () => Promise<void>;
   updateUserFirestoreData: (data: Partial<UserData>) => Promise<void>;
@@ -44,7 +46,7 @@ interface AppStateContextType {
   pageHistory: string[];
   addPageVisit: (page: string) => void;
   fetchLeaderboardData: () => Promise<void>;
-  fetchMarqueeItems: () => Promise<void>; // Added
+  fetchMarqueeItems: () => Promise<void>;
   checkAndAwardAchievements: () => Promise<void>;
   purchaseTheme: (themeId: string) => Promise<boolean>;
   setActiveThemeState: (themeId: string) => void;
@@ -55,6 +57,7 @@ interface AppStateContextType {
   updateQuestProgress: (questId: string, progressIncrement: number) => Promise<void>;
   submitSupportTicket: (category: string, description: string) => Promise<boolean>;
   fetchFaqs: () => Promise<void>;
+  fetchUserSupportTickets: () => Promise<void>; // Added
   currentPersonalizedTip: string | null;
   getAndSetPersonalizedTip: () => Promise<void>;
   triggerTapFrenzy: () => void;
@@ -75,12 +78,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [achievements] = useState<Achievement[]>(CONFIG.ACHIEVEMENTS);
   const [userQuests, setUserQuests] = useState<UserQuest[]>([]);
   const [faqs, setFaqs] = useState<FAQEntry[]>([]);
+  const [userSupportTickets, setUserSupportTickets] = useState<SupportTicket[]>([]); // Added
   const [loadingUserData, setLoadingUserData] = useState(true);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(true);
   const [loadingAchievements, setLoadingAchievements] = useState(false);
   const [loadingQuests, setLoadingQuests] = useState(false);
   const [loadingFaqs, setLoadingFaqs] = useState(true);
-  const [loadingMarquee, setLoadingMarquee] = useState(true); // Added
+  const [loadingMarquee, setLoadingMarquee] = useState(true);
+  const [loadingUserSupportTickets, setLoadingUserSupportTickets] = useState(true); // Added
   const [isOnline, setIsOnline] = useState(true);
   const [pageHistory, setPageHistory] = useState<string[]>([]);
   const [currentPersonalizedTip, setCurrentPersonalizedTip] = useState<string | null>(null);
@@ -407,6 +412,31 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [toast]);
 
+  const fetchUserSupportTickets = useCallback(async () => {
+    if (!user) return;
+    setLoadingUserSupportTickets(true);
+    try {
+      const ticketsCollectionRef = collection(db, 'support_tickets');
+      const q = query(ticketsCollectionRef, where('userId', '==', user.id), orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+      const tickets = querySnapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          ...data,
+          createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
+          updatedAt: (data.updatedAt as Timestamp)?.toDate() || (data.createdAt as Timestamp)?.toDate() || new Date(),
+        } as SupportTicket;
+      });
+      setUserSupportTickets(tickets);
+    } catch (error: any) {
+      console.error("Error fetching user support tickets:", error);
+      toast({ title: "Support Tickets Error", description: "Could not load your support tickets.", variant: "destructive" });
+    } finally {
+      setLoadingUserSupportTickets(false);
+    }
+  }, [user, toast]);
+
   const refreshUserQuests = useCallback(async () => {
     if (!user) return;
     setLoadingQuests(true);
@@ -467,10 +497,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     if (user && !authLoading) {
       fetchUserData(); 
       fetchTransactions();
-      fetchMarqueeItems(); // Fetch from Firestore
+      fetchMarqueeItems();
       fetchLeaderboardData();
       fetchFaqs(); 
       refreshUserQuests(); 
+      fetchUserSupportTickets(); // Fetch user support tickets
 
       const userDocRef = doc(db, 'users', user.id);
       const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
@@ -512,11 +543,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const qMarquee = query(marqueeCollectionRef, orderBy('createdAt', 'asc'));
       const unsubscribeMarquee = onSnapshot(qMarquee, (querySnapshot) => {
         const items = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as MarqueeItem));
-        setMarqueeItems(items.length > 0 ? items : CONFIG.DEFAULT_MARQUEE_ITEMS.map(text => ({ text }))); // Fallback if empty
+        setMarqueeItems(items.length > 0 ? items : CONFIG.DEFAULT_MARQUEE_ITEMS.map(text => ({ text }))); 
       }, (error: FirestoreError) => {
         console.error("Error in MARQUEE snapshot listener:", error.code, error.message);
         toast({ title: "Database Error: Marquee", description: `Could not sync marquee messages. (${error.code})`, variant: "destructive" });
-        setMarqueeItems(CONFIG.DEFAULT_MARQUEE_ITEMS.map(text => ({ text }))); // Fallback on error
+        setMarqueeItems(CONFIG.DEFAULT_MARQUEE_ITEMS.map(text => ({ text })));
       });
 
       const userQuestsRef = doc(db, 'user_quests', user.id);
@@ -547,28 +578,48 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         toast({ title: "Database Error: Quests", description: `Could not sync quest data. (${error.code})`, variant: "destructive" });
       });
 
+      const qSupportTickets = query(collection(db, 'support_tickets'), where('userId', '==', user.id), orderBy('createdAt', 'desc'));
+      const unsubscribeSupportTickets = onSnapshot(qSupportTickets, (querySnapshot) => {
+        const tickets = querySnapshot.docs.map(docSnap => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            ...data,
+            createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
+            updatedAt: (data.updatedAt as Timestamp)?.toDate() || (data.createdAt as Timestamp)?.toDate() || new Date(),
+          } as SupportTicket;
+        });
+        setUserSupportTickets(tickets);
+      }, (error: FirestoreError) => {
+        console.error("Error in SUPPORT_TICKETS snapshot listener:", error.code, error.message);
+        toast({ title: "Database Error: Support Tickets", description: `Could not sync your support tickets. (${error.code})`, variant: "destructive" });
+      });
+
 
       return () => {
         unsubscribeUser();
         unsubscribeTransactions();
-        unsubscribeMarquee(); // Unsubscribe marquee listener
+        unsubscribeMarquee();
         unsubscribeUserQuests();
+        unsubscribeSupportTickets(); // Unsubscribe support tickets listener
       };
 
     } else if (!user && !authLoading) {
       setUserDataState(null);
       setTransactions([]);
-      setMarqueeItems(CONFIG.DEFAULT_MARQUEE_ITEMS.map(text => ({ text }))); // Fallback
+      setMarqueeItems(CONFIG.DEFAULT_MARQUEE_ITEMS.map(text => ({ text })));
       setLeaderboard([]);
       setUserQuests([]);
       setFaqs([]);
+      setUserSupportTickets([]); // Clear support tickets on logout
       setLoadingUserData(false);
       setLoadingLeaderboard(false);
       setLoadingQuests(false);
       setLoadingFaqs(false);
-      setLoadingMarquee(false); // Set loading to false
+      setLoadingMarquee(false);
+      setLoadingUserSupportTickets(false); // Set loading to false
     }
-  }, [user, authLoading, fetchUserData, fetchTransactions, fetchLeaderboardData, processFirestoreData, toast, fetchFaqs, refreshUserQuests, fetchMarqueeItems]);
+  }, [user, authLoading, fetchUserData, fetchTransactions, fetchLeaderboardData, processFirestoreData, toast, fetchFaqs, refreshUserQuests, fetchMarqueeItems, fetchUserSupportTickets]);
 
   const checkAndAwardAchievements = useCallback(async () => {
     if (!userData || !user) return;
@@ -1333,15 +1384,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   return (
     <AppStateContext.Provider value={{
-      userData, transactions, marqueeItems, leaderboard, achievements, userQuests, faqs,
-      loadingUserData, loadingLeaderboard, loadingAchievements, loadingQuests, loadingFaqs, loadingMarquee,
+      userData, transactions, marqueeItems, leaderboard, achievements, userQuests, faqs, userSupportTickets,
+      loadingUserData, loadingLeaderboard, loadingAchievements, loadingQuests, loadingFaqs, loadingMarquee, loadingUserSupportTickets,
       setUserDataState, fetchUserData, updateUserFirestoreData, addTransaction,
       updateEnergy, purchaseBooster, claimDailyBonus, submitRedeemRequest,
       resetUserProgress, isOnline, pageHistory, addPageVisit,
       fetchLeaderboardData, fetchMarqueeItems, checkAndAwardAchievements, purchaseTheme, setActiveThemeState,
       uploadProfilePicture, transferToUser,
       refreshUserQuests, claimQuestReward, updateQuestProgress,
-      submitSupportTicket, fetchFaqs,
+      submitSupportTicket, fetchFaqs, fetchUserSupportTickets,
       currentPersonalizedTip, getAndSetPersonalizedTip,
       triggerTapFrenzy, triggerEnergySurge,
       showOfflineEarningsModal, offlineEarnedAmount, closeOfflineEarningsModal,
